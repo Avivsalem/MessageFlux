@@ -67,6 +67,7 @@ class ThreadLocalValue(threading.local, Generic[TValueType]):
     x.value # 5
     x.value = 7 # changes only for this thread
     """
+
     def __init__(self, init_value: Optional[TValueType] = None):
         self.value = init_value
 
@@ -76,31 +77,51 @@ class ThreadLocalMember(Generic[TValueType]):
     this is a descriptor, for making thread local memebers for class:
 
     class MyClass:
-        x = ThreadLocalMember(5)
+        x = ThreadLocalMember()
+        y = ThreadLocalMember(1)
+        z = ThreadLocalMember()
+        w = ThreadLocalMember(1)
+        def __init__():
+            self.x = 5
+            self.w = 2
 
     a = MyClass():
     a.x # 5
     a.x = 7 # changes only for this thread
+    a.y # 1 - the default init value for this
+    a.z # raises AttributeError (z was not set on class). once it's set, then value is the init value for each thread
+    a.w # 2 for this thread, 1 for any other thread (because of the default init value)
     """
-    def __init__(self, init_value: Optional[TValueType] = None):
+
+    def __init__(self, init_value: Optional[TValueType] = ...):
         self._init_value = init_value
 
     def __set_name__(self, owner, name):
+        self._public_name = name
         self._private_name = f'_thread_local_{name}'
 
-    def _get_local_value(self, instance) -> ThreadLocalValue:
-        if hasattr(instance, self._private_name):
+    def _get_or_set_lv(self, instance, init_value):
+        try:
             lv = getattr(instance, self._private_name)
-        else:
-            lv = ThreadLocalValue(self._init_value)
+        except AttributeError:
+            lv = ThreadLocalValue(init_value)
             setattr(instance, self._private_name, lv)
-
         return lv
 
     def __get__(self, instance, owner) -> Optional[TValueType]:
-        lv = self._get_local_value(instance)
+        if self._init_value is not ...:
+            lv = self._get_or_set_lv(instance, self._init_value)
+        else:
+            if not hasattr(instance, self._private_name):
+                raise AttributeError(f"'{owner.__name__}' object has no attribute '{self._public_name}'")
+            lv = getattr(instance, self._private_name)
+
         return lv.value
 
     def __set__(self, instance, value):
-        lv = self._get_local_value(instance)
+        if self._init_value is ...:
+            init_value = value
+        else:
+            init_value = self._init_value
+        lv = self._get_or_set_lv(instance, init_value)
         lv.value = value
