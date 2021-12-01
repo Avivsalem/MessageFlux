@@ -1,6 +1,9 @@
-from baseservice.utils import ThreadLocalMember
 from concurrent.futures import ThreadPoolExecutor
+
+from baseservice.utils import ThreadLocalMember
+
 executor = ThreadPoolExecutor()
+
 
 def test_thread_local_member():
     class MyTestClass:
@@ -25,7 +28,3 @@ def test_thread_local_member():
     fut = executor.submit(func)
     assert fut.result() == (5, None, 5, "this is thread")
     assert b.prop2 is None
-
-
-
-
