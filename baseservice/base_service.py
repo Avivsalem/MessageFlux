@@ -2,8 +2,19 @@ import logging
 import threading
 from abc import ABCMeta, abstractmethod
 import signal
-from threading import Event
+import threading
+from enum import Enum, unique
+
 from typing import Optional
+
+from baseservice.utils import Event
+
+
+@unique
+class ServiceState(Enum):
+    STARTING = 'STARTING'
+    STOPPING = 'STOPPING'
+    STOPPED = 'STOPPED'
 
 
 class BaseService(metaclass=ABCMeta):
@@ -11,15 +22,25 @@ class BaseService(metaclass=ABCMeta):
     this class is the base class for all services
     """
 
-    def __init__(self, *, should_stop_on_signal=True):
+    def __init__(self, *, name: str = None, should_stop_on_signal=True):
         """
 
+        :param name: the name of this service. if None, the name of the type will be used
         :param should_stop_on_signal: if True, the service will try to register SIGTERM and SIGINT on stop method.
         """
         self._should_stop_on_signal: bool = should_stop_on_signal
-        self._cancellation_token: Event = Event()
+        self._cancellation_token: threading.Event = threading.Event()
         self._cancellation_token.set()  # service starts as not_running
         self._logger = logging.getLogger(__name__)
+        self._state_event: Event[ServiceState] = Event()
+        if not name:
+            name = type(self).__name__
+
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     @property
     def is_alive(self) -> bool:
@@ -27,6 +48,13 @@ class BaseService(metaclass=ABCMeta):
         this property is True, if the service is running.
         """
         return self._is_alive()
+
+    @property
+    def state_event(self) -> Event[ServiceState]:
+        """
+        this is an Event, that can be used to register on server state changes
+        """
+        return self._state_event
 
     def _is_alive(self) -> bool:
         """
@@ -41,16 +69,20 @@ class BaseService(metaclass=ABCMeta):
         self._cancellation_token.clear()
         if self._should_stop_on_signal:
             self._register_signals()
+        server_exception = None
         try:
+            self._state_event.fire(ServiceState.STARTING)
             self._logger.info(f"Starting {self.__name__}")
             self._prepare_service()
             self._run_service(cancellation_token=self._cancellation_token)
             self._cancellation_token.wait()
         except Exception as ex:
             self._cancellation_token.set()
-            self._finalize_service(exception=ex)
-        else:
-            self._finalize_service()
+            server_exception = ex
+
+        self._state_event.fire(ServiceState.STOPPING)
+        self._finalize_service(exception=server_exception)
+        self._state_event.fire(ServiceState.STOPPED)
 
     def _register_signals(self):
         if threading.current_thread() is threading.main_thread():
