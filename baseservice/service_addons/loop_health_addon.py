@@ -36,6 +36,9 @@ class LoopHealthAddon:
         while not self._cancellation_token.is_set():
             time_from_last_loop = time() - self._last_loop_time
             if time_from_last_loop >= self._stop_after_inactivity_timeout:
+                self._logger.warning(
+                    f'Service {self._service.name} exceeded {self._stop_after_inactivity_timeout} '
+                    f'seconds from last loop finished and will be stopped')
                 self._service.stop()
                 return
 
