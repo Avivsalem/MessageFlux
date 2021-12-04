@@ -34,15 +34,15 @@ class LoopHealthAddon:
 
     def _inactivity_watchdog_thread(self):
         while not self._cancellation_token.is_set():
-            time_from_last_loop = time() - self._last_loop_time
-            if time_from_last_loop >= self._stop_after_inactivity_timeout:
+            timeout_time = self._last_loop_time + self._stop_after_inactivity_timeout
+            if time() >= timeout_time:
                 self._logger.warning(
                     f'Service {self._service.name} exceeded {self._stop_after_inactivity_timeout} '
                     f'seconds from last loop finished and will be stopped')
                 self._service.stop()
                 return
 
-            time_to_sleep = self._stop_after_inactivity_timeout - time_from_last_loop
+            time_to_sleep = timeout_time - time()
             self._cancellation_token.wait(time_to_sleep)
 
     def _on_service_state_change(self, service_state: ServiceState):

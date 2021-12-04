@@ -277,7 +277,7 @@ class AggregateInputDevice(InputDevice):
     @property
     def last_read_device(self) -> Optional[InputDevice]:
         """
-        :return: the last device that returned a message
+        :return: the last device that was read (in case it returned data/raised exception)
         """
         return self._last_read_device
 
@@ -292,10 +292,11 @@ class AggregateInputDevice(InputDevice):
         :return: the result from the first device that returned non-empty result
         """
         for inner_device in self._inner_devices_iterator:
+            self._last_read_device = inner_device
+
             message, device_headers, transaction = inner_device.read_stream(timeout=0,
                                                                             with_transaction=with_transaction)
             if message is not None:
-                self._last_read_device = inner_device
                 return message, device_headers, WrapperTransaction(self, transaction)
 
         self._last_read_device = None
