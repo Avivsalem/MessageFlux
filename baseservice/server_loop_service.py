@@ -1,5 +1,5 @@
-from abc import ABCMeta, abstractmethod
 import threading
+from abc import ABCMeta, abstractmethod
 from time import time
 from typing import Optional
 

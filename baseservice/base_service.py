@@ -1,10 +1,8 @@
 import logging
-import threading
-from abc import ABCMeta, abstractmethod
 import signal
 import threading
+from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
-
 from typing import Optional
 
 from baseservice.utils import Event

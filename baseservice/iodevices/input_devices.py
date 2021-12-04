@@ -1,9 +1,17 @@
 from abc import ABCMeta, abstractmethod
 from threading import Event
-from typing import Optional, Tuple, List
+from time import time, sleep
+from typing import Optional, Tuple, List, Dict, Union
 
 from baseservice.iodevices.common import Message, DeviceHeaders
-from baseservice.utils import KwargsException
+from baseservice.utils import KwargsException, StatefulListIterator
+
+
+class InputDeviceException(KwargsException):
+    """
+    a base exception class for all input device related exceptions
+    """
+    pass
 
 
 class InputTransaction(metaclass=ABCMeta):
@@ -86,17 +94,57 @@ class InputTransaction(metaclass=ABCMeta):
         pass
 
 
-class InputDeviceException(KwargsException):
+class WrapperTransaction(InputTransaction):
     """
-    a base exception class for all input device related exceptions
+    wraps a transaction for an underlying device. used for wrapper devices.
     """
-    pass
+
+    def __init__(self, device: 'InputDevice', inner_transaction: InputTransaction):
+        """
+        :param device: the wrapper device for this transaction
+        :param inner_transaction: the transaction to wrap
+        """
+        super().__init__(device)
+        self._inner_transaction = inner_transaction
+
+    @property
+    def inner_transaction(self) -> InputTransaction:
+        """
+        :return: the inner transaction
+        """
+        return self._inner_transaction
+
+    def _commit(self):
+        """
+        commits the inner transaction
+        """
+        self._inner_transaction.commit()
+
+    def _rollback(self):
+        """
+        rolls back the inner transaction
+        """
+        self._inner_transaction.rollback()
+
+    @staticmethod
+    def collate_inner_transaction_by_device(transactions: List['WrapperTransaction']) -> Dict['InputDevice',
+                                                                                              List[InputTransaction]]:
+        result: Dict['InputDevice', List[InputTransaction]] = {}
+        for transaction in transactions:
+            inner_transaction = transaction.inner_transaction
+            result.setdefault(inner_transaction.device, []).append(inner_transaction)
+
+        return result
+
+
+ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
 
 
 class InputDevice(metaclass=ABCMeta):
     """
     this is the base class for input devices
     """
+    INPUT_DEVICE_NAME_HEADER = "__INPUT_DEVICE_NAME__"
 
     def __init__(self, manager: 'InputDeviceManager', name: str):
         """
@@ -121,12 +169,32 @@ class InputDevice(metaclass=ABCMeta):
         """
         return self._manager
 
-    @abstractmethod
     def read_stream(self,
                     timeout: Optional[float] = 0,
-                    with_transaction: bool = True) -> Tuple[Optional[Message],
-                                                            Optional[DeviceHeaders],
-                                                            Optional[InputTransaction]]:
+                    with_transaction: bool = True) -> ReadStreamResult:
+        """
+        this method returns a message from the device. and makes sure that the input device name header is present
+
+        :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
+        after 'timeout' seconds, if the device doesn't have a message to return, it will return (None, None)
+        :param with_transaction: 'True' if the device should read message within transaction,
+        or 'False' if the message is automatically committed
+
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        the device headers, can contain extra information about the device that returned the message
+        """
+        message, device_headers, transaction = self._read_stream(timeout=timeout,
+                                                                 with_transaction=with_transaction)
+        if message is not None:
+            device_headers = device_headers or {}
+            device_headers.setdefault(self.INPUT_DEVICE_NAME_HEADER, self.name)
+
+        return message, device_headers, transaction
+
+    @abstractmethod
+    def _read_stream(self,
+                     timeout: Optional[float] = 0,
+                     with_transaction: bool = True) -> ReadStreamResult:
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -155,24 +223,104 @@ class InputDevice(metaclass=ABCMeta):
     def commit_all(self, transactions: List[InputTransaction]):
         """
         this method tries commit more than one transaction at once.
-        it may be overridden in child classes to perform optimized batch commit
 
         :param transactions: the list of transactions to commit
         """
         self._validate_transactions(transactions)
+        self._commit_all(transactions)
+
+    def _commit_all(self, transactions: List[InputTransaction]):
+        """
+        this method tries commit more than one transaction at once.
+        it may be overridden in child classes to perform optimized batch commit
+
+        :param transactions: the list of transactions to commit
+        """
         for transaction in transactions:
             transaction.commit()
 
     def rollback_all(self, transactions: List[InputTransaction]):
         """
         this method tries rollback more than one transaction at once.
-        it may be overridden in child classes to perform optimized batch rollback
 
         :param transactions: the list of transactions to rollback
         """
         self._validate_transactions(transactions)
+        self._rollback_all(transactions)
+
+    def _rollback_all(self, transactions: List[InputTransaction]):
+        """
+        this method tries rollback more than one transaction at once.
+        it may be overridden in child classes to perform optimized batch rollback
+
+        :param transactions: the list of transactions to rollback
+        """
         for transaction in transactions:
             transaction.rollback()
+
+
+class AggregateInputDevice(InputDevice):
+    """
+    this class is a round-robin input device, that reads from several underlying input devices in order
+    """
+
+    def __init__(self, manager: 'InputDeviceManager', inner_devices: List[InputDevice]):
+        """
+
+        :param manager: the input device manager that created this device
+        :param inner_devices: the list of input devices to read from
+        """
+        super().__init__(manager=manager, name="AggregateInputDevice")
+        self._inner_devices_iterator: StatefulListIterator[InputDevice] = StatefulListIterator(inner_devices)
+        self._last_read_device: Optional[InputDevice] = None
+
+    @property
+    def last_read_device(self) -> Optional[InputDevice]:
+        """
+        :return: the last device that returned a message
+        """
+        return self._last_read_device
+
+    def _read_from_device(self, with_transaction: bool) -> ReadStreamResult:
+        """
+        tries to read from the first device that returnes a result.
+        upon success, return the result. otherwise, returns (None,None,None)
+
+        :param with_transaction: 'True' if the device should read message within transaction,
+        or 'False' if the message is automatically committed
+
+        :return: the result from the first device that returned non-empty result
+        """
+        for inner_device in self._inner_devices_iterator:
+            message, device_headers, transaction = inner_device.read_stream(timeout=0,
+                                                                            with_transaction=with_transaction)
+            if message is not None:
+                self._last_read_device = inner_device
+                return message, device_headers, WrapperTransaction(self, transaction)
+
+        self._last_read_device = None
+        return None, None, None
+
+    def _read_stream(self,
+                     timeout: Optional[float] = 0,
+                     with_transaction: bool = True) -> ReadStreamResult:
+        end_time = time() + timeout
+        message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
+        while message is None and (time() < end_time):
+            sleep(0.1)
+            message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
+
+        return message, device_headers, transaction
+
+    def _commit_all(self, transactions: List[WrapperTransaction]):
+        transaction_dict = WrapperTransaction.collate_inner_transaction_by_device(transactions)
+        for device, inner_transactions in transaction_dict.items():
+            device.commit_all(inner_transactions)
+
+    def _rollback_all(self, transactions: List[WrapperTransaction]):
+        transaction_dict = WrapperTransaction.collate_inner_transaction_by_device(transactions)
+        for device, inner_transactions in transaction_dict.items():
+            device.rollback_all(inner_transactions)
 
 
 class InputDeviceManager(metaclass=ABCMeta):
@@ -189,6 +337,13 @@ class InputDeviceManager(metaclass=ABCMeta):
         :return: the created input device
         """
         pass
+
+    def get_aggregate_device(self, names: List[str]) -> AggregateInputDevice:
+        inner_devices: List[InputDevice] = []
+        for name in names:
+            inner_devices.append(self.get_input_device(name))
+
+        return AggregateInputDevice(manager=self, inner_devices=inner_devices)
 
 
 class InputTransactionScope(InputTransaction):
@@ -207,8 +362,7 @@ class InputTransactionScope(InputTransaction):
         self._transactions: List[InputTransaction] = []
 
     @abstractmethod
-    def read_stream(self, timeout: Optional[float] = 0) -> Tuple[Optional[Message],
-                                                                 Optional[DeviceHeaders]]:
+    def read_stream(self, timeout: Optional[float] = 0) -> Union[Tuple[Message, DeviceHeaders], Tuple[None, None]]:
         message, device_headers, transaction = self.device.read_stream(timeout=timeout,
                                                                        with_transaction=self._with_transaction)
 
@@ -230,32 +384,6 @@ class InputTransactionScope(InputTransaction):
         """
         self.device.rollback_all(self._transactions)
         self._transactions.clear()
-
-
-class WrapperTransaction(InputTransaction):
-    """
-    wraps a transaction for an underlying device. used for wrapper devices.
-    """
-
-    def __init__(self, device: InputDevice, inner_transaction: InputTransaction):
-        """
-        :param device: the wrapper device for this transaction
-        :param inner_transaction: the transaction to wrap
-        """
-        super().__init__(device)
-        self._inner_transaction = inner_transaction
-
-    def _commit(self):
-        """
-        commits the inner transaction
-        """
-        self._inner_transaction.commit()
-
-    def _rollback(self):
-        """
-        rolls back the inner transaction
-        """
-        self._inner_transaction.rollback()
 
 
 class NULLTransaction(InputTransaction):

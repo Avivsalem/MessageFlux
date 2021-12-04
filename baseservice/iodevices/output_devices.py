@@ -26,8 +26,19 @@ class OutputDevice(metaclass=ABCMeta):
         self._manager = manager
         self._name = name
 
-    @abstractmethod
     def send_stream(self, message: Message, device_headers: Optional[DeviceHeaders] = None):
+        """
+        sends a message to the device.
+
+        :param message: the message to send
+        :param device_headers: optional headers to send to underlying device.
+        those headers are not part of the message, but contains extra data for the device, that can modify its operation
+        """
+        device_headers = device_headers or {}
+        self._send_stream(message=message, device_headers=device_headers)
+
+    @abstractmethod
+    def _send_stream(self, message: Message, device_headers: DeviceHeaders):
         """
         sends a message to the device. this should be implemented by child classes
 

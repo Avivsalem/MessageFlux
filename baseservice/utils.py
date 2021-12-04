@@ -1,6 +1,6 @@
 import threading
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional
 from itertools import cycle, islice
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional
 
 
 class KwargsException(Exception):
