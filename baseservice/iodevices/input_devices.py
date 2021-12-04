@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from threading import Event
-from typing import Optional, Tuple, BinaryIO, Dict, Any, List
-from baseservice.iodevices.common import Message
+from typing import Optional, Tuple, List
+
+from baseservice.iodevices.common import Message, DeviceHeaders
 from baseservice.utils import KwargsException
 
 
@@ -124,6 +125,7 @@ class InputDevice(metaclass=ABCMeta):
     def read_stream(self,
                     timeout: Optional[float] = 0,
                     with_transaction: bool = True) -> Tuple[Optional[Message],
+                                                            Optional[DeviceHeaders],
                                                             Optional[InputTransaction]]:
         """
         this method returns a message from the device (should be implemented by child classes)
@@ -133,7 +135,8 @@ class InputDevice(metaclass=ABCMeta):
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
-        :return: a tuple of (Message, Transaction) or (None, None) if no message was available in the device
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        the device headers, can contain extra information about the device that returned the message
         """
         pass
 
@@ -204,14 +207,15 @@ class InputTransactionScope(InputTransaction):
         self._transactions: List[InputTransaction] = []
 
     @abstractmethod
-    def read_stream(self,
-                    timeout: Optional[float] = 0) -> Optional[Message]:
-        message, transaction = self.device.read_stream(timeout=timeout, with_transaction=self._with_transaction)
+    def read_stream(self, timeout: Optional[float] = 0) -> Tuple[Optional[Message],
+                                                                 Optional[DeviceHeaders]]:
+        message, device_headers, transaction = self.device.read_stream(timeout=timeout,
+                                                                       with_transaction=self._with_transaction)
 
         if transaction is not None:
             self._transactions.append(transaction)
 
-        return message
+        return message, device_headers
 
     def _commit(self):
         """
@@ -232,6 +236,7 @@ class WrapperTransaction(InputTransaction):
     """
     wraps a transaction for an underlying device. used for wrapper devices.
     """
+
     def __init__(self, device: InputDevice, inner_transaction: InputTransaction):
         """
         :param device: the wrapper device for this transaction
@@ -257,6 +262,7 @@ class NULLTransaction(InputTransaction):
     """
     a transaction object that does nothing. used as placeholder for some places
     """
+
     def _commit(self):
         pass
 

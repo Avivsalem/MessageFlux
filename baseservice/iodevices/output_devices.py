@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
-from typing import BinaryIO, Dict, Any
+from typing import Optional
 
-from baseservice.iodevices.common import Message
+from baseservice.iodevices.common import Message, DeviceHeaders
 from baseservice.utils import KwargsException
 
 
@@ -27,11 +27,13 @@ class OutputDevice(metaclass=ABCMeta):
         self._name = name
 
     @abstractmethod
-    def send_stream(self, message: Message):
+    def send_stream(self, message: Message, device_headers: Optional[DeviceHeaders] = None):
         """
         sends a message to the device. this should be implemented by child classes
 
         :param message: the message to send
+        :param device_headers: optional headers to send to underlying device.
+        those headers are not part of the message, but contains extra data for the device, that can modify its operation
         """
         pass
 
@@ -40,6 +42,7 @@ class OutputDeviceManager(metaclass=ABCMeta):
     """
     this is a base class for output device managers. it is used to create output devices
     """
+
     @abstractmethod
     def get_output_device(self, name: str) -> OutputDevice:
         """

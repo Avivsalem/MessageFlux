@@ -1,4 +1,6 @@
-from typing import BinaryIO, Dict, Any
+from typing import BinaryIO, Dict, Any, Optional
+
+MessageHeaders = Dict[str, Any]  # this is the type for message metadata
 
 
 class Message:
@@ -6,7 +8,7 @@ class Message:
     this class is the basic unit that is read from, or sent to devices.
     """
 
-    def __init__(self, stream: BinaryIO, headers: Dict[str, Any] = None):
+    def __init__(self, stream: BinaryIO, headers: Optional[MessageHeaders] = None):
         """
         :param stream: the stream containing the body of the message
         :param headers: (optional) headers containing metadata about the message
@@ -19,5 +21,8 @@ class Message:
         return self._stream
 
     @property
-    def headers(self) -> Dict[str, Any]:
+    def headers(self) -> MessageHeaders:
         return self._headers
+
+
+DeviceHeaders = Dict[str, Any]  # this is the type for device specific headers, used to pass arguments to/from device
