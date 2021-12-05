@@ -36,7 +36,7 @@ jobs:
         run: python -c "import sys; print(sys.version)"
         # Install the package using the setup.py
       - name: Install package
-        run: python setup.py install
+        run: python install .
         # Install pytest (you can use some other testing utility)
       - name: Install pytest
         run: |
