@@ -8,16 +8,16 @@ from baseservice.server_loop_service import ServerLoopService, LoopMetrics
 
 class LoopHealthAddon:
     def __init__(self, service: ServerLoopService, *,
-                 stop_after_consecutive_failures: int = -1,
-                 stop_after_inactivity_timeout: float = -1):
+                 max_consecutive_failures: int = -1,
+                 max_inactivity_timeout: float = -1):
         self._service = service
-        if stop_after_inactivity_timeout > 0:
+        if max_inactivity_timeout > 0:
             self._service.state_event.register_handler(self._on_service_state_change)
 
         self._service.loop_ended_event.register_handler(self._on_loop_ended)
 
-        self._stop_after_consecutive_failures = stop_after_consecutive_failures
-        self._stop_after_inactivity_timeout = stop_after_inactivity_timeout
+        self._max_consecutive_failures = max_consecutive_failures
+        self._max_inactivity_timeout = max_inactivity_timeout
         self._cancellation_token = threading.Event()
         self._logger = logging.getLogger(__name__)
 
@@ -34,10 +34,10 @@ class LoopHealthAddon:
 
     def _inactivity_watchdog_thread(self):
         while not self._cancellation_token.is_set():
-            timeout_time = self._last_loop_time + self._stop_after_inactivity_timeout
+            timeout_time = self._last_loop_time + self._max_inactivity_timeout
             if time() >= timeout_time:
                 self._logger.warning(
-                    f'Service {self._service.name} exceeded {self._stop_after_inactivity_timeout} '
+                    f'Service {self._service.name} exceeded {self._max_inactivity_timeout} '
                     f'seconds from last loop finished and will be stopped')
                 self._service.stop()
                 return
@@ -52,7 +52,7 @@ class LoopHealthAddon:
             self._on_service_stopping()
 
     def _on_service_starting(self):
-        if self._stop_after_inactivity_timeout >= 0:
+        if self._max_inactivity_timeout >= 0:
             self._cancellation_token.clear()
             self._last_loop_time = time()
             t = threading.Thread(target=self._inactivity_watchdog_thread, daemon=True)
@@ -68,7 +68,7 @@ class LoopHealthAddon:
         else:
             self._consecutive_failures += 1
 
-        if self._consecutive_failures >= self._stop_after_consecutive_failures > 0:
+        if self._consecutive_failures >= self._max_consecutive_failures > 0:
             self._logger.warning(
                 f'Service {self._service.name} reached {self._consecutive_failures} and will be stopped')
             self._service.stop()
