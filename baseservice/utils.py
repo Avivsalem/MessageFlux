@@ -100,7 +100,7 @@ class ThreadLocalMember(Generic[TValueType]):
         self._public_name = name
         self._private_name = f'_thread_local_{name}'
 
-    def _get_or_set_lv(self, instance, init_value):
+    def get_thread_local_value(self, instance, init_value):
         try:
             lv = getattr(instance, self._private_name)
         except AttributeError:
@@ -109,8 +109,10 @@ class ThreadLocalMember(Generic[TValueType]):
         return lv
 
     def __get__(self, instance, owner) -> Optional[TValueType]:
+        if instance is None:
+            return self
         if self._init_value is not ...:
-            lv = self._get_or_set_lv(instance, self._init_value)
+            lv = self.get_thread_local_value(instance, self._init_value)
         else:
             if not hasattr(instance, self._private_name):
                 raise AttributeError(f"'{owner.__name__}' object has no attribute '{self._public_name}'")
@@ -119,9 +121,11 @@ class ThreadLocalMember(Generic[TValueType]):
         return lv.value
 
     def __set__(self, instance, value):
+        if instance is None:
+            return
         if self._init_value is ...:
             init_value = value
         else:
             init_value = self._init_value
-        lv = self._get_or_set_lv(instance, init_value)
+        lv = self.get_thread_local_value(instance, init_value)
         lv.value = value

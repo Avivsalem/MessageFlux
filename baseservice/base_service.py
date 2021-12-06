@@ -10,7 +10,11 @@ from baseservice.utils import Event
 
 @unique
 class ServiceState(Enum):
+    """
+    the states of the service: STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
+    """
     STARTING = 'STARTING'
+    STARTED = 'STARTED'
     STOPPING = 'STOPPING'
     STOPPED = 'STOPPED'
 
@@ -20,7 +24,9 @@ class BaseService(metaclass=ABCMeta):
     this class is the base class for all services
     """
 
-    def __init__(self, *, name: str = None, should_stop_on_signal=True):
+    def __init__(self, *,
+                 name: str = None,
+                 should_stop_on_signal=True):
         """
 
         :param name: the name of this service. if None, the name of the type will be used
@@ -30,7 +36,9 @@ class BaseService(metaclass=ABCMeta):
         self._cancellation_token: threading.Event = threading.Event()
         self._cancellation_token.set()  # service starts as not_running
         self._logger = logging.getLogger(__name__)
-        self._state_event: Event[ServiceState] = Event()
+        self._state_changed_event: Event[ServiceState] = Event()
+        self._service_state = ServiceState.STOPPED
+
         if not name:
             name = type(self).__name__
 
@@ -48,17 +56,31 @@ class BaseService(metaclass=ABCMeta):
         return self._is_alive()
 
     @property
-    def state_event(self) -> Event[ServiceState]:
+    def service_state(self) -> ServiceState:
+        """
+        this is the current service state
+        """
+        return self._service_state
+
+    @property
+    def state_changed_event(self) -> Event[ServiceState]:
         """
         this is an Event, that can be used to register on server state changes
         """
-        return self._state_event
+        return self._state_changed_event
 
     def _is_alive(self) -> bool:
         """
         this may be overridden by child classes to change the 'is_alive' behaviour
         """
         return not self._cancellation_token.is_set()
+
+    def _set_service_state(self, new_service_state: ServiceState):
+        old_service_state = self._service_state
+        self._service_state = new_service_state
+
+        if old_service_state != new_service_state:
+            self._state_changed_event.fire(new_service_state)
 
     def start(self):
         """
@@ -69,18 +91,19 @@ class BaseService(metaclass=ABCMeta):
             self._register_signals()
         server_exception = None
         try:
-            self._state_event.fire(ServiceState.STARTING)
+            self._set_service_state(ServiceState.STARTING)
             self._logger.info(f"Starting {self.__name__}")
             self._prepare_service()
+            self._set_service_state(ServiceState.STARTED)
             self._run_service(cancellation_token=self._cancellation_token)
             self._cancellation_token.wait()
         except Exception as ex:
-            self._cancellation_token.set()
+            self._cancellation_token.wait()
             server_exception = ex
 
-        self._state_event.fire(ServiceState.STOPPING)
+        self._set_service_state(ServiceState.STOPPING)
         self._finalize_service(exception=server_exception)
-        self._state_event.fire(ServiceState.STOPPED)
+        self._set_service_state(ServiceState.STOPPED)
 
     def _register_signals(self):
         if threading.current_thread() is threading.main_thread():
@@ -119,4 +142,5 @@ class BaseService(metaclass=ABCMeta):
         """
         stops the service (sets the cancellation token, so the service will stop gracefully)
         """
+        self._set_service_state(ServiceState.STOPPING)
         self._cancellation_token.set()

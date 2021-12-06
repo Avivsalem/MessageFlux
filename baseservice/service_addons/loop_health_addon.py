@@ -12,7 +12,7 @@ class LoopHealthAddon:
                  max_inactivity_timeout: float = -1):
         self._service = service
         if max_inactivity_timeout > 0:
-            self._service.state_event.register_handler(self._on_service_state_change)
+            self._service.state_changed_event.register_handler(self._on_service_state_change)
 
         self._service.loop_ended_event.register_handler(self._on_loop_ended)
 
@@ -46,12 +46,12 @@ class LoopHealthAddon:
             self._cancellation_token.wait(time_to_sleep)
 
     def _on_service_state_change(self, service_state: ServiceState):
-        if service_state == ServiceState.STARTING:
-            self._on_service_starting()
+        if service_state == ServiceState.STARTED:
+            self._on_service_started()
         elif service_state == ServiceState.STOPPING:
             self._on_service_stopping()
 
-    def _on_service_starting(self):
+    def _on_service_started(self):
         if self._max_inactivity_timeout >= 0:
             self._cancellation_token.clear()
             self._last_loop_time = time()

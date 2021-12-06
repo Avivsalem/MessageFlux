@@ -37,14 +37,18 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
     this is a base class for services that uses a 'loop' as their running method
     """
 
-    def __init__(self, *, interval_between_loops: float = 0, **kwargs):
+    def __init__(self, *,
+                 duration_after_loop_success: float = 0,
+                 duration_after_loop_failure: float = 0, **kwargs):
         """
 
-        :param interval_between_loops: the interval (in seconds) to wait between each run of the loop.
+        :param duration_after_loop_success: the duration (in seconds) to wait after successful run of the loop.
+        :param duration_after_loop_failure: the duration (in seconds) to wait after failed run of the loop.
         :param kwargs: the init args for base classes
         """
         super().__init__(**kwargs)
-        self._interval_between_loops = interval_between_loops
+        self._duration_after_loop_success = duration_after_loop_success
+        self._duration_after_loop_failure = duration_after_loop_failure
         self._loop_ended_event: Event[LoopMetrics] = Event()
 
     @property
@@ -63,11 +67,17 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
             try:
                 self._server_loop(cancellation_token)
             except Exception as ex:
+                self._logger.exception(f'Server loop raised an exception')
                 loop_exception = ex
 
             loop_duration = time() - start_time
             self._loop_ended_event.fire(LoopMetrics(loop_duration=loop_duration, exception=loop_exception))
-            cancellation_token.wait(self._interval_between_loops)
+
+            wait_duration = self._duration_after_loop_success
+            if loop_exception is not None:
+                wait_duration = self._duration_after_loop_failure
+
+            cancellation_token.wait(wait_duration)
 
     @abstractmethod
     def _server_loop(self, cancellation_token: threading.Event):
