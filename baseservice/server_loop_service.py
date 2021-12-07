@@ -77,7 +77,8 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
             if loop_exception is not None:
                 wait_duration = self._duration_after_loop_failure
 
-            cancellation_token.wait(wait_duration)
+            if wait_duration > 0:
+                cancellation_token.wait(wait_duration)
 
     @abstractmethod
     def _server_loop(self, cancellation_token: threading.Event):
