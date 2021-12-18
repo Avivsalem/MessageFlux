@@ -54,6 +54,18 @@ class OutputDeviceManager(metaclass=ABCMeta):
     this is a base class for output device managers. it is used to create output devices
     """
 
+    def connect(self):
+        """
+        connects to the device manager
+        """
+        pass
+
+    def disconnect(self):
+        """
+        disconnects from the device manager
+        """
+        pass
+
     @abstractmethod
     def get_output_device(self, name: str) -> OutputDevice:
         """

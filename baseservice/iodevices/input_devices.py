@@ -329,6 +329,18 @@ class InputDeviceManager(metaclass=ABCMeta):
     this is the base class for input device managers. this class is used to create input devices.
     """
 
+    def connect(self):
+        """
+        connects to the device manager
+        """
+        pass
+
+    def disconnect(self):
+        """
+        disconnects from the device manager
+        """
+        pass
+
     @abstractmethod
     def get_input_device(self, name: str) -> InputDevice:
         """
