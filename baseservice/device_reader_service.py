@@ -3,8 +3,8 @@ from abc import abstractmethod, ABCMeta
 from time import time
 from typing import List, Optional, Tuple
 
-from baseservice.iodevices.common import Message, DeviceHeaders
-from baseservice.iodevices.input_devices import InputDeviceManager, AggregateInputDevice, InputTransactionScope, \
+from baseservice.iodevices.base.common import Message, DeviceHeaders
+from baseservice.iodevices.base.input_devices import InputDeviceManager, AggregateInputDevice, InputTransactionScope, \
     InputDevice
 from baseservice.server_loop_service import ServerLoopService
 
@@ -66,11 +66,10 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
                     timeout = 0  # if not wait_for_batch, try to read another message without waiting at all
 
                 message, device_headers = transaction_scope.read_stream(timeout=timeout)
-                if message is not None:
-                    batch.append((self._aggregate_input_device.last_read_device, message, device_headers))
-                else:
-                    if not self._wait_for_batch_count:  # if not wait_for_batch, no point in trying to read more messages from empty device
-                        break
+                if message is None:
+                    break  # no more messages to read
+
+                batch.append((self._aggregate_input_device.last_read_device, message, device_headers))
 
             if batch:
                 self._handle_messages(batch)

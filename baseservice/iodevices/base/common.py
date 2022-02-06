@@ -1,3 +1,4 @@
+import copy
 from typing import BinaryIO, Dict, Any, Optional
 
 MessageHeaders = Dict[str, Any]  # this is the type for message metadata
@@ -23,6 +24,19 @@ class Message:
     @property
     def headers(self) -> MessageHeaders:
         return self._headers
+
+    def copy(self):
+        return copy.copy(self)
+
+    def __copy__(self):
+        stream_copy = copy.copy(self._stream)
+        stream_copy.seek(0)
+        return Message(stream_copy, self._headers.copy())
+
+    def __deepcopy__(self, memo=None):
+        stream_copy = copy.deepcopy(self._stream, memo)
+        stream_copy.seek(0)
+        return Message(stream_copy, copy.deepcopy(self._headers, memo))
 
 
 DeviceHeaders = Dict[str, Any]  # this is the type for device specific headers, used to pass arguments to/from device

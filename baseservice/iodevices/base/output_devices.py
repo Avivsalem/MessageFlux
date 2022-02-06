@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
-from baseservice.iodevices.common import Message, DeviceHeaders
+from baseservice.iodevices.base.common import Message, DeviceHeaders
 from baseservice.utils import KwargsException
 
 
