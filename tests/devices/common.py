@@ -12,14 +12,14 @@ def sanity_test(input_device_manager: InputDeviceManager,
     Common test for all devices.
     """
     device_name = device_name or str(uuid.uuid4())
-    test_data1 = str(uuid.uuid4()).encode()
-    test_data2 = str(uuid.uuid4()).encode()
+    test_message_1 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test1'})
+    test_message_2 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test2'})
 
     output_device_manager.connect()
     try:
         output_device = output_device_manager.get_output_device(device_name)
-        output_device.send_stream(Message(BytesIO(test_data1)))
-        output_device.send_stream(Message(BytesIO(test_data2)))
+        output_device.send_stream(test_message_1)
+        output_device.send_stream(test_message_2)
     finally:
         output_device_manager.disconnect()
 
@@ -27,11 +27,11 @@ def sanity_test(input_device_manager: InputDeviceManager,
     try:
         input_device = input_device_manager.get_input_device(device_name)
         msg, headers, transaction = input_device.read_stream()
-        assert msg.stream.read() == test_data1
+        assert msg == test_message_1
         transaction.commit()
 
         msg, headers, transaction = input_device.read_stream()
-        assert msg.stream.read() == test_data2
+        assert msg == test_message_2
         transaction.commit()
     finally:
         input_device_manager.disconnect()
@@ -44,14 +44,14 @@ def rollback_test(input_device_manager: InputDeviceManager,
     Common test for all devices.
     """
     device_name = device_name or str(uuid.uuid4())
-    test_data1 = str(uuid.uuid4()).encode()
-    test_data2 = str(uuid.uuid4()).encode()
+    test_message_1 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test1'})
+    test_message_2 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test2'})
 
     output_device_manager.connect()
     try:
         output_device = output_device_manager.get_output_device(device_name)
-        output_device.send_stream(Message(BytesIO(test_data1), headers={'test': 'test1'}))
-        output_device.send_stream(Message(BytesIO(test_data2), headers={'test': 'test2'}))
+        output_device.send_stream(test_message_1)
+        output_device.send_stream(test_message_2)
     finally:
         output_device_manager.disconnect()
 
@@ -59,18 +59,18 @@ def rollback_test(input_device_manager: InputDeviceManager,
     try:
         input_device = input_device_manager.get_input_device(device_name)
         msg, headers, transaction1 = input_device.read_stream()
-        assert msg.stream.read() == test_data1
+        assert msg == test_message_1
         msg, headers, transaction2 = input_device.read_stream()
-        assert msg.stream.read() == test_data2
+        assert msg == test_message_2
         transaction1.rollback()
         transaction2.rollback()
 
         msg, headers, transaction = input_device.read_stream()
-        assert msg.stream.read() == test_data1
+        assert msg == test_message_1
         transaction.commit()
 
         msg, headers, transaction = input_device.read_stream()
-        assert msg.stream.read() == test_data2
+        assert msg == test_message_2
         transaction.commit()
     finally:
         input_device_manager.disconnect()

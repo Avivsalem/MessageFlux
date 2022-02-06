@@ -28,6 +28,16 @@ class Message:
     def copy(self):
         return copy.copy(self)
 
+    def __eq__(self, other):
+        if not isinstance(other, Message):
+            return False
+
+        my_data = self._stream.read()
+        self._stream.seek(0)
+        other_data = other._stream.read()
+        other._stream.seek(0)
+        return my_data == other_data and self._headers == other._headers
+
     def __copy__(self):
         stream_copy = copy.copy(self._stream)
         stream_copy.seek(0)
