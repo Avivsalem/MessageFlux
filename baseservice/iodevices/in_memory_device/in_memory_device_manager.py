@@ -2,14 +2,18 @@ import heapq
 import time
 from functools import total_ordering
 from threading import Condition
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List
 
-from baseservice.iodevices.base import Message, InputDeviceManager, OutputDeviceManager, OutputDevice, InputDevice, \
-    DeviceHeaders, InputTransaction
-from baseservice.iodevices.base.input_transaction import NULL_TRANSACTION
-
-if TYPE_CHECKING:
-    from baseservice.iodevices.base.input_devices import ReadStreamResult
+from baseservice.iodevices.base import (Message,
+                                        InputDeviceManager,
+                                        OutputDeviceManager,
+                                        OutputDevice,
+                                        InputDevice,
+                                        DeviceHeaders,
+                                        InputTransaction,
+                                        NULL_TRANSACTION,
+                                        ReadStreamResult,
+                                        EMPTY_RESULT)
 
 MESSAGE_TIMESTAMP_HEADER = 'message_timestamp'
 
@@ -53,7 +57,7 @@ class InMemoryDevice(InputDevice, OutputDevice):
                 device_headers = {MESSAGE_TIMESTAMP_HEADER: message.timestamp}
                 return message.message.copy(), device_headers, transaction
             else:
-                return None, None, None
+                return EMPTY_RESULT
 
     def _push_to_queue(self, message: 'InMemoryDevice._QueueMessage'):
         with self._queue_not_empty:

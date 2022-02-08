@@ -8,7 +8,7 @@ from baseservice.utils import KwargsException, StatefulListIterator
 from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
 
 ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
-
+EMPTY_RESULT = (None, None, None)
 
 class InputDeviceException(KwargsException):
     """
@@ -48,7 +48,7 @@ class InputDevice(metaclass=ABCMeta):
 
     def read_message(self,
                      timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> 'ReadStreamResult':
+                     with_transaction: bool = True) -> ReadStreamResult:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
 
@@ -57,7 +57,7 @@ class InputDevice(metaclass=ABCMeta):
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
-        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or EMPTY_RESULT if no message was available.
         the device headers, can contain extra information about the device that returned the message
         """
         message, device_headers, transaction = self._read_message(timeout=timeout,
@@ -74,7 +74,7 @@ class InputDevice(metaclass=ABCMeta):
     @abstractmethod
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> 'ReadStreamResult':
+                      with_transaction: bool = True) -> ReadStreamResult:
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -83,7 +83,7 @@ class InputDevice(metaclass=ABCMeta):
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
-        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or EMPTY_RESULT if no message was available.
         the device headers, can contain extra information about the device that returned the message
         """
         pass
@@ -111,7 +111,7 @@ class AggregateInputDevice(InputDevice):
         """
         return self._last_read_device
 
-    def _read_from_device(self, with_transaction: bool) -> 'ReadStreamResult':
+    def _read_from_device(self, with_transaction: bool) -> ReadStreamResult:
         """
         tries to read from the first device that returnes a result.
         upon success, return the result. otherwise, returns (None,None,None)
@@ -130,11 +130,11 @@ class AggregateInputDevice(InputDevice):
                 return message, device_headers, transaction
 
         self._last_read_device = None
-        return None, None, None
+        return EMPTY_RESULT
 
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> 'ReadStreamResult':
+                      with_transaction: bool = True) -> ReadStreamResult:
         end_time = time() + timeout
         message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
         while message is None and (time() < end_time):
