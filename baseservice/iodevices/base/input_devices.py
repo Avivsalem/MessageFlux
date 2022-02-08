@@ -1,14 +1,13 @@
 from abc import ABCMeta, abstractmethod
 from time import time, sleep
-from typing import Optional, Tuple, List, Union, TYPE_CHECKING
+from typing import Optional, Tuple, List, Union
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
 from baseservice.utils import KwargsException, StatefulListIterator
 
-if TYPE_CHECKING:
-    from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
-    ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
+from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
 
+ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
 
 
 class InputDeviceException(KwargsException):
@@ -47,9 +46,9 @@ class InputDevice(metaclass=ABCMeta):
         """
         return self._manager
 
-    def read_stream(self,
-                    timeout: Optional[float] = 0,
-                    with_transaction: bool = True) -> 'ReadStreamResult':
+    def read_message(self,
+                     timeout: Optional[float] = 0,
+                     with_transaction: bool = True) -> 'ReadStreamResult':
         """
         this method returns a message from the device. and makes sure that the input device name header is present
 
@@ -61,8 +60,8 @@ class InputDevice(metaclass=ABCMeta):
         :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
         the device headers, can contain extra information about the device that returned the message
         """
-        message, device_headers, transaction = self._read_stream(timeout=timeout,
-                                                                 with_transaction=with_transaction)
+        message, device_headers, transaction = self._read_message(timeout=timeout,
+                                                                  with_transaction=with_transaction)
         if message is not None:
             device_headers = device_headers or {}
             device_headers.setdefault(self.INPUT_DEVICE_NAME_HEADER, self.name)
@@ -73,9 +72,9 @@ class InputDevice(metaclass=ABCMeta):
         return message, device_headers, transaction
 
     @abstractmethod
-    def _read_stream(self,
-                     timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self,
+                      timeout: Optional[float] = 0,
+                      with_transaction: bool = True) -> 'ReadStreamResult':
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -125,17 +124,17 @@ class AggregateInputDevice(InputDevice):
         for inner_device in self._inner_devices_iterator:
             self._last_read_device = inner_device
 
-            message, device_headers, transaction = inner_device.read_stream(timeout=0,
-                                                                            with_transaction=with_transaction)
+            message, device_headers, transaction = inner_device.read_message(timeout=0,
+                                                                             with_transaction=with_transaction)
             if message is not None:
                 return message, device_headers, transaction
 
         self._last_read_device = None
         return None, None, None
 
-    def _read_stream(self,
-                     timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self,
+                      timeout: Optional[float] = 0,
+                      with_transaction: bool = True) -> 'ReadStreamResult':
         end_time = time() + timeout
         message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
         while message is None and (time() < end_time):

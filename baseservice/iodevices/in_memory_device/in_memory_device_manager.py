@@ -45,7 +45,7 @@ class InMemoryDevice(InputDevice, OutputDevice):
         self._queue: List[InMemoryDevice._QueueMessage] = []
         self._queue_not_empty: Condition = Condition()
 
-    def _read_stream(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> 'ReadStreamResult':
         with self._queue_not_empty:
             if self._queue_not_empty.wait_for(lambda: any(self._queue), timeout):
                 message = heapq.heappop(self._queue)
@@ -60,7 +60,7 @@ class InMemoryDevice(InputDevice, OutputDevice):
             heapq.heappush(self._queue, message)
             self._queue_not_empty.notify()
 
-    def _send_stream(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message: Message, device_headers: DeviceHeaders):
         self._push_to_queue(InMemoryDevice._QueueMessage(message))
 
 

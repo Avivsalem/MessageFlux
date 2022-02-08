@@ -1,9 +1,10 @@
 from abc import ABCMeta, abstractmethod
 from threading import Event
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List, Union, TYPE_CHECKING
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
-from baseservice.iodevices.base.input_devices import InputDevice
+if TYPE_CHECKING:
+    from baseservice.iodevices.base.input_devices import InputDevice
 
 
 class InputTransaction(metaclass=ABCMeta):
@@ -14,16 +15,16 @@ class InputTransaction(metaclass=ABCMeta):
     the transaction, to signal the device if the message is done processing or not
     """
 
-    def __init__(self, device: Optional[InputDevice] = None):
+    def __init__(self, device: Optional['InputDevice'] = None):
         """
 
         :param device: the input device that returned that transaction
         """
-        self._device: Optional[InputDevice] = device
+        self._device: Optional['InputDevice'] = device
         self._finished: Event = Event()
 
     @property
-    def device(self) -> Optional[InputDevice]:
+    def device(self) -> Optional['InputDevice']:
         """
         :return: the input device that returned that transaction
         """
@@ -94,7 +95,7 @@ class InputTransactionScope(InputTransaction):
     a helper class for reading several messages inside a transaction scope.
     """
 
-    def __init__(self, device: Optional[InputDevice] = None, with_transaction: bool = True):
+    def __init__(self, device: Optional['InputDevice'] = None, with_transaction: bool = True):
         """
 
         :param device: the input device to read the messages from
@@ -104,10 +105,9 @@ class InputTransactionScope(InputTransaction):
         self._with_transaction = with_transaction
         self._transactions: List[InputTransaction] = []
 
-    @abstractmethod
-    def read_stream(self, timeout: Optional[float] = 0) -> Union[Tuple[Message, DeviceHeaders], Tuple[None, None]]:
-        message, device_headers, transaction = self.device.read_stream(timeout=timeout,
-                                                                       with_transaction=self._with_transaction)
+    def read_message(self, timeout: Optional[float] = 0) -> Union[Tuple[Message, DeviceHeaders], Tuple[None, None]]:
+        message, device_headers, transaction = self.device.read_message(timeout=timeout,
+                                                                        with_transaction=self._with_transaction)
 
         if transaction is not None:
             self._transactions.append(transaction)

@@ -13,6 +13,7 @@ class ServiceState(Enum):
     """
     the states of the service: STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
     """
+    INITIALIZED = "INITIALIZED"
     STARTING = 'STARTING'
     STARTED = 'STARTED'
     STOPPING = 'STOPPING'
@@ -37,7 +38,7 @@ class BaseService(metaclass=ABCMeta):
         self._cancellation_token.set()  # service starts as not_running
         self._logger = logging.getLogger(__name__)
         self._state_changed_event: Event[ServiceState] = Event()
-        self._service_state = ServiceState.STOPPED
+        self._service_state = ServiceState.INITIALIZED
 
         if not name:
             name = type(self).__name__
@@ -92,7 +93,7 @@ class BaseService(metaclass=ABCMeta):
         server_exception = None
         try:
             self._set_service_state(ServiceState.STARTING)
-            self._logger.info(f"Starting {self.__name__}")
+            self._logger.info(f"Starting {self._name}")
             self._prepare_service()
             self._set_service_state(ServiceState.STARTED)
             self._run_service(cancellation_token=self._cancellation_token)
