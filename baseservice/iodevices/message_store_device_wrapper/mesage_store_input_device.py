@@ -1,6 +1,6 @@
 from typing import Optional
 
-from baseservice.iodevices.base import InputDevice, ReadStreamResult, EMPTY_RESULT, InputDeviceManager
+from baseservice.iodevices.base import InputDevice, ReadMessageResult, EMPTY_RESULT, InputDeviceManager
 from baseservice.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
 
 
@@ -14,7 +14,7 @@ class MessageStoreInputDevice(InputDevice):
         self._message_store = message_store
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadStreamResult:
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
         message, headers, transaction = self._inner_device.read_message(timeout=timeout,
                                                                         with_transaction=with_transaction)
         if message is None:

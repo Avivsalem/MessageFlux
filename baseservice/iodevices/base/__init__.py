@@ -9,7 +9,7 @@ from .input_transaction import (InputTransaction,
 from .input_devices import (InputDevice,
                             InputDeviceManager,
                             InputDeviceException,
-                            ReadStreamResult,
+                            ReadMessageResult,
                             EMPTY_RESULT,
                             AggregateInputDevice)
 

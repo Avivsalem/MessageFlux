@@ -7,7 +7,7 @@ from baseservice.utils import KwargsException, StatefulListIterator
 
 from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
 
-ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
+ReadMessageResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
 EMPTY_RESULT = (None, None, None)
 
 class InputDeviceException(KwargsException):
@@ -48,7 +48,7 @@ class InputDevice(metaclass=ABCMeta):
 
     def read_message(self,
                      timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> ReadStreamResult:
+                     with_transaction: bool = True) -> ReadMessageResult:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
 
@@ -74,7 +74,7 @@ class InputDevice(metaclass=ABCMeta):
     @abstractmethod
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> ReadStreamResult:
+                      with_transaction: bool = True) -> ReadMessageResult:
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -111,7 +111,7 @@ class AggregateInputDevice(InputDevice):
         """
         return self._last_read_device
 
-    def _read_from_device(self, with_transaction: bool) -> ReadStreamResult:
+    def _read_from_device(self, with_transaction: bool) -> ReadMessageResult:
         """
         tries to read from the first device that returnes a result.
         upon success, return the result. otherwise, returns (None,None,None)
@@ -134,7 +134,7 @@ class AggregateInputDevice(InputDevice):
 
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> ReadStreamResult:
+                      with_transaction: bool = True) -> ReadMessageResult:
         end_time = time() + timeout
         message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
         while message is None and (time() < end_time):
