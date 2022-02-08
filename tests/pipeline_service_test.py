@@ -1,5 +1,5 @@
 from io import BytesIO
-from threading import Thread
+from threading import Thread, Event
 from time import sleep
 from typing import Union, Tuple
 
@@ -30,10 +30,11 @@ def test_sanity():
                               input_device_names=[input_device_name],
                               output_device_manager=output_device_manager,
                               pipeline_handler=TestPipelineHandler())
-
+    loop_ended = Event()
+    service.loop_ended_event.register_handler(lambda x: loop_ended.set())
     try:
         Thread(target=service.start).start()
-        sleep(1)
+        loop_ended.wait(3)
         message, _, _ = output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
         assert message is not None
         assert message.stream.read() == b'output_device1'

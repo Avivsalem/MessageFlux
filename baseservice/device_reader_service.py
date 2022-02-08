@@ -3,9 +3,12 @@ from abc import abstractmethod, ABCMeta
 from time import time
 from typing import List, Optional, Tuple
 
-from baseservice.iodevices.base import InputTransactionScope
-from baseservice.iodevices.base.common import Message, DeviceHeaders
-from baseservice.iodevices.base.input_devices import InputDeviceManager, AggregateInputDevice, InputDevice
+from baseservice.iodevices.base import (InputTransactionScope,
+                                        Message,
+                                        DeviceHeaders,
+                                        InputDeviceManager,
+                                        AggregateInputDevice,
+                                        InputDevice)
 from baseservice.server_loop_service import ServerLoopService
 
 
