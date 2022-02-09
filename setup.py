@@ -1,9 +1,12 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
-setup(name='BaseService',
+pkg_name = 'baseservice'
+
+setup(name=pkg_name,
       version='0.1a',
       author='Aviv Salem',
       author_email='avivsalem@gmail.com',
       url='https://github.com/Avivsalem/BaseService',
-      packages=['baseservice'],
+      packages=find_packages(include=[pkg_name, f'{pkg_name}.*']),
+      install_requires=[],
      )
