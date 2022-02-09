@@ -1,5 +1,4 @@
 import uuid
-from io import BytesIO
 from typing import Optional
 
 from baseservice.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
@@ -12,8 +11,8 @@ def sanity_test(input_device_manager: InputDeviceManager,
     Common test for all devices.
     """
     device_name = device_name or str(uuid.uuid4())
-    test_message_1 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test1'})
-    test_message_2 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test2'})
+    test_message_1 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test1'})
+    test_message_2 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test2'})
 
     output_device_manager.connect()
     try:
@@ -44,8 +43,8 @@ def rollback_test(input_device_manager: InputDeviceManager,
     Common test for all devices.
     """
     device_name = device_name or str(uuid.uuid4())
-    test_message_1 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test1'})
-    test_message_2 = Message(BytesIO(str(uuid.uuid4()).encode()), headers={'test': 'test2'})
+    test_message_1 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test1'})
+    test_message_2 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test2'})
 
     output_device_manager.connect()
     try:

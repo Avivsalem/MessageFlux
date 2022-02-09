@@ -1,5 +1,6 @@
 import copy
-from typing import BinaryIO, Dict, Any, Optional
+from io import BytesIO
+from typing import BinaryIO, Dict, Any, Optional, Union
 
 MessageHeaders = Dict[str, Any]  # this is the type for message metadata
 
@@ -9,17 +10,30 @@ class Message:
     this class is the basic unit that is read from, or sent to devices.
     """
 
-    def __init__(self, stream: BinaryIO, headers: Optional[MessageHeaders] = None):
+    def __init__(self, data: Union[BinaryIO, bytes], headers: Optional[MessageHeaders] = None):
         """
-        :param stream: the stream containing the body of the message
+        :param data: the bytes/stream containing the body of the message
         :param headers: (optional) headers containing metadata about the message
         """
-        self._stream = stream
+        if isinstance(data, bytes):
+            data = BytesIO(data)
+
+        self._stream = data
         self._headers = headers or {}
 
     @property
     def stream(self) -> BinaryIO:
         return self._stream
+
+    @property
+    def bytes(self) -> bytes:
+        """
+        :return: the data of the message
+        """
+        current_pos = self._stream.tell()
+        data = self._stream.read()
+        self._stream.seek(current_pos)
+        return data
 
     @property
     def headers(self) -> MessageHeaders:
@@ -32,11 +46,7 @@ class Message:
         if not isinstance(other, Message):
             return False
 
-        my_data = self._stream.read()
-        self._stream.seek(0)
-        other_data = other._stream.read()
-        other._stream.seek(0)
-        return my_data == other_data and self._headers == other._headers
+        return self.bytes == other.bytes and self._headers == other._headers
 
     def __copy__(self):
         stream_copy = copy.copy(self._stream)

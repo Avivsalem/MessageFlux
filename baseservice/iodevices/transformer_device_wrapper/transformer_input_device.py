@@ -1,17 +1,17 @@
 from typing import Optional
 
 from baseservice.iodevices.base import InputDevice, ReadMessageResult, EMPTY_RESULT, InputDeviceManager
-from baseservice.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
+from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
-class MessageStoreInputDevice(InputDevice):
+class TransformerInputDevice(InputDevice):
     def __init__(self,
-                 manager: 'MessageStoreInputDeviceManager',
+                 manager: 'TransformerInputDeviceManager',
                  name: str,
                  inner_device: InputDevice,
-                 message_store: MessageStoreBase):
-        super(MessageStoreInputDevice, self).__init__(manager, name)
-        self._message_store = message_store
+                 transformer: TransformerBase):
+        super(TransformerInputDevice, self).__init__(manager, name)
+        self._transformer = transformer
         self._inner_device = inner_device
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
@@ -20,20 +20,22 @@ class MessageStoreInputDevice(InputDevice):
         if message is None:
             return EMPTY_RESULT
 
-        return self._message_store.get_message(message, headers, transaction)
+        return self._transformer.transform_incoming_message(message, headers, transaction)
 
 
-class MessageStoreInputDeviceManager(InputDeviceManager):
-    def __init__(self, inner_device_manager: InputDeviceManager, message_store: MessageStoreBase):
+class TransformerInputDeviceManager(InputDeviceManager):
+    def __init__(self, inner_device_manager: InputDeviceManager, transformer: TransformerBase):
         self._inner_device_manager = inner_device_manager
-        self._message_store = message_store
+        self._transformer = transformer
 
     def connect(self):
+        self._transformer.connect()
         self._inner_device_manager.connect()
 
     def disconnect(self):
         self._inner_device_manager.disconnect()
+        self._transformer.disconnect()
 
     def get_input_device(self, name: str) -> InputDevice:
         inner_input_device = self._inner_device_manager.get_input_device(name)
-        return MessageStoreInputDevice(self, name, inner_input_device, self._message_store)
+        return TransformerInputDevice(self, name, inner_input_device, self._transformer)

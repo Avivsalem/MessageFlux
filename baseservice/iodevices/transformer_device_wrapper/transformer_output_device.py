@@ -1,34 +1,36 @@
 from baseservice.iodevices.base import OutputDevice, OutputDeviceManager, Message, DeviceHeaders
-from baseservice.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
+from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
-class MessageStoreOutputDevice(OutputDevice):
+class TransformerOutputDevice(OutputDevice):
     def __init__(self,
-                 manager: 'MessageStoreOutputDeviceManager',
+                 manager: 'TransformerOutputDeviceManager',
                  name: str,
                  inner_device: OutputDevice,
-                 message_store: MessageStoreBase):
+                 transformer: TransformerBase):
         super().__init__(manager, name)
-        self._message_store = message_store
+        self._transformer = transformer
         self._inner_device = inner_device
 
     def _send_message(self, message: Message, device_headers: DeviceHeaders):
-        new_message, new_device_headers = self._message_store.store_message(message, device_headers)
+        new_message, new_device_headers = self._transformer.transform_outgoing_message(message, device_headers)
         self._inner_device.send_message(new_message, new_device_headers)
 
 
-class MessageStoreOutputDeviceManager(OutputDeviceManager):
-    def __init__(self, inner_device_manager: OutputDeviceManager, message_store: MessageStoreBase):
+class TransformerOutputDeviceManager(OutputDeviceManager):
+    def __init__(self, inner_device_manager: OutputDeviceManager, transformer: TransformerBase):
         self._inner_device_manager = inner_device_manager
-        self._message_store = message_store
+        self._transformer = transformer
 
     def connect(self):
+        self._transformer.connect()
         self._inner_device_manager.connect()
 
     def disconnect(self):
         self._inner_device_manager.disconnect()
+        self._transformer.disconnect()
 
     def get_output_device(self, name: str) -> OutputDevice:
         inner_device = self._inner_device_manager.get_output_device(name)
-        return MessageStoreOutputDevice(self, name, inner_device, self._message_store)
+        return TransformerOutputDevice(self, name, inner_device, self._transformer)
 
