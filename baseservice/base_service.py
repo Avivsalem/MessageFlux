@@ -99,6 +99,7 @@ class BaseService(metaclass=ABCMeta):
             self._run_service(cancellation_token=self._cancellation_token)
             self._cancellation_token.wait()
         except Exception as ex:
+            self._logger.exception(f'Service raised an exception: {str(ex)}')
             self._cancellation_token.wait()
             server_exception = ex
 
