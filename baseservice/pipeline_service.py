@@ -25,6 +25,22 @@ class PipelineHandlerBase(metaclass=ABCMeta):
         pass
 
 
+class FixedRouterPipelineHandler(PipelineHandlerBase):
+    """
+    A pipeline handler that routes all messages to a single output device. without any processing.
+    """
+
+    def __init__(self, output_device_name: str):
+        self._output_device_name = output_device_name
+
+    def handle_message(self,
+                       input_device: InputDevice,
+                       message: Message,
+                       device_headers: DeviceHeaders) -> Union[Tuple[None, None, None],
+                                                               Tuple[str, Message, DeviceHeaders]]:
+        return self._output_device_name, message, device_headers
+
+
 class PipelineService(DeviceReaderService):
     def __init__(self, *, output_device_manager: OutputDeviceManager, pipeline_handler: PipelineHandlerBase, **kwargs):
         super().__init__(**kwargs)
