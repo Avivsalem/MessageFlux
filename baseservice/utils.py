@@ -31,14 +31,14 @@ class StatefulListIterator(Collection[TItemType]):
 TEventType = TypeVar('TEventType')
 
 
-class Event(Generic[TEventType]):
+class ObservableEvent(Generic[TEventType]):
     def __init__(self) -> None:
         self._handlers: List[Callable[[TEventType], None]] = []
 
-    def register_handler(self, handler: Callable[[TEventType], None]) -> None:
+    def subscribe(self, handler: Callable[[TEventType], None]) -> None:
         self._handlers.append(handler)
 
-    def unregister_handler(self, handler: Callable[[TEventType], None]) -> bool:
+    def unsubscribe(self, handler: Callable[[TEventType], None]) -> bool:
         if handler in self._handlers:
             self._handlers.remove(handler)
             return True

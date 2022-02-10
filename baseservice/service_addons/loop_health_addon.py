@@ -12,9 +12,9 @@ class LoopHealthAddon:
                  max_inactivity_timeout: float = -1):
         self._service = service
         if max_inactivity_timeout > 0:
-            self._service.state_changed_event.register_handler(self._on_service_state_change)
+            self._service.state_changed_event.subscribe(self._on_service_state_change)
 
-        self._service.loop_ended_event.register_handler(self._on_loop_ended)
+        self._service.loop_ended_event.subscribe(self._on_loop_ended)
 
         self._max_consecutive_failures = max_consecutive_failures
         self._max_inactivity_timeout = max_inactivity_timeout

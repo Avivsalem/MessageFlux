@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 from typing import Optional
 
-from baseservice.utils import Event
+from baseservice.utils import ObservableEvent
 
 
 @unique
@@ -37,7 +37,7 @@ class BaseService(metaclass=ABCMeta):
         self._cancellation_token: threading.Event = threading.Event()
         self._cancellation_token.set()  # service starts as not_running
         self._logger = logging.getLogger(__name__)
-        self._state_changed_event: Event[ServiceState] = Event()
+        self._state_changed_event: ObservableEvent[ServiceState] = ObservableEvent()
         self._service_state = ServiceState.INITIALIZED
 
         if not name:
@@ -64,7 +64,7 @@ class BaseService(metaclass=ABCMeta):
         return self._service_state
 
     @property
-    def state_changed_event(self) -> Event[ServiceState]:
+    def state_changed_event(self) -> ObservableEvent[ServiceState]:
         """
         this is an Event, that can be used to register on server state changes
         """
@@ -123,7 +123,7 @@ class BaseService(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _run_service(self, cancellation_token: Event):
+    def _run_service(self, cancellation_token: threading.Event):
         """
         this method should be implemented by child classes, and actually run the service
 

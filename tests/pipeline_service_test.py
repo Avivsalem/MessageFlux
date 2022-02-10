@@ -30,7 +30,7 @@ def test_sanity():
                               output_device_manager=output_device_manager,
                               pipeline_handler=TestPipelineHandler())
     loop_ended = Event()
-    service.loop_ended_event.register_handler(lambda x: loop_ended.set())
+    service.loop_ended_event.subscribe(lambda x: loop_ended.set())
     try:
         Thread(target=service.start).start()
         loop_ended.wait(3)
