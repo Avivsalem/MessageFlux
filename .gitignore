@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Internal folders for jetbrains' IDEs
+.idea/
+
+# Reports from ci utilities such as mypy are configured to be saved inside this directory
+reports/

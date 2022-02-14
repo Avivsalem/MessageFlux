@@ -9,4 +9,13 @@ setup(name=pkg_name,
       url='https://github.com/Avivsalem/BaseService',
       packages=find_packages(include=[pkg_name, f'{pkg_name}.*']),
       install_requires=[],
-     )
+      extras_require={
+            "dev": [
+                  "tox",
+                  "pytest",
+                  "mypy",
+                  "lxml",  # lxml is a mypy requirement in order to generate xml reports.
+                  "flake8"
+            ]
+      }
+)

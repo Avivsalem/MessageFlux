@@ -1,0 +1,54 @@
+[build-system]
+requires = [
+    "setuptools",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.tox]
+legacy_tox_ini="""
+[tox]
+envlist = py39, flake8, mypy
+isolated_build = True
+
+[gh-actions]
+python =
+    3.7: py37
+    3.8: py38
+    3.9: py39, mypy, flake8
+
+[testenv]
+commands =
+    python -m pip install pip -U
+    pip install .[dev]
+    pytest
+
+
+[testenv:mypy]
+commands =
+    pip install .[dev]
+    mypy baseservice
+
+[testenv:flake8]
+commands =
+    pip install .[dev]
+    flake8 baseservice tests
+"""
+
+[tool.mypy]
+warn_unused_configs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs  = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+strict_equality = true
+pretty = true
+show_traceback = true
+raise_exceptions = true
+html_report = "./reports/mypy"
+junit_xml = "./reports/mypy.xml"
