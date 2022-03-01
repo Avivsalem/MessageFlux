@@ -79,4 +79,4 @@ class _AsyncioContext(Context):
 
 global_context = _GlobalContext()
 thread_local_context = _ThreadLocalContext()
-asyncio_context = _AsyncioContext
+asyncio_context = _AsyncioContext()
