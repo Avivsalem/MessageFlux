@@ -77,6 +77,6 @@ class _AsyncioContext(Context):
             _context_var.reset(token)
 
 
-global_context = _GlobalContext()
-thread_local_context = _ThreadLocalContext()
-asyncio_context = _AsyncioContext()
+global_context: Context = _GlobalContext()
+thread_local_context: Context = _ThreadLocalContext()
+asyncio_context: Context = _AsyncioContext()
