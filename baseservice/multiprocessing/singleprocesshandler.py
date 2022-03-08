@@ -57,7 +57,6 @@ def _start_service_and_listen_queue(service_factory: ServiceFactory,
         service.start()
     except Exception as ex:
         # TODO: log
-        logging.shutdown()
         raise
 
 
@@ -110,12 +109,24 @@ class SingleProcessHandler:
         context = multiprocessing.get_context('spawn')
         self._parent_pipe, child_pipe = context.Pipe()
         self._stop_was_called.clear()
+
         self._process = context.Process(target=_start_service_and_listen_queue,
                                         args=(self._service_factory, child_pipe, self._instance_index))
+
+        def _run_process():
+            self._process.start()
+            self._process.join()
+            self._cleanup()
+
+            exit_callback(self)
+
+        run_process_thread = threading.Thread(target=_run_process, daemon=True)
+        run_process_thread.start()
+
         self._liveness_thread = threading.Thread(target=self._liveness_check, daemon=True)
         self._liveness_thread.start()
 
-        return self._run_process(exit_callback)
+        return run_process_thread
 
     def stop(self):
         self._stop_was_called.set()
@@ -143,18 +154,7 @@ class SingleProcessHandler:
         if self.is_alive():
             self._process.kill()
 
-    def _close(self):
+    def _cleanup(self):
         if self._parent_pipe is not None:
             self._parent_pipe.close()
             self._parent_pipe = None
-
-    def _run_process(self, exit_callback: Callable[['SingleProcessHandler'], None]) -> threading.Thread:
-        def _run_thread():
-            self._process.start()
-            self._process.join()
-            self._close()
-            exit_callback(self)
-
-        t = threading.Thread(target=_run_thread, daemon=True)
-        t.start()
-        return t
