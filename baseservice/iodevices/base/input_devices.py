@@ -10,6 +10,7 @@ from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_
 ReadMessageResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
 EMPTY_RESULT = (None, None, None)
 
+
 class InputDeviceException(KwargsException):
     """
     a base exception class for all input device related exceptions

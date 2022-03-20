@@ -54,4 +54,4 @@ class PipelineService(DeviceReaderService):
                                                                                                         device_headers)
             if output_device_name is not None and new_message is not None:
                 output_device = self._output_device_manager.get_output_device(output_device_name)
-                output_device.send_message(message, device_headers)
+                output_device.send_message(new_message, new_device_headers)
