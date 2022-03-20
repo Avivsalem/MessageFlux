@@ -23,6 +23,7 @@ _STOP_MESSAGE = 'STOP'
 _TEST_ALIVE_MESSAGE = 'TEST_ALIVE'
 
 INSTANCE_INDEX_ENV_VAR = 'MULTI_PROCESS_INSTANCE_INDEX'
+_logger = logging.getLogger(__name__)
 
 
 def _start_service_and_listen_queue(service_factory: ServiceFactory,
@@ -39,13 +40,13 @@ def _start_service_and_listen_queue(service_factory: ServiceFactory,
                     if message == _TEST_ALIVE_MESSAGE:
                         pipe.send(inner_service.is_alive)
                     elif message == _STOP_MESSAGE:
-                        # TODO: log
+                        _logger.info(f'Stopping Service #{instance_index}')
                         break
                     else:
-                        # TODO: log
+                        _logger.error(f'Unknown message received: {message}')
                         pass
             except Exception:
-                # TODO: log
+                _logger.exception('Error in pipe listener')
                 pass
             finally:
                 inner_service.stop()
@@ -53,10 +54,10 @@ def _start_service_and_listen_queue(service_factory: ServiceFactory,
 
         t = threading.Thread(target=_listen_to_pipe, args=(service, child_pipe), daemon=True)
         t.start()
-        # TODO: log
+        _logger.info(f'Starting Service #{instance_index}')
         service.start()
     except Exception as ex:
-        # TODO: log
+        _logger.exception(f'Error starting service #{instance_index}')
         raise
 
 
@@ -93,7 +94,7 @@ class SingleProcessHandler:
                     alive = self._parent_pipe.recv()
 
             if not alive:
-                # TODO: log
+                _logger.error(f'Service #{self._instance_index} is not alive. Stopping.')
                 self.stop()
                 self.kill()
                 break

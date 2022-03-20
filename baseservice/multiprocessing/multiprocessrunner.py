@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import time
@@ -16,14 +17,17 @@ class MultiProcessRunner(BaseService):
                  instance_count: int,
                  shutdown_timeout: int = 5,
                  live_check_interval: int = 60,
-                 live_check_timeout: int = 10):
+                 live_check_timeout: int = 10,
+                 restart_on_failure: bool = True):
+
         super().__init__()
         self._service_factory = service_factory
         self._instance_count = instance_count
         self._shutdown_timeout = shutdown_timeout
         self._live_check_interval = live_check_interval
         self._live_check_timeout = live_check_timeout
-        # TODO: logger
+        self._restart_on_failure = restart_on_failure
+        self._logger = logging.getLogger(__name__)
 
         self._process_handlers: List[SingleProcessHandler] = []
 
@@ -37,7 +41,7 @@ class MultiProcessRunner(BaseService):
     def _run_service(self, cancellation_token: threading.Event):
         os.environ[INSTANCE_COUNT_ENV_VAR] = str(self._instance_count)
         for i in range(self._instance_count):
-            # TODO: log
+            self._logger.info(f'Starting service instance {i}')
             self._run_service_instance(i)
 
     @property
@@ -53,6 +57,9 @@ class MultiProcessRunner(BaseService):
         self._process_handlers.append(handler)
 
     def _on_handler_exit(self, handler: SingleProcessHandler):
+        if not self._restart_on_failure:
+            return
+
         if self._cancellation_token.is_set():
             return  # no need to restart if we are shutting down
 
@@ -68,17 +75,19 @@ class MultiProcessRunner(BaseService):
         time.sleep(self._shutdown_timeout)
         still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
         if still_running:
-            # TODO: log
+            self._logger.warning(f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
             for handler in still_running:
                 handler.terminate()
             time.sleep(self._shutdown_timeout)
             still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
             if still_running:
-                # TODO: log
+                self._logger.warning(
+                    f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
                 for handler in still_running:
                     handler.kill()
                 time.sleep(self._shutdown_timeout)
                 still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
                 if still_running:
-                    # TODO: log
+                    self._logger.error(
+                        f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
                     pass
