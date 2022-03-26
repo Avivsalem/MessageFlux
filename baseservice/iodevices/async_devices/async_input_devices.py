@@ -107,7 +107,7 @@ class AsyncAggregateInputDevice(AsyncInputDevice):
     async def _read_message(self,
                             timeout: Optional[float] = 0,
                             with_transaction: bool = True) -> ReadMessageResult:
-        start_time = time.time()
+        end_time = time.time() + timeout if timeout is not None else 0
         if self._inner_devices_tasks is None:
             self._inner_devices_tasks = {}
             for inner_device in self._inner_devices:
@@ -121,7 +121,7 @@ class AsyncAggregateInputDevice(AsyncInputDevice):
             if timeout is None:
                 remaining_time = None
             else:
-                remaining_time = max((start_time + timeout) - time.time(), 0)
+                remaining_time = max(end_time - time.time(), 0)
 
             done, _ = await asyncio.wait(self._inner_devices_tasks.keys(),
                                          timeout=remaining_time,
