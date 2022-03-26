@@ -136,9 +136,12 @@ class AggregateInputDevice(InputDevice):
     def _read_message(self,
                       timeout: Optional[float] = 0,
                       with_transaction: bool = True) -> ReadMessageResult:
-        end_time = time() + timeout
+        if timeout is not None:
+            end_time = time() + timeout
+        else:
+            end_time = -1
         message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
-        while message is None and (time() < end_time):
+        while message is None and (timeout is None or (time() < end_time)):
             sleep(0.1)
             message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
 

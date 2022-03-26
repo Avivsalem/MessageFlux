@@ -1,4 +1,5 @@
 import asyncio
+import time
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Tuple, Union, List, Dict
 
@@ -106,26 +107,36 @@ class AsyncAggregateInputDevice(AsyncInputDevice):
     async def _read_message(self,
                             timeout: Optional[float] = 0,
                             with_transaction: bool = True) -> ReadMessageResult:
+        start_time = time.time()
         if self._inner_devices_tasks is None:
             self._inner_devices_tasks = {}
             for inner_device in self._inner_devices:
                 task = asyncio.create_task(
                     inner_device.read_message(timeout=timeout, with_transaction=with_transaction))
                 self._inner_devices_tasks[task] = inner_device
-        done, _ = await asyncio.wait(self._inner_devices_tasks.keys(),
-                                     timeout=timeout,
-                                     return_when=asyncio.FIRST_COMPLETED)
 
-        for task in done:
-            inner_device = self._inner_devices_tasks[task]
-            self._inner_devices_tasks.pop(task)
-            new_task = asyncio.create_task(
-                inner_device.read_message(timeout=timeout, with_transaction=with_transaction))
-            self._inner_devices_tasks[new_task] = inner_device
-            result = task.result()
-            if result is not EMPTY_RESULT:
-                self._last_read_device = inner_device
-                return result
+        remaining_time = None  # this is so the loop will run at least once
+
+        while remaining_time is None or remaining_time > 0:
+            if timeout is None:
+                remaining_time = None
+            else:
+                remaining_time = max((start_time + timeout) - time.time(), 0)
+
+            done, _ = await asyncio.wait(self._inner_devices_tasks.keys(),
+                                         timeout=remaining_time,
+                                         return_when=asyncio.FIRST_COMPLETED)
+
+            for task in done:
+                inner_device = self._inner_devices_tasks[task]
+                self._inner_devices_tasks.pop(task)
+                new_task = asyncio.create_task(
+                    inner_device.read_message(timeout=timeout, with_transaction=with_transaction))
+                self._inner_devices_tasks[new_task] = inner_device
+                result = task.result()
+                if result is not EMPTY_RESULT:
+                    self._last_read_device = inner_device
+                    return result
 
         return EMPTY_RESULT
 
