@@ -3,7 +3,7 @@ import time
 from abc import ABCMeta, abstractmethod
 from typing import Optional, Tuple, Union, List, Dict
 
-from baseservice.iodevices.async_devices.async_input_transaction import AsyncInputTransaction, ASYNC_NULL_TRANSACTION
+from baseservice.async_service.iodevices.base.async_input_transaction import AsyncInputTransaction, ASYNC_NULL_TRANSACTION
 from baseservice.iodevices.base import InputDevice, EMPTY_RESULT
 from baseservice.iodevices.base.common import Message, DeviceHeaders
 

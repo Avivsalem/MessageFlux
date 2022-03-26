@@ -4,8 +4,9 @@ from asyncio import Event
 from typing import Optional, Tuple, List, Union, TYPE_CHECKING
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
+
 if TYPE_CHECKING:
-    from baseservice.iodevices.async_devices.async_input_devices import AsyncInputDevice
+    from baseservice.async_service.iodevices.base.async_input_devices import AsyncInputDevice
 
 
 class AsyncInputTransaction(metaclass=ABCMeta):
@@ -110,9 +111,10 @@ class AsyncInputTransactionScope(AsyncInputTransaction):
         self._with_transaction = with_transaction
         self._transactions: List[AsyncInputTransaction] = []
 
-    async def read_message(self, timeout: Optional[float] = 0) -> Union[Tuple[Message, DeviceHeaders], Tuple[None, None]]:
+    async def read_message(self, timeout: Optional[float] = 0) -> Union[
+        Tuple[Message, DeviceHeaders], Tuple[None, None]]:
         message, device_headers, transaction = await self.device.read_message(timeout=timeout,
-                                                                        with_transaction=self._with_transaction)
+                                                                              with_transaction=self._with_transaction)
 
         if transaction is not None:
             self._transactions.append(transaction)
