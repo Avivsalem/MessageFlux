@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional
+from typing import Optional, TypeVar, Generic
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
 from baseservice.utils import KwargsException
+
+TManagerType = TypeVar('TManagerType', bound='OutputDeviceManager')
 
 
 class OutputDeviceException(KwargsException):
@@ -12,12 +14,12 @@ class OutputDeviceException(KwargsException):
     pass
 
 
-class OutputDevice(metaclass=ABCMeta):
+class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
     """
     base class for all output devices
     """
 
-    def __init__(self, manager: 'OutputDeviceManager', name: str):
+    def __init__(self, manager: TManagerType, name: str):
         """
 
         :param manager: the output device manager that created this device
@@ -25,6 +27,20 @@ class OutputDevice(metaclass=ABCMeta):
         """
         self._manager = manager
         self._name = name
+
+    @property
+    def name(self) -> str:
+        """
+        :return: the name of this device
+        """
+        return self._name
+
+    @property
+    def manager(self) -> TManagerType:
+        """
+        :return: the input device manager that created this device
+        """
+        return self._manager
 
     def send_message(self, message: Message, device_headers: Optional[DeviceHeaders] = None):
         """
@@ -53,6 +69,12 @@ class OutputDeviceManager(metaclass=ABCMeta):
     """
     this is a base class for output device managers. it is used to create output devices
     """
+
+    def __enter__(self):
+        self.connect()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
 
     def connect(self):
         """

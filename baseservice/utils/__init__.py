@@ -1,6 +1,10 @@
+import os
+
+import datetime
+
 import threading
 from itertools import cycle, islice
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any
 
 
 class KwargsException(Exception):
@@ -129,3 +133,29 @@ class ThreadLocalMember(Generic[TValueType]):
             init_value = self._init_value
         lv = self.get_thread_local_value(instance, init_value)
         lv.value = value
+
+
+def get_random_id():
+    return os.urandom(16).hex()
+
+def json_safe_encoder(obj: Any):
+    """
+    Convert non-serializable types to strings.
+
+    :param obj: The object to make serializable.
+    :return: Serializable version of the object (string-form).
+    """
+
+    try:
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.time):
+            return obj.strftime('%H:%M')
+        elif isinstance(obj, bytes):
+            return obj.decode()
+        else:
+            return str(obj)
+    except Exception:
+        return "UNENCODABLE"

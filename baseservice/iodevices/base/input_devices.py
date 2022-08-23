@@ -1,14 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from time import time, sleep
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List, Union, TypeVar, Generic
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
-from baseservice.utils import KwargsException, StatefulListIterator
-
 from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
+from baseservice.utils import KwargsException, StatefulListIterator
 
 ReadMessageResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
 EMPTY_RESULT = (None, None, None)
+
+TManagerType = TypeVar('TManagerType', bound='InputDeviceManager')
 
 
 class InputDeviceException(KwargsException):
@@ -18,15 +19,15 @@ class InputDeviceException(KwargsException):
     pass
 
 
-class InputDevice(metaclass=ABCMeta):
+class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
     """
     this is the base class for input devices
     """
     INPUT_DEVICE_NAME_HEADER = "__INPUT_DEVICE_NAME__"
 
-    def __init__(self, manager: 'InputDeviceManager', name: str):
+    def __init__(self, manager: TManagerType, name: str):
         """
-
+        ctor
         :param manager: the input device manager that created this device
         :param name: the name of this device
         """
@@ -41,7 +42,7 @@ class InputDevice(metaclass=ABCMeta):
         return self._name
 
     @property
-    def manager(self) -> 'InputDeviceManager':
+    def manager(self) -> TManagerType:
         """
         :return: the input device manager that created this device
         """
@@ -52,7 +53,6 @@ class InputDevice(metaclass=ABCMeta):
                      with_transaction: bool = True) -> ReadMessageResult:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
-
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return (None, None)
         :param with_transaction: 'True' if the device should read message within transaction,
@@ -114,7 +114,7 @@ class AggregateInputDevice(InputDevice):
 
     def _read_from_device(self, with_transaction: bool) -> ReadMessageResult:
         """
-        tries to read from the first device that returnes a result.
+        tries to read from the first device that returns a result.
         upon success, return the result. otherwise, returns (None,None,None)
 
         :param with_transaction: 'True' if the device should read message within transaction,
@@ -149,6 +149,12 @@ class InputDeviceManager(metaclass=ABCMeta):
     """
     this is the base class for input device managers. this class is used to create input devices.
     """
+
+    def __enter__(self):
+        self.connect()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
 
     def connect(self):
         """
