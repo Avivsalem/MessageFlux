@@ -1,14 +1,15 @@
 from abc import ABCMeta, abstractmethod
 from time import time, sleep
-from typing import Optional, Tuple, List, Union, TYPE_CHECKING
+from typing import Optional, Tuple, List, Union, TypeVar, Generic
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
+from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
 from baseservice.utils import KwargsException, StatefulListIterator
 
-if TYPE_CHECKING:
-    from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
-    ReadStreamResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
+ReadMessageResult = Union[Tuple[Message, DeviceHeaders, InputTransaction], Tuple[None, None, None]]
+EMPTY_RESULT = (None, None, None)
 
+TManagerType = TypeVar('TManagerType', bound='InputDeviceManager')
 
 
 class InputDeviceException(KwargsException):
@@ -18,15 +19,15 @@ class InputDeviceException(KwargsException):
     pass
 
 
-class InputDevice(metaclass=ABCMeta):
+class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
     """
     this is the base class for input devices
     """
     INPUT_DEVICE_NAME_HEADER = "__INPUT_DEVICE_NAME__"
 
-    def __init__(self, manager: 'InputDeviceManager', name: str):
+    def __init__(self, manager: TManagerType, name: str):
         """
-
+        ctor
         :param manager: the input device manager that created this device
         :param name: the name of this device
         """
@@ -41,28 +42,27 @@ class InputDevice(metaclass=ABCMeta):
         return self._name
 
     @property
-    def manager(self) -> 'InputDeviceManager':
+    def manager(self) -> TManagerType:
         """
         :return: the input device manager that created this device
         """
         return self._manager
 
-    def read_stream(self,
-                    timeout: Optional[float] = 0,
-                    with_transaction: bool = True) -> 'ReadStreamResult':
+    def read_message(self,
+                     timeout: Optional[float] = 0,
+                     with_transaction: bool = True) -> ReadMessageResult:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
-
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return (None, None)
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
-        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or EMPTY_RESULT if no message was available.
         the device headers, can contain extra information about the device that returned the message
         """
-        message, device_headers, transaction = self._read_stream(timeout=timeout,
-                                                                 with_transaction=with_transaction)
+        message, device_headers, transaction = self._read_message(timeout=timeout,
+                                                                  with_transaction=with_transaction)
         if message is not None:
             device_headers = device_headers or {}
             device_headers.setdefault(self.INPUT_DEVICE_NAME_HEADER, self.name)
@@ -73,9 +73,9 @@ class InputDevice(metaclass=ABCMeta):
         return message, device_headers, transaction
 
     @abstractmethod
-    def _read_stream(self,
-                     timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self,
+                      timeout: Optional[float] = 0,
+                      with_transaction: bool = True) -> ReadMessageResult:
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -84,7 +84,7 @@ class InputDevice(metaclass=ABCMeta):
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
-        :return: a tuple of (Message, DeviceHeaders, Transaction) or (None, None, None) if no message was available.
+        :return: a tuple of (Message, DeviceHeaders, Transaction) or EMPTY_RESULT if no message was available.
         the device headers, can contain extra information about the device that returned the message
         """
         pass
@@ -112,9 +112,9 @@ class AggregateInputDevice(InputDevice):
         """
         return self._last_read_device
 
-    def _read_from_device(self, with_transaction: bool) -> 'ReadStreamResult':
+    def _read_from_device(self, with_transaction: bool) -> ReadMessageResult:
         """
-        tries to read from the first device that returnes a result.
+        tries to read from the first device that returns a result.
         upon success, return the result. otherwise, returns (None,None,None)
 
         :param with_transaction: 'True' if the device should read message within transaction,
@@ -125,17 +125,17 @@ class AggregateInputDevice(InputDevice):
         for inner_device in self._inner_devices_iterator:
             self._last_read_device = inner_device
 
-            message, device_headers, transaction = inner_device.read_stream(timeout=0,
-                                                                            with_transaction=with_transaction)
+            message, device_headers, transaction = inner_device.read_message(timeout=0,
+                                                                             with_transaction=with_transaction)
             if message is not None:
                 return message, device_headers, transaction
 
         self._last_read_device = None
-        return None, None, None
+        return EMPTY_RESULT
 
-    def _read_stream(self,
-                     timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self,
+                      timeout: Optional[float] = 0,
+                      with_transaction: bool = True) -> ReadMessageResult:
         end_time = time() + timeout
         message, device_headers, transaction = self._read_from_device(with_transaction=with_transaction)
         while message is None and (time() < end_time):
@@ -149,6 +149,12 @@ class InputDeviceManager(metaclass=ABCMeta):
     """
     this is the base class for input device managers. this class is used to create input devices.
     """
+
+    def __enter__(self):
+        self.connect()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.disconnect()
 
     def connect(self):
         """

@@ -3,9 +3,12 @@ from abc import abstractmethod, ABCMeta
 from time import time
 from typing import List, Optional, Tuple
 
-from baseservice.iodevices.base.common import Message, DeviceHeaders
-from baseservice.iodevices.base.input_devices import InputDeviceManager, AggregateInputDevice, InputTransactionScope, \
-    InputDevice
+from baseservice.iodevices.base import (InputTransactionScope,
+                                        Message,
+                                        DeviceHeaders,
+                                        InputDeviceManager,
+                                        AggregateInputDevice,
+                                        InputDevice)
 from baseservice.server_loop_service import ServerLoopService
 
 
@@ -30,7 +33,7 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
         'True' means that it will wait until read_timeout is passed, or batch_count messages has reached.
         :param kwargs: passed to parent as is
         """
-        super(DeviceReaderService, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._input_device_manager = input_device_manager
         self._input_device_names = input_device_names
         self._use_transactions = use_transactions
@@ -49,7 +52,7 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
             batch = []
 
             # read first message with _read_timeout anyway
-            message, device_headers = transaction_scope.read_stream(timeout=self._read_timeout)
+            message, device_headers = transaction_scope.read_message(timeout=self._read_timeout)
             if message is not None:
                 batch.append((self._aggregate_input_device.last_read_device, message, device_headers))
 
@@ -65,7 +68,7 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
                 else:
                     timeout = 0  # if not wait_for_batch, try to read another message without waiting at all
 
-                message, device_headers = transaction_scope.read_stream(timeout=timeout)
+                message, device_headers = transaction_scope.read_message(timeout=timeout)
                 if message is None:
                     break  # no more messages to read
 

@@ -1,6 +1,10 @@
+from time import perf_counter
+
+import datetime
+import os
 import threading
 from itertools import cycle, islice
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any
 
 
 class KwargsException(Exception):
@@ -31,14 +35,14 @@ class StatefulListIterator(Collection[TItemType]):
 TEventType = TypeVar('TEventType')
 
 
-class Event(Generic[TEventType]):
+class ObservableEvent(Generic[TEventType]):
     def __init__(self) -> None:
         self._handlers: List[Callable[[TEventType], None]] = []
 
-    def register_handler(self, handler: Callable[[TEventType], None]) -> None:
+    def subscribe(self, handler: Callable[[TEventType], None]) -> None:
         self._handlers.append(handler)
 
-    def unregister_handler(self, handler: Callable[[TEventType], None]) -> bool:
+    def unsubscribe(self, handler: Callable[[TEventType], None]) -> bool:
         if handler in self._handlers:
             self._handlers.remove(handler)
             return True
@@ -129,3 +133,55 @@ class ThreadLocalMember(Generic[TValueType]):
             init_value = self._init_value
         lv = self.get_thread_local_value(instance, init_value)
         lv.value = value
+
+
+def get_random_id():
+    return os.urandom(16).hex()
+
+
+class TimerContext:
+    """
+    context.py object that times the context.py
+    """
+
+    def __init__(self):
+        self._start = -1
+        self._elapsed = -1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """
+        returns the elapsed time for this context.py (between __enter__ and __exit__)
+        :return: the elapsed time (in seconds) for the context.py. -1 if __enter__ or __exit__ weren't called
+        """
+        return self._elapsed
+
+    def __enter__(self):
+        self._start = perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._elapsed = perf_counter() - self._start
+
+
+def json_safe_encoder(obj: Any):
+    """
+    Convert non-serializable types to strings.
+
+    :param obj: The object to make serializable.
+    :return: Serializable version of the object (string-form).
+    """
+
+    try:
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+        elif isinstance(obj, datetime.time):
+            return obj.strftime('%H:%M')
+        elif isinstance(obj, bytes):
+            return obj.decode()
+        else:
+            return str(obj)
+    except Exception:
+        return "UNENCODABLE"

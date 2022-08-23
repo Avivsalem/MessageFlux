@@ -4,7 +4,7 @@ from time import time
 from typing import Optional
 
 from baseservice.base_service import BaseService
-from baseservice.utils import Event
+from baseservice.utils import ObservableEvent
 
 
 class LoopMetrics:
@@ -49,10 +49,10 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
         super().__init__(**kwargs)
         self._duration_after_loop_success = duration_after_loop_success
         self._duration_after_loop_failure = duration_after_loop_failure
-        self._loop_ended_event: Event[LoopMetrics] = Event()
+        self._loop_ended_event: ObservableEvent[LoopMetrics] = ObservableEvent()
 
     @property
-    def loop_ended_event(self) -> Event[LoopMetrics]:
+    def loop_ended_event(self) -> ObservableEvent[LoopMetrics]:
         return self._loop_ended_event
 
     def _run_service(self, cancellation_token: threading.Event):

@@ -2,14 +2,18 @@ import heapq
 import time
 from functools import total_ordering
 from threading import Condition
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List
 
-from baseservice.iodevices.base import Message, InputDeviceManager, OutputDeviceManager, OutputDevice, InputDevice, \
-    DeviceHeaders, InputTransaction
-from baseservice.iodevices.base.input_transaction import NULL_TRANSACTION
-
-if TYPE_CHECKING:
-    from baseservice.iodevices.base.input_devices import ReadStreamResult
+from baseservice.iodevices.base import (Message,
+                                        InputDeviceManager,
+                                        OutputDeviceManager,
+                                        OutputDevice,
+                                        InputDevice,
+                                        DeviceHeaders,
+                                        InputTransaction,
+                                        NULL_TRANSACTION,
+                                        ReadMessageResult,
+                                        EMPTY_RESULT)
 
 MESSAGE_TIMESTAMP_HEADER = 'message_timestamp'
 
@@ -45,7 +49,7 @@ class InMemoryDevice(InputDevice, OutputDevice):
         self._queue: List[InMemoryDevice._QueueMessage] = []
         self._queue_not_empty: Condition = Condition()
 
-    def _read_stream(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> 'ReadStreamResult':
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
         with self._queue_not_empty:
             if self._queue_not_empty.wait_for(lambda: any(self._queue), timeout):
                 message = heapq.heappop(self._queue)
@@ -53,14 +57,14 @@ class InMemoryDevice(InputDevice, OutputDevice):
                 device_headers = {MESSAGE_TIMESTAMP_HEADER: message.timestamp}
                 return message.message.copy(), device_headers, transaction
             else:
-                return None, None, None
+                return EMPTY_RESULT
 
     def _push_to_queue(self, message: 'InMemoryDevice._QueueMessage'):
         with self._queue_not_empty:
             heapq.heappush(self._queue, message)
             self._queue_not_empty.notify()
 
-    def _send_stream(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message: Message, device_headers: DeviceHeaders):
         self._push_to_queue(InMemoryDevice._QueueMessage(message))
 
 

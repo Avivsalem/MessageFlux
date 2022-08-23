@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 from typing import Optional
 
-from baseservice.utils import Event
+from baseservice.utils import ObservableEvent
 
 
 @unique
@@ -13,6 +13,7 @@ class ServiceState(Enum):
     """
     the states of the service: STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
     """
+    INITIALIZED = "INITIALIZED"
     STARTING = 'STARTING'
     STARTED = 'STARTED'
     STOPPING = 'STOPPING'
@@ -36,8 +37,8 @@ class BaseService(metaclass=ABCMeta):
         self._cancellation_token: threading.Event = threading.Event()
         self._cancellation_token.set()  # service starts as not_running
         self._logger = logging.getLogger(__name__)
-        self._state_changed_event: Event[ServiceState] = Event()
-        self._service_state = ServiceState.STOPPED
+        self._state_changed_event: ObservableEvent[ServiceState] = ObservableEvent()
+        self._service_state = ServiceState.INITIALIZED
 
         if not name:
             name = type(self).__name__
@@ -63,7 +64,7 @@ class BaseService(metaclass=ABCMeta):
         return self._service_state
 
     @property
-    def state_changed_event(self) -> Event[ServiceState]:
+    def state_changed_event(self) -> ObservableEvent[ServiceState]:
         """
         this is an Event, that can be used to register on server state changes
         """
@@ -92,12 +93,13 @@ class BaseService(metaclass=ABCMeta):
         server_exception = None
         try:
             self._set_service_state(ServiceState.STARTING)
-            self._logger.info(f"Starting {self.__name__}")
+            self._logger.info(f"Starting {self._name}")
             self._prepare_service()
             self._set_service_state(ServiceState.STARTED)
             self._run_service(cancellation_token=self._cancellation_token)
             self._cancellation_token.wait()
         except Exception as ex:
+            self._logger.exception(f'Service raised an exception: {str(ex)}')
             self._cancellation_token.wait()
             server_exception = ex
 
@@ -121,7 +123,7 @@ class BaseService(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _run_service(self, cancellation_token: Event):
+    def _run_service(self, cancellation_token: threading.Event):
         """
         this method should be implemented by child classes, and actually run the service
 
