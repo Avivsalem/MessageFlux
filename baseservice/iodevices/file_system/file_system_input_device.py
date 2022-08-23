@@ -458,10 +458,13 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                 while True:
                     input_files = self._get_sorted_filenames()
                     for direntry in input_files:
-                        msg, trans = self._read_file(direntry, with_transaction=with_transaction)
-                        if msg is not None:
+                        try:
                             fs_metadata = {self.FILENAME_HEADER_NAME: direntry.name,
                                            self.STAT_HEADER_NAME: direntry.stat()}
+                        except FileNotFoundError:  # file was deleted before we read it
+                            continue
+                        msg, trans = self._read_file(direntry, with_transaction=with_transaction)
+                        if msg is not None:
                             return msg, fs_metadata, trans
 
                     if time.perf_counter() >= dead_line:
@@ -473,11 +476,14 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                     got_file = False
                     for direntry in self._get_unsorted_filenames():
                         got_file = True
+                        try:
+                            fs_metadata = {self.FILENAME_HEADER_NAME: direntry.name,
+                                           self.STAT_HEADER_NAME: direntry.stat()}
+                        except FileNotFoundError:  # file was deleted before we read it
+                            continue
                         msg, trans = self._read_file(direntry, with_transaction=with_transaction)
                         if msg is not None:
                             self._decrease_batch_size()
-                            fs_metadata = {self.FILENAME_HEADER_NAME: direntry.name,
-                                           self.STAT_HEADER_NAME: direntry.stat()}
                             return msg, fs_metadata, trans
 
                     # couldn't read any file from batch. try bigger batch next time

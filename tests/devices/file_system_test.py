@@ -24,13 +24,13 @@ def test_folder_creation(tmpdir):
 def test_generic_sanity(tmpdir):
     input_manager = FileSystemInputDeviceManager(tmpdir)
     output_manager = FileSystemOutputDeviceManager(tmpdir)
-    sanity_test(input_manager, output_manager, sleep_between_sends=1.5)
+    sanity_test(input_manager, output_manager, sleep_between_sends=1)
 
 
 def rollback_test(tmpdir):
     input_manager = FileSystemInputDeviceManager(tmpdir)
     output_manager = FileSystemOutputDeviceManager(tmpdir)
-    sanity_test(input_manager, output_manager, sleep_between_sends=1.5)
+    sanity_test(input_manager, output_manager, sleep_between_sends=1)
 
 
 def test_sanity(tmpdir):
