@@ -1,8 +1,9 @@
+from multiprocessing import Process
+
 import logging
 import os
 import threading
 import time
-from multiprocessing import Process
 from typing import List, Optional
 
 from baseservice.base_service import BaseService

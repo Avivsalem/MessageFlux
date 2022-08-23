@@ -1,7 +1,5 @@
-import os
-
 import datetime
-
+import os
 import threading
 from itertools import cycle, islice
 from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any
@@ -137,6 +135,7 @@ class ThreadLocalMember(Generic[TValueType]):
 
 def get_random_id():
     return os.urandom(16).hex()
+
 
 def json_safe_encoder(obj: Any):
     """

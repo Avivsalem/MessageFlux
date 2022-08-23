@@ -33,4 +33,3 @@ class TransformerOutputDeviceManager(OutputDeviceManager):
     def get_output_device(self, name: str) -> OutputDevice:
         inner_device = self._inner_device_manager.get_output_device(name)
         return TransformerOutputDevice(self, name, inner_device, self._transformer)
-

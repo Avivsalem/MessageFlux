@@ -7,10 +7,10 @@ import random
 import threading
 import time
 from random import randint
-from typing import BinaryIO, Optional, Tuple, Dict, Any, List, Generator
+from typing import Optional, Tuple, Dict, List, Generator
 
 from baseservice.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadMessageResult, \
-    InputDeviceException, Message
+    InputDeviceException, Message, EMPTY_RESULT
 from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from baseservice.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
     DefaultFileSystemSerializer
@@ -70,8 +70,7 @@ class FileSystemInputTransaction(InputTransaction):
                   org_path: str,
                   tmp_folder: str,
                   with_transaction: bool,
-                  serializer: FileSystemSerializerBase) -> Tuple[Optional[BinaryIO],
-                                                                 Optional[Dict[str, Any]],
+                  serializer: FileSystemSerializerBase) -> Tuple[Optional[Message],
                                                                  Optional['FileSystemInputTransaction']]:
         """
         reads the file from org_path, and adds the file to transaction if it exists, or delete if it doesn't
@@ -86,19 +85,20 @@ class FileSystemInputTransaction(InputTransaction):
         try:
             if not atomic_move(org_path, tmp_path,
                                FileSystemInputTransaction._calc_lockfile_name(tmp_folder, org_path)):
-                return None, None, None
+                return None, None
         except AtomicMoveException as ex:
             FileSystemInputTransaction._logger.exception(f'Atomic move could not move the file {org_path}')
-            return None, None, None
+            return None, None
 
         with open(tmp_path, 'rb') as f:
             data, headers = serializer.deserialize(f)
 
         if with_transaction:
-            return data, headers, FileSystemInputTransaction(device=device, org_path=org_path, tmp_path=tmp_path)
+            return Message(data, headers), FileSystemInputTransaction(device=device, org_path=org_path,
+                                                                      tmp_path=tmp_path)
         else:
             os.remove(tmp_path)
-            return data, headers, None
+            return Message(data, headers), None
 
     def _commit(self):
         """
@@ -445,15 +445,11 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
         self._logger.debug(f"found input file {direntry.name} in directory {self._input_folder}")
 
         file_path = direntry.path
-        data, metadata, trans = FileSystemInputTransaction.read_file(self,
-                                                                     org_path=file_path,
-                                                                     tmp_folder=self._tmp_folder,
-                                                                     with_transaction=with_transaction,
-                                                                     serializer=self._serializer)
-        if data is None:
-            return None, None
-
-        return Message(data, metadata), trans
+        return FileSystemInputTransaction.read_file(self,
+                                                    org_path=file_path,
+                                                    tmp_folder=self._tmp_folder,
+                                                    with_transaction=with_transaction,
+                                                    serializer=self._serializer)
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
         try:
@@ -491,7 +487,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                     if not got_file:
                         time.sleep(1)
 
-            return None, None, None
+            return EMPTY_RESULT
 
         except Exception as e:
             raise InputDeviceException('Error reading product from device') from e

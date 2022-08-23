@@ -3,6 +3,7 @@ from threading import Event
 from typing import Optional, Tuple, List, Union, TYPE_CHECKING
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders
+
 if TYPE_CHECKING:
     from baseservice.iodevices.base.input_devices import InputDevice
 
