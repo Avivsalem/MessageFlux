@@ -1,3 +1,5 @@
+from time import perf_counter
+
 import datetime
 import os
 import threading
@@ -135,6 +137,31 @@ class ThreadLocalMember(Generic[TValueType]):
 
 def get_random_id():
     return os.urandom(16).hex()
+
+
+class TimerContext:
+    """
+    context.py object that times the context.py
+    """
+
+    def __init__(self):
+        self._start = -1
+        self._elapsed = -1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """
+        returns the elapsed time for this context.py (between __enter__ and __exit__)
+        :return: the elapsed time (in seconds) for the context.py. -1 if __enter__ or __exit__ weren't called
+        """
+        return self._elapsed
+
+    def __enter__(self):
+        self._start = perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._elapsed = perf_counter() - self._start
 
 
 def json_safe_encoder(obj: Any):
