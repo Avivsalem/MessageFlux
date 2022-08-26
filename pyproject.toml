@@ -89,7 +89,7 @@ commands_pre =
 [testenv:py{37,38,39}-{windows,linux}-pytest]
 commands =
     linux: bash -c "pytest . | tee ./reports/test-console-results.txt"
-    windows: powershell /c "pytest | Tee-Object reports\\test-console-results.txt"
+    windows: powershell /c "pytest | Tee-Object .\\reports\\test-console-results.txt"
 
 
 [testenv:py{37,38,39}-{windows,linux}-mypy]

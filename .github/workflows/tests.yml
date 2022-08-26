@@ -49,16 +49,20 @@ jobs:
         if: always() # always run even if the previous step fails
         with:
           report_paths: ./reports/test-results.xml
+          detailed_summery: true
+          include_passed: true
+          check_name: ${{ matrix.python-version }}-${{ matrix.platform }} JUnit Test Report
 
       - name: Publish Coverage Comment
         uses: MishaKav/pytest-coverage-comment@main
         with:
           pytest-coverage-path: ./reports/test-console-results.txt
           junitxml-path: ./reports/test-results.xml
+          title: ${{ matrix.python-version }}-${{ matrix.platform }} Test Coverage
 
       # Upload mypy artifact
       - name: Upload mypy artifact
         uses: actions/upload-artifact@v3
         with:
           name: mypy-report
-          path: reports/mypy
+          path: reports/mypy.xml
