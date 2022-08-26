@@ -79,7 +79,7 @@ allowlist_externals =
     windows: cmd
     windows: powershell
     linux: mkdir
-    linux: tee
+    linux: bash
 commands_pre =
     linux: mkdir -p ./reports
     windows: cmd /c if not exist .\\reports mkdir .\\reports
@@ -88,7 +88,7 @@ commands_pre =
 
 [testenv:py{37,38,39}-{windows,linux}-pytest]
 commands =
-    linux: pytest . | tee ./reports/test-console-results.txt
+    linux: bash -c "pytest . | tee ./reports/test-console-results.txt"
     windows: powershell /c "pytest | Tee-Object reports\\test-console-results.txt"
 
 
