@@ -90,6 +90,7 @@ commands_pre =
 commands =
     linux: bash -c "pytest . | tee ./reports/test-console-results.txt"
     windows: powershell /c "pytest | Tee-Object .\\reports\\test-console-results.txt"
+    windows: python -c "file = open('./reports/test-console-results.txt', 'rb');results=file.read();file.close();file = open('./reports/test-console-results.txt', 'wb');file.write(results.replace(b'\\r\\n', b'\\n'));file.close()"
 
 
 [testenv:py{37,38,39}-{windows,linux}-mypy]
