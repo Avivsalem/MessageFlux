@@ -41,3 +41,24 @@ jobs:
         # Run the tests using tox.
       - name: Test with tox
         run: tox
+        env:
+          PLATFORM: ${{ matrix.platform }}
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: ./reports/test-results.xml
+
+      - name: Publish Coverage Comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ./reports/test-console-results.txt
+          junitxml-path: ./reports/test-results.xml
+
+      # Upload mypy artifact
+      - name: Upload mypy artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: mypy-report
+          path: reports/mypy

@@ -1,7 +1,7 @@
 import threading
 from abc import ABCMeta, abstractmethod
 from time import time
-from typing import Optional
+from typing import Optional, Any
 
 from baseservice.base_service import BaseService
 from baseservice.utils import ObservableEvent
@@ -39,7 +39,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
 
     def __init__(self, *,
                  duration_after_loop_success: float = 0,
-                 duration_after_loop_failure: float = 0, **kwargs):
+                 duration_after_loop_failure: float = 0, **kwargs: Any):
         """
 
         :param duration_after_loop_success: the duration (in seconds) to wait after successful run of the loop.
@@ -55,7 +55,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
     def loop_ended_event(self) -> ObservableEvent[LoopMetrics]:
         return self._loop_ended_event
 
-    def _run_service(self, cancellation_token: threading.Event):
+    def _run_service(self, cancellation_token: threading.Event) -> None:
         """
         runs the server loop continuously, until the cancellation token is set.
 
@@ -67,7 +67,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
             try:
                 self._server_loop(cancellation_token)
             except Exception as ex:
-                self._logger.exception(f'Server loop raised an exception')
+                self._logger.exception('Server loop raised an exception')
                 loop_exception = ex
 
             loop_duration = time() - start_time
@@ -81,7 +81,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
                 cancellation_token.wait(wait_duration)
 
     @abstractmethod
-    def _server_loop(self, cancellation_token: threading.Event):
+    def _server_loop(self, cancellation_token: threading.Event) -> None:
         """
         this method performs a single server loop. it should be implemented by the child classes
 

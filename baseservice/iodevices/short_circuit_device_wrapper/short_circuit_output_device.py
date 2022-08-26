@@ -13,7 +13,7 @@ class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice):
         ShortCircuitDeviceBase.__init__(self, short_circuit_fail_count, short_circuit_time)
         self._inner_device = inner_device
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message: Message, device_headers: DeviceHeaders) -> None:
         self._validate_short_circuit()
         try:
             self._inner_device.send_message(message, device_headers)
@@ -33,10 +33,10 @@ class ShortCircuitOutputDeviceManager(OutputDeviceManager):
         self._short_circuit_fail_count = short_circuit_fail_count
         self._short_circuit_fail_time = short_circuit_time
 
-    def connect(self):
+    def connect(self) -> None:
         self._inner_device_manager.connect()
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         self._inner_device_manager.disconnect()
 
     def get_output_device(self, name: str) -> OutputDevice:

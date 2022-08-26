@@ -24,7 +24,7 @@ def test_thread_local_member():
     assert a.prop2 == "this is the init"
     assert a.prop3 == 3
     with pytest.raises(AttributeError):
-        x = a.prop4
+        _ = a.prop4
     a.prop4 = "prop4"  # this is the first set, so from now on, all the threads will see this value as the default
     assert a.prop4 == "prop4"
     assert a.not_local == 7
@@ -35,7 +35,7 @@ def test_thread_local_member():
     assert b.prop2 == "this is the init"
     assert b.prop3 == 3
     with pytest.raises(AttributeError):
-        x = b.prop4
+        _ = b.prop4
     assert b.not_local == 7
     b.not_local = 77
 

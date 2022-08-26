@@ -5,33 +5,98 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "baseservice"
+version = "0.0.1a"
+requires-python = '>=3.7,<3.10'
+readme = "README.md"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9"
+]
+dynamic = [
+    "dependencies",
+    "optional-dependencies"
+]
+
+[project.urls]
+github-repo = "https://github.com/Avivsalem/BaseService"
+
+[[project.authors]]
+name = "Aviv Salem"
+email = "avivsalem@gmail.com"
+
+[[project.maintainers]]
+name = "Aviv Salem"
+email = "avivsalem@gmail.com"
+
+[[project.maintainers]]
+name = "Nir Schulman"
+email = "narsssx@gmail.com"
+
+[tool.setuptools]
+packages = ["baseservice"]
+platforms = [
+    "win32",
+    "linux"
+]
+
+[tool.setuptools.dynamic]
+dependencies = {file = "requirements.txt"}
+optional-dependencies = {dev = {file = "requirements-dev.txt"}}
+
+[tool.pytest.ini_options]
+addopts = "--cov=./baseservice --cov-report term-missing --cov-report=html:./reports/coverage/html_results --cov-report xml:./reports/coverage/coverage-results.xml --junitxml=./reports/test-results.xml"
+testpaths = [
+    "tests"
+]
+
 [tool.tox]
 legacy_tox_ini="""
 [tox]
-envlist = py39, flake8, mypy
+envlist = py{37,38,39}-{windows,linux}-pytest,py{39}-{windows,linux}-{flake8,mypy}
 isolated_build = True
 
 [gh-actions]
 python =
     3.7: py37
     3.8: py38
-    3.9: py39, mypy, flake8
+    3.9: py39
+
+[gh-actions:env]
+PLATFORM =
+    windows-latest: windows
+    ubuntu-latest: linux
 
 [testenv]
-commands =
+platform =
+    linux: linux
+    windows: win32
+allowlist_externals =
+    windows: cmd
+    windows: powershell
+    linux: tee
+commands_pre =
+    linux: mkdir -p ./reports
+    windows: cmd /c if not exist .\\reports mkdir .\\reports
     python -m pip install pip -U
     pip install .[dev]
-    pytest
 
-
-[testenv:mypy]
+[testenv:py{37,38,39}-{windows,linux}-pytest]
 commands =
-    pip install .[dev]
+    linux: pytest | tee ./reports/test-console-results.txt
+    windows: powershell /c "pytest | Tee-Object reports\\test-console-results.txt"
+
+
+[testenv:py{37,38,39}-{windows,linux}-mypy]
+commands =
     mypy baseservice
 
-[testenv:flake8]
+[testenv:py{37,38,39}-{windows,linux}-flake8]
 commands =
-    pip install .[dev]
     flake8 baseservice tests
 """
 

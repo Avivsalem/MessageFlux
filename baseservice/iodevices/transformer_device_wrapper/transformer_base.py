@@ -5,13 +5,13 @@ from baseservice.iodevices.base import Message, DeviceHeaders, InputTransaction
 
 
 class TransformerBase(metaclass=ABCMeta):
-    def connect(self):
+    def connect(self) -> None:
         """
         this method is called when the transformer device manager is connected
         """
         pass
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
         this method is called when the transformer device manager is disconnected
         """

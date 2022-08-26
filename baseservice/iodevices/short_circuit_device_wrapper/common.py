@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 from baseservice.utils import KwargsException
 
@@ -19,7 +20,7 @@ class ShortCircuitDeviceBase(object):
         """
         self._short_circuit_fail_count = short_circuit_fail_count
         self._short_circuit_time = short_circuit_time
-        self._short_circuit_end_time = None
+        self._short_circuit_end_time: Optional[float] = None
         self._current_fail_count = 0
 
     @property
@@ -30,17 +31,17 @@ class ShortCircuitDeviceBase(object):
     def current_fail_count(self) -> int:
         return self._current_fail_count
 
-    def _validate_short_circuit(self):
+    def _validate_short_circuit(self) -> None:
         if self.is_in_short_circuit_state:
             raise ShortCircuitException("Device is in short circuit state")
 
         self._short_circuit_end_time = None
 
-    def _report_failure(self):
+    def _report_failure(self) -> None:
         self._current_fail_count += 1
         if self._current_fail_count >= self._short_circuit_fail_count:
             self._short_circuit_end_time = time.time() + self._short_circuit_time
             self._current_fail_count = 0  # we are now in short circuit state, so reset the fail count
 
-    def _report_success(self):
+    def _report_success(self) -> None:
         self._current_fail_count = 0

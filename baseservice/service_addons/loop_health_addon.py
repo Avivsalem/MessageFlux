@@ -1,6 +1,7 @@
 import logging
 import threading
 from time import time
+from typing import Optional
 
 from baseservice.base_service import ServiceState
 from baseservice.server_loop_service import ServerLoopService, LoopMetrics
@@ -22,17 +23,20 @@ class LoopHealthAddon:
         self._logger = logging.getLogger(__name__)
 
         self._consecutive_failures = 0
-        self._last_loop_time = None
+        self._last_loop_time: Optional[float] = None
 
     @property
     def consecutive_failures(self) -> int:
         return self._consecutive_failures
 
     @property
-    def last_loop_time(self) -> float:
+    def last_loop_time(self) -> Optional[float]:
         return self._last_loop_time
 
-    def _inactivity_watchdog_thread(self):
+    def _inactivity_watchdog_thread(self) -> None:
+        if self._last_loop_time is None:
+            raise Exception("Inactivity watchdog thread has started before the service itself")
+
         while not self._cancellation_token.is_set():
             timeout_time = self._last_loop_time + self._max_inactivity_timeout
             if time() >= timeout_time:
@@ -45,23 +49,23 @@ class LoopHealthAddon:
             time_to_sleep = timeout_time - time()
             self._cancellation_token.wait(time_to_sleep)
 
-    def _on_service_state_change(self, service_state: ServiceState):
+    def _on_service_state_change(self, service_state: ServiceState) -> None:
         if service_state == ServiceState.STARTED:
             self._on_service_started()
         elif service_state == ServiceState.STOPPING:
             self._on_service_stopping()
 
-    def _on_service_started(self):
+    def _on_service_started(self) -> None:
         if self._max_inactivity_timeout >= 0:
             self._cancellation_token.clear()
             self._last_loop_time = time()
             t = threading.Thread(target=self._inactivity_watchdog_thread, daemon=True)
             t.start()
 
-    def _on_service_stopping(self):
+    def _on_service_stopping(self) -> None:
         self._cancellation_token.set()
 
-    def _on_loop_ended(self, loop_metrics: LoopMetrics):
+    def _on_loop_ended(self, loop_metrics: LoopMetrics) -> None:
         self._last_loop_time = time()
         if loop_metrics.exception is None:
             self._consecutive_failures = 0

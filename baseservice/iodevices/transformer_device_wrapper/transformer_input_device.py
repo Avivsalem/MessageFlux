@@ -1,6 +1,4 @@
-from typing import Optional
-
-from baseservice.iodevices.base import InputDevice, ReadMessageResult, EMPTY_RESULT, InputDeviceManager
+from baseservice.iodevices.base import InputDevice, ReadMessageResult,  InputDeviceManager
 from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
@@ -14,13 +12,14 @@ class TransformerInputDevice(InputDevice):
         self._transformer = transformer
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
-        message, headers, transaction = self._inner_device.read_message(timeout=timeout,
-                                                                        with_transaction=with_transaction)
-        if message is None:
-            return EMPTY_RESULT
+    def _read_message(self, timeout: float = 0, with_transaction: bool = True) -> ReadMessageResult:
+        result = self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)
 
-        return self._transformer.transform_incoming_message(message, headers, transaction)
+        if InputDevice.is_non_empty_message_result(result):
+            message, headers, transaction = result
+            return self._transformer.transform_incoming_message(message, headers, transaction)
+
+        return result
 
 
 class TransformerInputDeviceManager(InputDeviceManager):
@@ -28,11 +27,11 @@ class TransformerInputDeviceManager(InputDeviceManager):
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
-    def connect(self):
+    def connect(self) -> None:
         self._transformer.connect()
         self._inner_device_manager.connect()
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 

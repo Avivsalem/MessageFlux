@@ -12,7 +12,7 @@ class TransformerOutputDevice(OutputDevice):
         self._transformer = transformer
         self._inner_device = inner_device
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message: Message, device_headers: DeviceHeaders) -> None:
         new_message, new_device_headers = self._transformer.transform_outgoing_message(message, device_headers)
         self._inner_device.send_message(new_message, new_device_headers)
 
@@ -22,15 +22,14 @@ class TransformerOutputDeviceManager(OutputDeviceManager):
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
-    def connect(self):
+    def connect(self) -> None:
         self._transformer.connect()
         self._inner_device_manager.connect()
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
     def get_output_device(self, name: str) -> OutputDevice:
         inner_device = self._inner_device_manager.get_output_device(name)
         return TransformerOutputDevice(self, name, inner_device, self._transformer)
-

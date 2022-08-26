@@ -39,21 +39,21 @@ class Message:
     def headers(self) -> MessageHeaders:
         return self._headers
 
-    def copy(self):
+    def copy(self) -> 'Message':
         return copy.copy(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Message):
             return False
 
         return self.bytes == other.bytes and self._headers == other._headers
 
-    def __copy__(self):
+    def __copy__(self) -> 'Message':
         stream_copy = copy.copy(self._stream)
         stream_copy.seek(0)
         return Message(stream_copy, self._headers.copy())
 
-    def __deepcopy__(self, memo=None):
+    def __deepcopy__(self, memo: Optional[dict] = None) -> 'Message':
         stream_copy = copy.deepcopy(self._stream, memo)
         stream_copy.seek(0)
         return Message(stream_copy, copy.deepcopy(self._headers, memo))

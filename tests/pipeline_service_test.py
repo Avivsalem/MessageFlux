@@ -1,6 +1,4 @@
-from io import BytesIO
 from threading import Thread, Event
-from time import sleep
 from typing import Union, Tuple
 
 from baseservice.iodevices.base import InputDevice, Message, DeviceHeaders
@@ -31,8 +29,9 @@ def test_sanity():
                               pipeline_handler=TestPipelineHandler())
     loop_ended = Event()
     service.loop_ended_event.subscribe(lambda x: loop_ended.set())
+    service_thread = Thread(target=service.start)
     try:
-        Thread(target=service.start).start()
+        service_thread.start()
         loop_ended.wait(3)
         message, _, _ = output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
         assert message is not None
@@ -47,3 +46,4 @@ def test_sanity():
         assert message.bytes == b'output_device3'
     finally:
         service.stop()
+        service_thread.join(1)

@@ -1,10 +1,10 @@
 import threading
 from itertools import cycle, islice
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any, overload
 
 
 class KwargsException(Exception):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args)
         self.kwargs = kwargs
 
@@ -67,14 +67,15 @@ class ThreadLocalValue(threading.local, Generic[TValueType]):
     x.value # 5
     x.value = 7 # changes only for this thread
     """
+    __NO_INIT_VALUE = None
 
-    def __init__(self, init_value: Optional[TValueType] = None):
+    def __init__(self, init_value: Optional[TValueType] = __NO_INIT_VALUE):
         self.value = init_value
 
 
 class ThreadLocalMember(Generic[TValueType]):
     """
-    this is a descriptor, for making thread local memebers for class:
+    this is a descriptor, for making thread local members for class:
 
     class MyClass:
         x = ThreadLocalMember()
@@ -92,38 +93,49 @@ class ThreadLocalMember(Generic[TValueType]):
     a.z # raises AttributeError (z was not set on class). once it's set, then value is the init value for each thread
     a.w # 2 for this thread, 1 for any other thread (because of the default init value)
     """
+    __NO_INIT_VALUE = None
 
-    def __init__(self, init_value: Optional[TValueType] = ...):
+    def __init__(self, init_value: Optional[TValueType] = __NO_INIT_VALUE):
         self._init_value = init_value
 
-    def __set_name__(self, owner, name):
+    def __set_name__(self, owner: Any, name: str) -> None:
         self._public_name = name
         self._private_name = f'_thread_local_{name}'
 
-    def get_thread_local_value(self, instance, init_value):
+    def get_thread_local_value(self, instance: Any, init_value: Optional[TValueType]) -> \
+            ThreadLocalValue[Optional[TValueType]]:
         try:
-            lv = getattr(instance, self._private_name)
+            lv: ThreadLocalValue[Optional[TValueType]] = getattr(instance, self._private_name)
         except AttributeError:
             lv = ThreadLocalValue(init_value)
             setattr(instance, self._private_name, lv)
         return lv
 
-    def __get__(self, instance, owner) -> Optional[TValueType]:
+    @overload
+    def __get__(self, instance: None, owner: Any) -> 'ThreadLocalMember[TValueType]':
+        ...
+
+    @overload
+    def __get__(self, instance: Any, owner: Any) -> Optional[TValueType]:
+        ...
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
         if instance is None:
             return self
-        if self._init_value is not ...:
-            lv = self.get_thread_local_value(instance, self._init_value)
-        else:
+
+        if self._init_value is self.__NO_INIT_VALUE:
             if not hasattr(instance, self._private_name):
                 raise AttributeError(f"'{owner.__name__}' object has no attribute '{self._public_name}'")
             lv = getattr(instance, self._private_name)
+        else:
+            lv = self.get_thread_local_value(instance, self._init_value)
 
         return lv.value
 
-    def __set__(self, instance, value):
+    def __set__(self, instance: Any, value: TValueType) -> None:
         if instance is None:
             return
-        if self._init_value is ...:
+        if self._init_value is self.__NO_INIT_VALUE:
             init_value = value
         else:
             init_value = self._init_value

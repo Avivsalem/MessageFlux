@@ -8,7 +8,7 @@ from baseservice.iodevices.transformer_device_wrapper import TransformerBase, Tr
 from baseservice.iodevices.transformer_device_wrapper.zlib_transformer import ZLIBTransformer
 
 
-class TestMessageStoreTransformer(TransformerBase):
+class InMemoryMessageStoreTransformer(TransformerBase):
     def __init__(self):
         self.messages = {}
 
@@ -29,7 +29,7 @@ class TestMessageStoreTransformer(TransformerBase):
 
 def test_sanity():
     memory_device_manager = InMemoryDeviceManager()
-    message_store_transformer = TestMessageStoreTransformer()
+    message_store_transformer = InMemoryMessageStoreTransformer()
     input_device_manager = TransformerInputDeviceManager(memory_device_manager, message_store_transformer)
     output_device_manager = TransformerOutputDeviceManager(memory_device_manager, message_store_transformer)
 

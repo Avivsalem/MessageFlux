@@ -26,7 +26,7 @@ class OutputDevice(metaclass=ABCMeta):
         self._manager = manager
         self._name = name
 
-    def send_message(self, message: Message, device_headers: Optional[DeviceHeaders] = None):
+    def send_message(self, message: Message, device_headers: Optional[DeviceHeaders] = None) -> None:
         """
         sends a message to the device.
 
@@ -38,7 +38,7 @@ class OutputDevice(metaclass=ABCMeta):
         self._send_message(message=message, device_headers=device_headers)
 
     @abstractmethod
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message: Message, device_headers: DeviceHeaders) -> None:
         """
         sends a message to the device. this should be implemented by child classes
 
@@ -54,13 +54,13 @@ class OutputDeviceManager(metaclass=ABCMeta):
     this is a base class for output device managers. it is used to create output devices
     """
 
-    def connect(self):
+    def connect(self) -> None:
         """
         connects to the device manager
         """
         pass
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """
         disconnects from the device manager
         """

@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Any
 
 from baseservice.device_reader_service import DeviceReaderService
 from baseservice.iodevices.base import InputDevice, Message, DeviceHeaders, OutputDeviceManager
@@ -14,13 +14,13 @@ class PipelineHandlerBase(metaclass=ABCMeta):
                        device_headers: DeviceHeaders) -> Union[Tuple[None, None, None],
                                                                Tuple[str, Message, DeviceHeaders]]:
         """
-        Handles a message from an input device. and returns a tuple of the output device name, message and headers. to send to.
+        Handles a message from an input device. and returns the output device name, message and headers to send to.
 
         :param input_device: The input device that sent the message.
         :param message: The message that was sent.
         :param device_headers: The headers of the device that sent the message.
-        :return: (None, None, None) if the message should not be sent to any output device.
-        (output_device_name, message, device_headers) if a message should be sent to the output device with the given name.
+        :return: (output_device_name, message, device_headers) if a message should be sent to the output device with
+        the given name or (None, None, None) if the message should not be sent to any output device.
         """
         pass
 
@@ -42,12 +42,16 @@ class FixedRouterPipelineHandler(PipelineHandlerBase):
 
 
 class PipelineService(DeviceReaderService):
-    def __init__(self, *, output_device_manager: OutputDeviceManager, pipeline_handler: PipelineHandlerBase, **kwargs):
+    def __init__(self, *,
+                 output_device_manager: OutputDeviceManager,
+                 pipeline_handler: PipelineHandlerBase,
+                 **kwargs: Any
+                 ):
         super().__init__(**kwargs)
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler
 
-    def _handle_messages(self, batch: List[Tuple[InputDevice, Message, DeviceHeaders]]):
+    def _handle_messages(self, batch: List[Tuple[InputDevice, Message, DeviceHeaders]]) -> None:
         for input_device, message, device_headers in batch:
             output_device_name, new_message, new_device_headers = self._pipeline_handler.handle_message(input_device,
                                                                                                         message,

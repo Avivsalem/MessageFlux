@@ -3,8 +3,7 @@ from .common import (Message,
                      DeviceHeaders)
 
 from .input_transaction import (InputTransaction,
-                                InputTransactionScope,
-                                NULL_TRANSACTION)
+                                InputTransactionScope)
 
 from .input_devices import (InputDevice,
                             InputDeviceManager,
@@ -17,4 +16,4 @@ from .output_devices import (OutputDevice,
                              OutputDeviceManager,
                              OutputDeviceException)
 
-
+from .null_transaction import NULL_TRANSACTION

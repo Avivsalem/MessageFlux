@@ -11,7 +11,14 @@ from baseservice.utils import ObservableEvent
 @unique
 class ServiceState(Enum):
     """
-    the states of the service: STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
+    the states of the service:
+    STARTING->
+    (prepare_service)->
+    STARTED->
+    (run_service)->
+    STOPPING->
+    (finalize_service)->
+    STOPPED
     """
     INITIALIZED = "INITIALIZED"
     STARTING = 'STARTING'
@@ -26,8 +33,8 @@ class BaseService(metaclass=ABCMeta):
     """
 
     def __init__(self, *,
-                 name: str = None,
-                 should_stop_on_signal=True):
+                 name: Optional[str] = None,
+                 should_stop_on_signal: bool = True):
         """
 
         :param name: the name of this service. if None, the name of the type will be used
@@ -76,14 +83,14 @@ class BaseService(metaclass=ABCMeta):
         """
         return not self._cancellation_token.is_set()
 
-    def _set_service_state(self, new_service_state: ServiceState):
+    def _set_service_state(self, new_service_state: ServiceState) -> None:
         old_service_state = self._service_state
         self._service_state = new_service_state
 
         if old_service_state != new_service_state:
             self._state_changed_event.fire(new_service_state)
 
-    def start(self):
+    def start(self) -> None:
         """
         starts the service, and blocks until 'stop' is called
         """
@@ -107,7 +114,7 @@ class BaseService(metaclass=ABCMeta):
         self._finalize_service(exception=server_exception)
         self._set_service_state(ServiceState.STOPPED)
 
-    def _register_signals(self):
+    def _register_signals(self) -> None:
         if threading.current_thread() is threading.main_thread():
             self._logger.info("Registering Terminate Signals...")
             signal.signal(signal.SIGINT, lambda s, f: self.stop())
@@ -115,7 +122,7 @@ class BaseService(metaclass=ABCMeta):
         else:
             self._logger.warning("Service doesn't run on main thread - can't register signals")
 
-    def _prepare_service(self):
+    def _prepare_service(self) -> None:
         """
         this method may be implemented by child classes, to perform some initialization logic
         before actually starting the service
@@ -123,7 +130,7 @@ class BaseService(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _run_service(self, cancellation_token: threading.Event):
+    def _run_service(self, cancellation_token: threading.Event) -> None:
         """
         this method should be implemented by child classes, and actually run the service
 
@@ -131,7 +138,7 @@ class BaseService(metaclass=ABCMeta):
         """
         pass
 
-    def _finalize_service(self, exception: Optional[Exception] = None):
+    def _finalize_service(self, exception: Optional[Exception] = None) -> None:
         """
         this method may be implemented by child classes, to perfom some cleanup logic
         after the service has finished running.
@@ -140,7 +147,7 @@ class BaseService(metaclass=ABCMeta):
         """
         pass
 
-    def stop(self):
+    def stop(self) -> None:
         """
         stops the service (sets the cancellation token, so the service will stop gracefully)
         """
