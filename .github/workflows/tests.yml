@@ -49,7 +49,7 @@ jobs:
         if: always() # always run even if the previous step fails
         with:
           report_paths: ./reports/test-results.xml
-          detailed_summery: true
+          detailed_summary: true
           include_passed: true
           check_name: ${{ matrix.python-version }}-${{ matrix.platform }} JUnit Test Report
 
