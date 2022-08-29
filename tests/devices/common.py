@@ -30,10 +30,12 @@ def sanity_test(input_device_manager: InputDeviceManager,
     try:
         input_device = input_device_manager.get_input_device(device_name)
         read_result = input_device.read_message()
+        assert read_result is not None
         assert read_result.message == test_message_1
         read_result.commit()
 
         read_result = input_device.read_message()
+        assert read_result is not None
         assert read_result.message == test_message_2
         read_result.commit()
     finally:
@@ -64,17 +66,21 @@ def rollback_test(input_device_manager: InputDeviceManager,
     try:
         input_device = input_device_manager.get_input_device(device_name)
         read_result1 = input_device.read_message()
+        assert read_result1 is not None
         assert read_result1.message == test_message_1
         read_result2 = input_device.read_message()
+        assert read_result2 is not None
         assert read_result2.message == test_message_2
         read_result1.rollback()
         read_result2.rollback()
 
         read_result = input_device.read_message()
+        assert read_result is not None
         assert read_result.message == test_message_1
         read_result.commit()
 
         read_result = input_device.read_message()
+        assert read_result is not None
         assert read_result.message == test_message_2
         read_result.commit()
     finally:

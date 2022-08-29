@@ -5,28 +5,8 @@ from typing import Optional, List, TypeVar, Generic
 from time import time, sleep
 
 from baseservice.iodevices.base.common import MessageBundle
-from baseservice.iodevices.base.input_transaction import InputTransaction, NULL_TRANSACTION
+from baseservice.iodevices.base.input_transaction import InputTransaction, NULLTransaction
 from baseservice.utils import KwargsException, StatefulListIterator
-
-
-@dataclass
-class ReadResult(MessageBundle):
-    """
-    this class holds the result for "read_message". adds the transaction to the message bundle
-    """
-    transaction: InputTransaction = NULL_TRANSACTION
-
-    def commit(self) -> None:
-        """
-        commits this read result
-        """
-        self.transaction.commit()
-
-    def rollback(self) -> None:
-        """
-        rolls back this read result
-        """
-        self.transaction.rollback()
 
 
 TManagerType = TypeVar('TManagerType', bound='InputDeviceManager')
@@ -70,11 +50,11 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
 
     def read_message(self,
                      timeout: Optional[float] = 0,
-                     with_transaction: bool = True) -> Optional[ReadResult]:
+                     with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
-        after 'timeout' seconds, if the device doesn't have a message to return, it will return (None, None)
+        after 'timeout' seconds, if the device doesn't have a message to return, it will return None
         :param with_transaction: 'True' if the device should read message within transaction,
         or 'False' if the message is automatically committed
 
@@ -90,7 +70,7 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
     @abstractmethod
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> Optional[ReadResult]:
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device (should be implemented by child classes)
 
@@ -127,7 +107,7 @@ class AggregateInputDevice(InputDevice):
         """
         return self._last_read_device
 
-    def _read_from_device(self, with_transaction: bool) -> Optional[ReadResult]:
+    def _read_from_device(self, with_transaction: bool) -> Optional['ReadResult']:
         """
         tries to read from the first device that returns a result.
         upon success, return the result. otherwise, returns None
@@ -149,10 +129,12 @@ class AggregateInputDevice(InputDevice):
 
     def _read_message(self,
                       timeout: Optional[float] = 0,
-                      with_transaction: bool = True) -> ReadResult:
-        end_time = time() + timeout
+                      with_transaction: bool = True) -> Optional['ReadResult']:
+        end_time = 0.0
+        if timeout is not None:
+            end_time = time() + timeout
         read_result = self._read_from_device(with_transaction=with_transaction)
-        while read_result is None and (time() < end_time):
+        while read_result is None and (timeout is None or time() < end_time):
             sleep(0.1)
             read_result = self._read_from_device(with_transaction=with_transaction)
 
@@ -198,3 +180,41 @@ class InputDeviceManager(metaclass=ABCMeta):
             inner_devices.append(self.get_input_device(name))
 
         return AggregateInputDevice(manager=self, inner_devices=inner_devices)
+
+
+class _NullInputDeviceManager(InputDeviceManager):
+    def get_input_device(self, name: str) -> InputDevice:
+        return _NullDevice()
+
+
+class _NullDevice(InputDevice):
+    def __init__(self):
+        super(_NullDevice, self).__init__(_NullInputDeviceManager(), '__NULL__')
+
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional['ReadResult']:
+        return None
+
+
+
+NULL_TRANSACTION = NULLTransaction(_NullDevice())
+
+
+@dataclass
+class ReadResult(MessageBundle):
+    """
+    this class holds the result for "read_message". adds the transaction to the message bundle
+    """
+    transaction: InputTransaction = NULL_TRANSACTION
+
+    def commit(self) -> None:
+        """
+        commits this read result
+        """
+        self.transaction.commit()
+
+    def rollback(self) -> None:
+        """
+        rolls back this read result
+        """
+        self.transaction.rollback()
+

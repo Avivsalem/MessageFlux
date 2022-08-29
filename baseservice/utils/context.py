@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Dict, Any
 
-_context_var = ContextVar('__asyncio_context__', default={})
+_context_var: ContextVar = ContextVar('__asyncio_context__', default={})
 
 
 class Context(metaclass=ABCMeta):

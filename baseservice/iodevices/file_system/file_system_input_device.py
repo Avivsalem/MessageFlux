@@ -5,7 +5,7 @@ import random
 import threading
 from collections import defaultdict
 from random import randint
-from typing import Optional, Tuple, Dict, List, Generator
+from typing import Optional, Dict, List, Set, Iterator
 
 import time
 
@@ -341,8 +341,8 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
             raise InputDeviceException('Error creating input device') from e
 
         self._current_batch_size = self._MIN_BATCH_SIZE
-        self._current_generator = None
-        self._black_listed_files = set()
+        self._current_generator: Optional[Iterator[Optional[os.DirEntry]]] = None
+        self._black_listed_files: Set[str] = set()
         self._logger = logging.getLogger(__name__)
         self._serializer = serializer or DefaultFileSystemSerializer()
 
@@ -368,7 +368,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
             result.append(tup[0])
         return result
 
-    def _get_generator_files(self) -> Generator[os.DirEntry, None, None]:
+    def _get_generator_files(self) -> Iterator[Optional[os.DirEntry]]:
         """
         returns a generator of direntries for files under input_folder, unsorted
         None when have no more direnties in the scandir
@@ -390,6 +390,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
         if not self._current_generator:
             self._current_generator = self._get_generator_files()
         batch = []
+        assert self._current_generator is not None
         for direntry in self._current_generator:
             if direntry is None:
                 break
@@ -451,7 +452,9 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         try:
-            dead_line = time.perf_counter() + timeout
+            deadline = 0.0
+            if timeout is not None:
+                deadline = time.perf_counter() + timeout
             if self._sorted:
                 while True:
                     input_files = self._get_sorted_filenames()
@@ -465,10 +468,11 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                         if read_result is not None:
                             read_result.device_headers.update(fs_metadata)
                             return read_result
+                        if timeout is not None and time.perf_counter() >= deadline:
+                            break
 
-                    if time.perf_counter() >= dead_line:
+                    if timeout is not None and time.perf_counter() >= deadline:
                         break
-
                     time.sleep(1)
             else:
                 while True:
@@ -488,7 +492,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
 
                     # couldn't read any file from batch. try bigger batch next time
                     self._increase_batch_size()
-                    if time.perf_counter() >= dead_line:
+                    if timeout is not None and time.perf_counter() >= deadline:
                         break
                     if not got_file:
                         time.sleep(1)

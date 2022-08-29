@@ -19,6 +19,7 @@ class MyException(Exception):
     pass
 
 
+# noinspection Mypy
 class ErrorDevice(InputDevice, OutputDevice):
     def __init__(self):
         InputDevice.__init__(self, None, None)

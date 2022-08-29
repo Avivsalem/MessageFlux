@@ -14,16 +14,16 @@ class InputTransaction(metaclass=ABCMeta):
     the transaction, to signal the device if the message is done processing or not
     """
 
-    def __init__(self, device: Optional['InputDevice'] = None):
+    def __init__(self, device: 'InputDevice'):
         """
 
         :param device: the input device that returned that transaction
         """
-        self._device: Optional['InputDevice'] = device
+        self._device: 'InputDevice' = device
         self._finished: Event = Event()
 
     @property
-    def device(self) -> Optional['InputDevice']:
+    def device(self) -> 'InputDevice':
         """
         :return: the input device that returned that transaction
         """
@@ -139,6 +139,3 @@ class NULLTransaction(InputTransaction):
 
     def _rollback(self):
         pass
-
-
-NULL_TRANSACTION = NULLTransaction()

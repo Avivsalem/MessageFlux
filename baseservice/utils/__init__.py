@@ -1,10 +1,11 @@
-from time import perf_counter
-
 import datetime
 import os
 import threading
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any, Union
+EllipsisType = type(Ellipsis)
+
 from itertools import cycle, islice
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any
+from time import perf_counter
 
 
 class KwargsException(Exception):
@@ -62,7 +63,6 @@ class ObservableEvent(Generic[TEventType]):
 
 TValueType = TypeVar('TValueType')
 
-
 class ThreadLocalValue(threading.local, Generic[TValueType]):
     """
     this class holds a single, thread-local value
@@ -97,7 +97,8 @@ class ThreadLocalMember(Generic[TValueType]):
     a.w # 2 for this thread, 1 for any other thread (because of the default init value)
     """
 
-    def __init__(self, init_value: Optional[TValueType] = ...):
+    # noinspection Mypy
+    def __init__(self, init_value: Union[TValueType, EllipsisType] = ...):
         self._init_value = init_value
 
     def __set_name__(self, owner, name):
@@ -113,8 +114,6 @@ class ThreadLocalMember(Generic[TValueType]):
         return lv
 
     def __get__(self, instance, owner) -> Optional[TValueType]:
-        if instance is None:
-            return self
         if self._init_value is not ...:
             lv = self.get_thread_local_value(instance, self._init_value)
         else:

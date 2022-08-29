@@ -5,10 +5,10 @@ from .input_devices import (InputDevice,
                             InputDeviceManager,
                             InputDeviceException,
                             ReadResult,
-                            AggregateInputDevice)
+                            AggregateInputDevice,
+                            NULL_TRANSACTION)
 from .input_transaction import (InputTransaction,
-                                InputTransactionScope,
-                                NULL_TRANSACTION)
+                                InputTransactionScope)
 from .output_devices import (OutputDevice,
                              OutputDeviceManager,
                              OutputDeviceException)

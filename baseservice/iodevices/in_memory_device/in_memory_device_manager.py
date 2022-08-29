@@ -1,7 +1,7 @@
 import heapq
 from functools import total_ordering
 from threading import Condition
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 import time
 
@@ -18,21 +18,22 @@ from baseservice.iodevices.base.common import MessageBundle
 MESSAGE_TIMESTAMP_HEADER = 'message_timestamp'
 
 
-class InMemoryDevice(InputDevice, OutputDevice):
-    @total_ordering
-    class _QueueMessage:
-        def __init__(self, message: Message, timestamp: Optional[float] = None):
-            self.message = message.copy()
-            self.timestamp = timestamp or time.time()
+@total_ordering
+class _QueueMessage:
+    def __init__(self, message: Message, timestamp: Optional[float] = None):
+        self.message = message.copy()
+        self.timestamp = timestamp or time.time()
 
-        def __eq__(self, other):
-            return self.timestamp == other.timestamp
+    def __eq__(self, other):
+        return self.timestamp == other.timestamp
 
-        def __lt__(self, other):
-            return self.timestamp < other.timestamp
+    def __lt__(self, other):
+        return self.timestamp < other.timestamp
 
+
+class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
     class InMemoryTransaction(InputTransaction):
-        def __init__(self, device: 'InMemoryDevice', message: 'InMemoryDevice._QueueMessage'):
+        def __init__(self, device: 'InMemoryInputDevice', message: _QueueMessage):
             super().__init__(device)
             self._message = message
             self._device = device
@@ -43,11 +44,13 @@ class InMemoryDevice(InputDevice, OutputDevice):
         def _rollback(self):
             self._device._push_to_queue(self._message)
 
-    def __init__(self, manager: 'InMemoryDeviceManager', name: str):
-        InputDevice.__init__(self, manager, name)
-        OutputDevice.__init__(self, manager, name)
-        self._queue: List[InMemoryDevice._QueueMessage] = []
-        self._queue_not_empty: Condition = Condition()
+    def __init__(self, manager: 'InMemoryDeviceManager',
+                 name: str,
+                 queue: List[_QueueMessage],
+                 queue_not_empty_condition: Condition):
+        super().__init__(manager, name)
+        self._queue = queue
+        self._queue_not_empty = queue_not_empty_condition
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         with self._queue_not_empty:
@@ -61,21 +64,48 @@ class InMemoryDevice(InputDevice, OutputDevice):
             else:
                 return None
 
-    def _push_to_queue(self, message: 'InMemoryDevice._QueueMessage'):
+    def _push_to_queue(self, message: _QueueMessage):
         with self._queue_not_empty:
             heapq.heappush(self._queue, message)
             self._queue_not_empty.notify()
 
+
+class InMemoryOutputDevice(OutputDevice['InMemoryDeviceManager']):
+    def __init__(self, manager: 'InMemoryDeviceManager',
+                 name: str,
+                 queue: List[_QueueMessage],
+                 queue_not_empty_condition: Condition):
+        super().__init__(manager, name)
+        self._queue = queue
+        self._queue_not_empty = queue_not_empty_condition
+
     def _send_message(self, message_bundle: MessageBundle):
-        self._push_to_queue(InMemoryDevice._QueueMessage(message_bundle.message))
+        with self._queue_not_empty:
+            heapq.heappush(self._queue, _QueueMessage(message_bundle.message))
+            self._queue_not_empty.notify()
 
 
 class InMemoryDeviceManager(InputDeviceManager, OutputDeviceManager):
+
     def __init__(self):
-        self._queues: Dict[str, InMemoryDevice] = {}
+        self._queues: Dict[str, Tuple[List[_QueueMessage], Condition]] = {}
+
+    def _get_queue_tuple(self, name: str) -> Tuple[List[_QueueMessage], Condition]:
+        res = self._queues.get(name, None)
+        if res is not None:
+            queue, condition = res
+        else:
+            queue = []
+            condition = Condition()
+            self._queues[name] = (queue, condition)
+
+        return queue, condition
 
     def get_input_device(self, name: str) -> InputDevice:
-        return self._queues.setdefault(name, InMemoryDevice(self, name))
+        queue, condition = self._get_queue_tuple(name)
+
+        return InMemoryInputDevice(self, name, queue, condition)
 
     def get_output_device(self, name: str) -> OutputDevice:
-        return self._queues.setdefault(name, InMemoryDevice(self, name))
+        queue, condition = self._get_queue_tuple(name)
+        return InMemoryOutputDevice(self, name, queue, condition)

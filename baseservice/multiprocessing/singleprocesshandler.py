@@ -3,6 +3,7 @@ import multiprocessing
 import os
 import threading
 from abc import ABCMeta, abstractmethod
+from multiprocessing import process
 from multiprocessing.connection import Connection
 from typing import Optional, Callable
 
@@ -77,7 +78,7 @@ class SingleProcessHandler:
         self._liveness_thread: Optional[threading.Thread] = None
         self._stop_was_called = threading.Event()
         self._parent_pipe: Optional[Connection] = None
-        self._process: Optional[multiprocessing.Process] = None
+        self._process: Optional[process.BaseProcess] = None
         self._instance_index = instance_index
 
     @property

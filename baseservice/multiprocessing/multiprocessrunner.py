@@ -1,10 +1,10 @@
-from multiprocessing import Process
-
 import logging
 import os
 import threading
-import time
+from multiprocessing import Process
 from typing import List, Optional
+
+import time
 
 from baseservice.base_service import BaseService
 from baseservice.multiprocessing.singleprocesshandler import ServiceFactory, SingleProcessHandler
@@ -47,7 +47,7 @@ class MultiProcessRunner(BaseService):
 
     @property
     def processes(self) -> List[Process]:
-        return [handler.process for handler in self._process_handlers]
+        return [handler.process for handler in self._process_handlers if handler.process is not None]
 
     def _run_service_instance(self, instance_index: int):
         handler = SingleProcessHandler(self._service_factory,
@@ -74,13 +74,15 @@ class MultiProcessRunner(BaseService):
         for handler in self._process_handlers:
             handler.stop()
         time.sleep(self._shutdown_timeout)
-        still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
+        still_running = [handler.process for handler in self._process_handlers if
+                         handler.is_alive() and handler.process is not None]
         if still_running:
             self._logger.warning(f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
             for handler in still_running:
                 handler.terminate()
             time.sleep(self._shutdown_timeout)
-            still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
+            still_running = [handler.process for handler in self._process_handlers if
+                             handler.is_alive() and handler.process is not None]
             if still_running:
                 self._logger.warning(
                     f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')

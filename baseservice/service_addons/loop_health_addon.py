@@ -22,7 +22,7 @@ class LoopHealthAddon:
         self._logger = logging.getLogger(__name__)
 
         self._consecutive_failures = 0
-        self._last_loop_time = None
+        self._last_loop_time = 0.0
 
     @property
     def consecutive_failures(self) -> int:
