@@ -37,7 +37,7 @@ def test_thread_local_member():
     assert b.prop2 == "this is the init"
     assert b.prop3 == 3
     with pytest.raises(AttributeError):
-        x = b.prop4
+        _ = b.prop4
     assert b.not_local == 7
     b.not_local = 77
 

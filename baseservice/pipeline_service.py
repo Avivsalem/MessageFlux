@@ -20,7 +20,8 @@ class PipelineHandlerBase(metaclass=ABCMeta):
                        input_device: InputDevice,
                        message_bundle: MessageBundle) -> Optional[PipelineResult]:
         """
-        Handles a message from an input device. and returns a tuple of the output device name, message and headers. to send to.
+        Handles a message from an input device. and returns a tuple of the output device name, message and headers to
+        send to.
 
         :param input_device: The input device that sent the message.
         :param message_bundle: The message that was received.

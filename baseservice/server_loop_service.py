@@ -68,7 +68,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
             try:
                 self._server_loop(cancellation_token)
             except Exception as ex:
-                self._logger.exception(f'Server loop raised an exception')
+                self._logger.exception('Server loop raised an exception')
                 loop_exception = ex
 
             loop_duration = time() - start_time

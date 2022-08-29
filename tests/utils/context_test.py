@@ -56,10 +56,10 @@ def test_asyncio():
             await asyncio.wait([task1, task2])
             org_val, new_val = task1.result()
             assert org_val == 'old_val'
-            assert new_val == f'new_val - 1'
+            assert new_val == 'new_val - 1'
             org_val, new_val = task2.result()
             assert org_val == 'old_val'
-            assert new_val == f'new_val - 2'
+            assert new_val == 'new_val - 2'
 
             assert asyncio_context.get(test_key) == 'old_val'
 

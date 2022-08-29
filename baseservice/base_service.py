@@ -11,7 +11,8 @@ from baseservice.utils import ObservableEvent
 @unique
 class ServiceState(Enum):
     """
-    the states of the service: STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
+    the states of the service:
+    INITIALIZING->(start)->STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
     """
     INITIALIZED = "INITIALIZED"
     STARTING = 'STARTING'
