@@ -1,14 +1,13 @@
-from time import sleep
 from typing import Optional
 
 import pytest
+from time import sleep
 
 from baseservice.iodevices.base import (InputDeviceManager,
                                         OutputDeviceManager,
                                         OutputDevice,
                                         InputDevice,
                                         Message,
-                                        DeviceHeaders,
                                         ReadResult)
 from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
@@ -20,10 +19,9 @@ class MyException(Exception):
 
 
 # noinspection Mypy
-class ErrorDevice(InputDevice, OutputDevice):
+class ErrorInputDevice(InputDevice):
     def __init__(self):
-        InputDevice.__init__(self, None, None)
-        OutputDevice.__init__(self, None, None)
+        super(ErrorInputDevice, self).__init__(None, '')
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         if with_transaction:
@@ -31,17 +29,21 @@ class ErrorDevice(InputDevice, OutputDevice):
         else:
             return None
 
+
+class ErrorOutputDevice(OutputDevice):
+    def __init__(self):
+        super(ErrorOutputDevice, self).__init__(None, '')
+
     def _send_message(self, message_bundle: MessageBundle):
         if message_bundle.device_headers.get("fail", True):
             raise MyException()
 
-
 class ErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
     def get_input_device(self, name: str) -> InputDevice:
-        return ErrorDevice()
+        return ErrorInputDevice()
 
     def get_output_device(self, name: str) -> OutputDevice:
-        return ErrorDevice()
+        return ErrorOutputDevice()
 
 
 def test_sanity_input():

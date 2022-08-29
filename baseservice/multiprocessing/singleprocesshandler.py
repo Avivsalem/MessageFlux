@@ -5,6 +5,7 @@ import threading
 from abc import ABCMeta, abstractmethod
 from multiprocessing import process
 from multiprocessing.connection import Connection
+from multiprocessing.process import BaseProcess
 from typing import Optional, Callable
 
 from baseservice.base_service import BaseService
@@ -145,7 +146,7 @@ class SingleProcessHandler:
         return self._process.pid
 
     @property
-    def process(self) -> Optional[multiprocessing.Process]:
+    def process(self) -> Optional[BaseProcess]:
         return self._process
 
     def terminate(self):

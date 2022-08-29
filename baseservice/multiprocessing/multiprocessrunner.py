@@ -1,7 +1,7 @@
 import logging
 import os
 import threading
-from multiprocessing import Process
+from multiprocessing.process import BaseProcess
 from typing import List, Optional
 
 import time
@@ -46,7 +46,7 @@ class MultiProcessRunner(BaseService):
             self._run_service_instance(i)
 
     @property
-    def processes(self) -> List[Process]:
+    def processes(self) -> List[BaseProcess]:
         return [handler.process for handler in self._process_handlers if handler.process is not None]
 
     def _run_service_instance(self, instance_index: int):
@@ -78,18 +78,19 @@ class MultiProcessRunner(BaseService):
                          handler.is_alive() and handler.process is not None]
         if still_running:
             self._logger.warning(f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
-            for handler in still_running:
-                handler.terminate()
+            for handler_process in still_running:
+                handler_process.terminate()
             time.sleep(self._shutdown_timeout)
             still_running = [handler.process for handler in self._process_handlers if
                              handler.is_alive() and handler.process is not None]
             if still_running:
                 self._logger.warning(
                     f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
-                for handler in still_running:
-                    handler.kill()
+                for handler_process in still_running:
+                    handler_process.kill()
                 time.sleep(self._shutdown_timeout)
-                still_running = [handler.process for handler in self._process_handlers if handler.is_alive()]
+                still_running = [handler.process for handler in self._process_handlers if
+                                 handler.is_alive() and handler.process is not None]
                 if still_running:
                     self._logger.error(
                         f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')

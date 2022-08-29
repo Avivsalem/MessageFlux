@@ -48,6 +48,7 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
         self._aggregate_input_device = self._input_device_manager.get_aggregate_device(self._input_device_names)
 
     def _server_loop(self, cancellation_token: threading.Event):
+        assert self._aggregate_input_device is not None
         with InputTransactionScope(device=self._aggregate_input_device,
                                    with_transaction=self._use_transactions) as transaction_scope:
             batch: List[Tuple[InputDevice, ReadResult]] = []
@@ -55,7 +56,9 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
             # read first message with _read_timeout anyway
             read_result = transaction_scope.read_message(timeout=self._read_timeout)
             if read_result is not None:
-                batch.append((self._aggregate_input_device.last_read_device, read_result))
+                last_read_device = self._aggregate_input_device.last_read_device
+                assert last_read_device is not None
+                batch.append((last_read_device, read_result))
 
             end_time = time() + self._read_timeout
             for i in range(self._max_batch_read_count - 1):  # try to read the rest of the batch
@@ -72,8 +75,9 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
                 read_result = transaction_scope.read_message(timeout=timeout)
                 if read_result is None:
                     break  # no more messages to read
-
-                batch.append((self._aggregate_input_device.last_read_device, read_result))
+                last_read_device = self._aggregate_input_device.last_read_device
+                assert last_read_device is not None
+                batch.append((last_read_device, read_result))
 
             if batch:
                 self._handle_messages(batch)
