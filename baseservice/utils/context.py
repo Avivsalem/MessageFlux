@@ -1,6 +1,7 @@
 import threading
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
+# noinspection PyPackageRequirements
 from contextvars import ContextVar
 from typing import Dict, Any
 
@@ -32,6 +33,7 @@ class _GlobalContext(Context):
 
     def _pop(self, key: str) -> Any:
         stack = self._state.get(key)
+        assert stack is not None
         value = stack.pop()
         if not stack:
             self._state.pop(key, None)

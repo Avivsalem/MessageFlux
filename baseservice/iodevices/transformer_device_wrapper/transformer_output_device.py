@@ -3,7 +3,7 @@ from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
-class TransformerOutputDevice(OutputDevice):
+class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
     def __init__(self,
                  manager: 'TransformerOutputDeviceManager',
                  name: str,
@@ -18,7 +18,7 @@ class TransformerOutputDevice(OutputDevice):
         self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
 
 
-class TransformerOutputDeviceManager(OutputDeviceManager):
+class TransformerOutputDeviceManager(OutputDeviceManager[TransformerOutputDevice]):
     def __init__(self, inner_device_manager: OutputDeviceManager, transformer: TransformerBase):
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
@@ -31,6 +31,6 @@ class TransformerOutputDeviceManager(OutputDeviceManager):
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
-    def get_output_device(self, name: str) -> OutputDevice:
+    def get_output_device(self, name: str) -> TransformerOutputDevice:
         inner_device = self._inner_device_manager.get_output_device(name)
         return TransformerOutputDevice(self, name, inner_device, self._transformer)

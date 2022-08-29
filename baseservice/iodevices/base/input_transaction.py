@@ -32,7 +32,7 @@ class InputTransaction(metaclass=ABCMeta):
     @property
     def finished(self) -> bool:
         """
-        :return: 'True' if the transaction committed/rolledback, 'False' otherwise
+        :return: 'True' if the transaction committed/rolled-back, 'False' otherwise
         """
         return self._finished.is_set()
 

@@ -37,9 +37,11 @@ def test_sanity():
 
     input_device = input_device_manager.get_input_device(test_device_name)
     read_result = input_device.read_message(with_transaction=False)
+    assert read_result is not None
     assert read_result.message.bytes == b'hello1'
 
     read_result = input_device.read_message(with_transaction=False)
+    assert read_result is not None
     assert read_result.message.bytes == b'hello2'
 
 
@@ -53,24 +55,28 @@ def test_zlib():
     output_device = memory_device_manager.get_output_device(test_device_name)
     output_device.send_message(Message(b'hello1'))
 
-    output_device = zlib_output_device_manager.get_output_device(test_device_name)
-    output_device.send_message(Message(b'hello2'))
+    output_device1 = zlib_output_device_manager.get_output_device(test_device_name)
+    output_device1.send_message(Message(b'hello2'))
 
     input_device = zlib_input_device_manager.get_input_device(test_device_name)
     read_result = input_device.read_message(with_transaction=False)
+    assert read_result is not None
     assert read_result.message.bytes == b'hello1'
 
     read_result = input_device.read_message(with_transaction=False)
+    assert read_result is not None
     assert read_result.message.bytes == b'hello2'
 
-    output_device = zlib_output_device_manager.get_output_device(test_device_name)
-    output_device.send_message(Message(b'X' * 1000))
+    output_device1 = zlib_output_device_manager.get_output_device(test_device_name)
+    output_device1.send_message(Message(b'X' * 1000))
 
-    input_device = memory_device_manager.get_input_device(test_device_name)
-    read_result = input_device.read_message(with_transaction=True)
+    input_device1 = memory_device_manager.get_input_device(test_device_name)
+    read_result = input_device1.read_message(with_transaction=True)
+    assert read_result is not None
     assert len(read_result.message.bytes) < 1000
     read_result.rollback()
 
     input_device = zlib_input_device_manager.get_input_device(test_device_name)
     read_result = input_device.read_message(with_transaction=False)
+    assert read_result is not None
     assert read_result.message.bytes == b'X' * 1000

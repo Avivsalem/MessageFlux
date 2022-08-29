@@ -59,7 +59,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         self._record_count = 0
         self._run = True
         self._next_rotate = time() + self._max_time
-        self._log_thread = None
+        self._log_thread: Optional[threading.Thread] = None
         self.doRollover()
         self._bkp_copy_thread = threading.Thread(target=self._do_bkp_copy_thread, daemon=True)
         self._bkp_copy_thread.start()
@@ -126,9 +126,9 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         while self._run:
             try:
                 now = time()
-                entries = scandir(self._bkp_log_path)
+                entries: Iterator[os.DirEntry] = scandir(self._bkp_log_path)
                 if self._live_log_path != self._bkp_log_path:
-                    entries: Iterator[os.DirEntry] = itertools.chain(entries, scandir(self._live_log_path))
+                    entries = itertools.chain(entries, scandir(self._live_log_path))
 
                 for direntry in entries:
                     if not direntry.is_file():
@@ -170,7 +170,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         try:
             if self.stream:
                 self.stream.close()
-                self.stream = None
+                self.stream = None  # type: ignore
 
             if os.path.exists(self.baseFilename):
                 try:

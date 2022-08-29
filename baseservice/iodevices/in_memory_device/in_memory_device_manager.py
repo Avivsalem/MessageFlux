@@ -36,7 +36,7 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
         def __init__(self, device: 'InMemoryInputDevice', message: _QueueMessage):
             super().__init__(device)
             self._message = message
-            self._device = device
+            self._device: InMemoryInputDevice = device
 
         def _commit(self):
             pass
@@ -85,7 +85,7 @@ class InMemoryOutputDevice(OutputDevice['InMemoryDeviceManager']):
             self._queue_not_empty.notify()
 
 
-class InMemoryDeviceManager(InputDeviceManager, OutputDeviceManager):
+class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDeviceManager[InMemoryOutputDevice]):
 
     def __init__(self):
         self._queues: Dict[str, Tuple[List[_QueueMessage], Condition]] = {}
@@ -101,11 +101,11 @@ class InMemoryDeviceManager(InputDeviceManager, OutputDeviceManager):
 
         return queue, condition
 
-    def get_input_device(self, name: str) -> InputDevice:
+    def get_input_device(self, name: str) -> InMemoryInputDevice:
         queue, condition = self._get_queue_tuple(name)
 
         return InMemoryInputDevice(self, name, queue, condition)
 
-    def get_output_device(self, name: str) -> OutputDevice:
+    def get_output_device(self, name: str) -> InMemoryOutputDevice:
         queue, condition = self._get_queue_tuple(name)
         return InMemoryOutputDevice(self, name, queue, condition)

@@ -80,7 +80,7 @@ class ThreadLocalValue(threading.local, Generic[TValueType]):
 
 class ThreadLocalMember(Generic[TValueType]):
     """
-    this is a descriptor, for making thread local memebers for class:
+    this is a descriptor, for making thread local members for class:
 
     class MyClass:
         x = ThreadLocalMember()
@@ -145,8 +145,8 @@ class TimerContext:
     """
 
     def __init__(self):
-        self._start = -1
-        self._elapsed = -1
+        self._start: float = -1.0
+        self._elapsed: float = -1.0
 
     @property
     def elapsed_seconds(self) -> float:

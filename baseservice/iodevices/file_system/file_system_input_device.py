@@ -197,111 +197,7 @@ class TransactionLog:
                 json.dump(self._transactions, f)
 
 
-class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManager):
-    def __init__(self,
-                 root_folder: str,
-                 queue_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR,
-                 tmp_dir: str = None,
-                 serializer: Optional[FileSystemSerializerBase] = None,
-                 fifo: bool = True,
-                 min_input_file_age: int = 0,
-                 transaction_log_save_interval: int = 10,
-                 bookkeeping_path: Optional[str] = None):
-        """
-        ctor
-
-        :param root_folder: the root folder to read/write from
-        :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
-        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
-        :param fifo: should we read the files sorted by time (Notice! when fifo=false, you might get file starvation)
-        :param min_input_file_age: the minimum time in seconds since last modification, before we to try to read it...
-        :param transaction_log_save_interval: the interval in seconds to save the transaction log
-        :param bookkeeping_path: optional path for the bookkeeping folder (may be outside of root folder)
-        """
-        super(FileSystemInputDeviceManager, self).__init__(root_folder=root_folder,
-                                                           queue_dir_name=queue_dir_name,
-                                                           tmp_dir=tmp_dir,
-                                                           bookkeeping_path=bookkeeping_path,
-                                                           serializer=serializer)
-        self._fifo = fifo
-        self._min_input_file_age = min_input_file_age
-        transaction_log_filename = os.path.join(self.bookkeeping_folder, f'{self._unique_manager_id}.transactionlog')
-        self._transaction_log = TransactionLog(transaction_log_filename)
-        self._transaction_log_save_interval = transaction_log_save_interval
-        self._should_stop: threading.Event = threading.Event()
-        self._transaction_log_thread = None
-        self._logger = logging.getLogger(__name__)
-
-    def _do_transaction_log_thread(self):
-        while not self._should_stop.is_set():
-            try:
-                self._transaction_log.write_log()
-                now = time.time()
-                for direntry in os.scandir(self.bookkeeping_folder):
-                    try:
-                        if not direntry.is_file():
-                            continue
-                        transaction_log_file = direntry.path
-                        if not transaction_log_file.endswith(".transactionlog"):
-                            continue
-                        file_age = now - direntry.stat().st_mtime
-                        if file_age < self._transaction_log_save_interval * 3:
-                            # don't roll back transaction logs that are too new (might be a file of another pod/process)
-                            continue
-
-                        temp_transaction_log_file_name = f'{transaction_log_file}.rolling_back.{randint(0, 10000)}'
-                        os.rename(src=transaction_log_file, dst=temp_transaction_log_file_name)
-                    except FileNotFoundError:
-                        continue  # Couldn't handle the file, because someone else got to it first
-
-                    try:
-                        transaction_log = TransactionLog(temp_transaction_log_file_name)
-                        transaction_log.rollback_all()
-                    except Exception:
-                        self._logger.exception(f"Error rolling back {transaction_log_file} file. removing")
-                    finally:
-                        if os.path.exists(temp_transaction_log_file_name):
-                            os.remove(temp_transaction_log_file_name)
-            except Exception:
-                self._logger.exception('Error in transaction_log thread')
-            # sleep for at least a few seconds, so we won't spam
-            self._should_stop.wait(self._transaction_log_save_interval)
-
-    @property
-    def transaction_log(self):
-        return self._transaction_log
-
-    def get_input_device(self, device_name: str) -> InputDevice:
-        """
-        Returns an input device by name
-
-        :param device_name: the name of the device to read from
-        :return: an input device for 'device_name'
-        """
-        try:
-            return FileSystemInputDevice(device_manager=self,
-                                         tmp_folder=self._tmp_folder,
-                                         queues_folder=self._queues_folder,
-                                         device_name=device_name,
-                                         fifo=self._fifo,
-                                         min_file_age=self._min_input_file_age,
-                                         serializer=self._serializer)
-        except Exception as e:
-            raise KwargsException("Error getting input device") from e  # TODO: raise another type of exception
-
-    def connect(self):
-        super(FileSystemInputDeviceManager, self).connect()
-        self._should_stop.clear()
-        self._transaction_log_thread = threading.Thread(target=self._do_transaction_log_thread, daemon=True)
-        self._transaction_log_thread.start()
-
-    def close(self):
-        super(FileSystemInputDeviceManager, self).close()
-        self._should_stop.set()
-        self._transaction_log.rollback_all()
-
-
-class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
+class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
     """
     An InputDevice, that reads from folder
     """
@@ -501,3 +397,107 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
 
         except Exception as e:
             raise InputDeviceException('Error reading product from device') from e
+
+
+class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManager[FileSystemInputDevice]):
+    def __init__(self,
+                 root_folder: str,
+                 queue_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR,
+                 tmp_dir: str = None,
+                 serializer: Optional[FileSystemSerializerBase] = None,
+                 fifo: bool = True,
+                 min_input_file_age: int = 0,
+                 transaction_log_save_interval: int = 10,
+                 bookkeeping_path: Optional[str] = None):
+        """
+        ctor
+
+        :param root_folder: the root folder to read/write from
+        :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
+        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
+        :param fifo: should we read the files sorted by time (Notice! when fifo=false, you might get file starvation)
+        :param min_input_file_age: the minimum time in seconds since last modification, before we to try to read it...
+        :param transaction_log_save_interval: the interval in seconds to save the transaction log
+        :param bookkeeping_path: optional path for the bookkeeping folder (may be outside of root folder)
+        """
+        super(FileSystemInputDeviceManager, self).__init__(root_folder=root_folder,
+                                                           queue_dir_name=queue_dir_name,
+                                                           tmp_dir=tmp_dir,
+                                                           bookkeeping_path=bookkeeping_path,
+                                                           serializer=serializer)
+        self._fifo = fifo
+        self._min_input_file_age = min_input_file_age
+        transaction_log_filename = os.path.join(self.bookkeeping_folder, f'{self._unique_manager_id}.transactionlog')
+        self._transaction_log = TransactionLog(transaction_log_filename)
+        self._transaction_log_save_interval = transaction_log_save_interval
+        self._should_stop: threading.Event = threading.Event()
+        self._transaction_log_thread: Optional[threading.Thread] = None
+        self._logger = logging.getLogger(__name__)
+
+    def _do_transaction_log_thread(self):
+        while not self._should_stop.is_set():
+            try:
+                self._transaction_log.write_log()
+                now = time.time()
+                for direntry in os.scandir(self.bookkeeping_folder):
+                    try:
+                        if not direntry.is_file():
+                            continue
+                        transaction_log_file = direntry.path
+                        if not transaction_log_file.endswith(".transactionlog"):
+                            continue
+                        file_age = now - direntry.stat().st_mtime
+                        if file_age < self._transaction_log_save_interval * 3:
+                            # don't roll back transaction logs that are too new (might be a file of another pod/process)
+                            continue
+
+                        temp_transaction_log_file_name = f'{transaction_log_file}.rolling_back.{randint(0, 10000)}'
+                        os.rename(src=transaction_log_file, dst=temp_transaction_log_file_name)
+                    except FileNotFoundError:
+                        continue  # Couldn't handle the file, because someone else got to it first
+
+                    try:
+                        transaction_log = TransactionLog(temp_transaction_log_file_name)
+                        transaction_log.rollback_all()
+                    except Exception:
+                        self._logger.exception(f"Error rolling back {transaction_log_file} file. removing")
+                    finally:
+                        if os.path.exists(temp_transaction_log_file_name):
+                            os.remove(temp_transaction_log_file_name)
+            except Exception:
+                self._logger.exception('Error in transaction_log thread')
+            # sleep for at least a few seconds, so we won't spam
+            self._should_stop.wait(self._transaction_log_save_interval)
+
+    @property
+    def transaction_log(self):
+        return self._transaction_log
+
+    def get_input_device(self, device_name: str) -> FileSystemInputDevice:
+        """
+        Returns an input device by name
+
+        :param device_name: the name of the device to read from
+        :return: an input device for 'device_name'
+        """
+        try:
+            return FileSystemInputDevice(device_manager=self,
+                                         tmp_folder=self._tmp_folder,
+                                         queues_folder=self._queues_folder,
+                                         device_name=device_name,
+                                         fifo=self._fifo,
+                                         min_file_age=self._min_input_file_age,
+                                         serializer=self._serializer)
+        except Exception as e:
+            raise KwargsException("Error getting input device") from e  # TODO: raise another type of exception
+
+    def connect(self):
+        super(FileSystemInputDeviceManager, self).connect()
+        self._should_stop.clear()
+        self._transaction_log_thread = threading.Thread(target=self._do_transaction_log_thread, daemon=True)
+        self._transaction_log_thread.start()
+
+    def close(self):
+        super(FileSystemInputDeviceManager, self).close()
+        self._should_stop.set()
+        self._transaction_log.rollback_all()

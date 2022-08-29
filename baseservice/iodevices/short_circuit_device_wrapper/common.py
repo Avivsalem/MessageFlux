@@ -19,12 +19,12 @@ class ShortCircuitDeviceBase(object):
         """
         self._short_circuit_fail_count = short_circuit_fail_count
         self._short_circuit_time = short_circuit_time
-        self._short_circuit_end_time = None
+        self._short_circuit_end_time: float = -1.0
         self._current_fail_count = 0
 
     @property
     def is_in_short_circuit_state(self) -> bool:
-        return self._short_circuit_end_time is not None and time.time() < self._short_circuit_end_time
+        return self._short_circuit_end_time >= 0 and time.time() < self._short_circuit_end_time
 
     @property
     def current_fail_count(self) -> int:
@@ -34,7 +34,7 @@ class ShortCircuitDeviceBase(object):
         if self.is_in_short_circuit_state:
             raise ShortCircuitException("Device is in short circuit state")
 
-        self._short_circuit_end_time = None
+        self._short_circuit_end_time = -1.0
 
     def _report_failure(self):
         self._current_fail_count += 1

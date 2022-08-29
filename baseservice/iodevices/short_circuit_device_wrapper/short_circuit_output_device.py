@@ -3,7 +3,7 @@ from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.short_circuit_device_wrapper.common import ShortCircuitDeviceBase
 
 
-class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice):
+class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice['ShortCircuitOutputDeviceManager']):
     def __init__(self,
                  manager: 'ShortCircuitOutputDeviceManager',
                  name: str,
@@ -25,7 +25,7 @@ class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice):
             self._report_success()
 
 
-class ShortCircuitOutputDeviceManager(OutputDeviceManager):
+class ShortCircuitOutputDeviceManager(OutputDeviceManager[ShortCircuitOutputDevice]):
     def __init__(self,
                  inner_device_manager: OutputDeviceManager,
                  short_circuit_fail_count: int,
@@ -40,7 +40,7 @@ class ShortCircuitOutputDeviceManager(OutputDeviceManager):
     def disconnect(self):
         self._inner_device_manager.disconnect()
 
-    def get_output_device(self, name: str) -> OutputDevice:
+    def get_output_device(self, name: str) -> ShortCircuitOutputDevice:
         inner_device = self._inner_device_manager.get_output_device(name)
         return ShortCircuitOutputDevice(self,
                                         name,

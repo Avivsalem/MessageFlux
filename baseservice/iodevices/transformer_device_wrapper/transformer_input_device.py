@@ -4,7 +4,7 @@ from baseservice.iodevices.base import InputDevice, ReadResult, InputDeviceManag
 from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
-class TransformerInputDevice(InputDevice):
+class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
     def __init__(self,
                  manager: 'TransformerInputDeviceManager',
                  name: str,
@@ -22,7 +22,7 @@ class TransformerInputDevice(InputDevice):
         return read_result
 
 
-class TransformerInputDeviceManager(InputDeviceManager):
+class TransformerInputDeviceManager(InputDeviceManager[TransformerInputDevice]):
     def __init__(self, inner_device_manager: InputDeviceManager, transformer: TransformerBase):
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
@@ -35,6 +35,6 @@ class TransformerInputDeviceManager(InputDeviceManager):
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
-    def get_input_device(self, name: str) -> InputDevice:
+    def get_input_device(self, name: str) -> TransformerInputDevice:
         inner_input_device = self._inner_device_manager.get_input_device(name)
         return TransformerInputDevice(self, name, inner_input_device, self._transformer)

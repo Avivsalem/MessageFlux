@@ -71,6 +71,7 @@ def test_sanity_unsorted(tmpdir):
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
         read_result = input_device.read_message(with_transaction=False)
+        assert read_result is not None
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
         output_device.send_message(read_result.message)

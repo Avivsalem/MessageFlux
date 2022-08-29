@@ -15,7 +15,9 @@ def test_thread_local_member():
         prop4: ThreadLocalMember[str] = ThreadLocalMember()
 
         def __init__(self):
+            # noinspection PyTypeChecker
             self.prop1 = 11
+            # noinspection PyTypeChecker
             self.prop2 = "this is the init"
             self.not_local = 7
 

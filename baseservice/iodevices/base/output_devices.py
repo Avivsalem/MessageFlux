@@ -5,6 +5,7 @@ from baseservice.iodevices.base.common import Message, DeviceHeaders, MessageBun
 from baseservice.utils import KwargsException
 
 TManagerType = TypeVar('TManagerType', bound='OutputDeviceManager')
+TOutputDeviceType = TypeVar('TOutputDeviceType', bound='OutputDevice')
 
 
 class OutputDeviceException(KwargsException):
@@ -63,7 +64,7 @@ class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
         pass
 
 
-class OutputDeviceManager(metaclass=ABCMeta):
+class OutputDeviceManager(Generic[TOutputDeviceType], metaclass=ABCMeta):
     """
     this is a base class for output device managers. it is used to create output devices
     """
@@ -87,7 +88,7 @@ class OutputDeviceManager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_output_device(self, name: str) -> OutputDevice:
+    def get_output_device(self, name: str) -> TOutputDeviceType:
         """
         creates an output device. this should be implemented by child classes
 

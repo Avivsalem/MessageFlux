@@ -4,7 +4,7 @@ from baseservice.iodevices.base import InputDevice, ReadResult, InputDeviceManag
 from baseservice.iodevices.short_circuit_device_wrapper.common import ShortCircuitDeviceBase
 
 
-class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice):
+class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice['ShortCircuitInputDeviceManager']):
     def __init__(self,
                  manager: 'ShortCircuitInputDeviceManager',
                  name: str,
@@ -28,7 +28,7 @@ class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice):
         return result
 
 
-class ShortCircuitInputDeviceManager(InputDeviceManager):
+class ShortCircuitInputDeviceManager(InputDeviceManager[ShortCircuitInputDevice]):
     def __init__(self,
                  inner_device_manager: InputDeviceManager,
                  short_circuit_fail_count: int,
@@ -43,7 +43,7 @@ class ShortCircuitInputDeviceManager(InputDeviceManager):
     def disconnect(self):
         self._inner_device_manager.disconnect()
 
-    def get_input_device(self, name: str) -> InputDevice:
+    def get_input_device(self, name: str) -> ShortCircuitInputDevice:
         inner_device = self._inner_device_manager.get_input_device(name)
         return ShortCircuitInputDevice(self,
                                        name,

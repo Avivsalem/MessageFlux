@@ -133,7 +133,7 @@ class BaseService(metaclass=ABCMeta):
 
     def _finalize_service(self, exception: Optional[Exception] = None):
         """
-        this method may be implemented by child classes, to perfom some cleanup logic
+        this method may be implemented by child classes, to perform some cleanup logic
         after the service has finished running.
 
         :param exception: the exception (if any) that _run_service raised

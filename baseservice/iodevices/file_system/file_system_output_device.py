@@ -13,49 +13,7 @@ from baseservice.utils import KwargsException, get_random_id
 from baseservice.utils.filesystem import create_dir_if_not_exists
 
 
-class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceManager):
-    def __init__(self,
-                 root_folder: str,
-                 queue_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR,
-                 tmp_dir: str = None,
-                 serializer: Optional[FileSystemSerializerBase] = None,
-                 output_filename_format: str = None,
-                 bookkeeping_path: Optional[str] = None):
-        """
-        ctor
-
-        :param root_folder: the root folder to read/write from
-        :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
-        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
-        :param output_filename_format: the filename format to save a product, "{filename}-{item_id}"
-        :param bookkeeping_path: optional path for the bookkeeping folder (it may be outside root folder)
-        """
-        super(FileSystemOutputDeviceManager, self).__init__(root_folder=root_folder,
-                                                            queue_dir_name=queue_dir_name,
-                                                            tmp_dir=tmp_dir,
-                                                            bookkeeping_path=bookkeeping_path,
-                                                            serializer=serializer)
-        self._output_filename_format = output_filename_format
-
-    def get_output_device(self, device_name: str) -> OutputDevice:
-        """
-        Returns an outgoing device by name
-
-        :param device_name: the name of the device to write to
-        :return: an outgoing device for 'device_name'
-        """
-        try:
-            return FileSystemOutputDevice(device_manager=self,
-                                          tmp_folder=self._tmp_folder,
-                                          queues_folder=self._queues_folder,
-                                          device_name=device_name,
-                                          format_filename=self._output_filename_format,
-                                          serializer=self._serializer)
-        except Exception as e:
-            raise KwargsException("Error getting output device") from e  # TODO: raise another type of exception
-
-
-class FileSystemOutputDevice(OutputDevice[FileSystemOutputDeviceManager]):
+class FileSystemOutputDevice(OutputDevice['FileSystemOutputDeviceManager']):
     """
     And OutputDevice that writes to filesystem
     """
@@ -125,3 +83,45 @@ class FileSystemOutputDevice(OutputDevice[FileSystemOutputDeviceManager]):
             self._logger.debug(f'Wrote product to path {final_fullpath}')
         except Exception as e:
             raise OutputDeviceException('Error writing to device') from e
+
+
+class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceManager[FileSystemOutputDevice]):
+    def __init__(self,
+                 root_folder: str,
+                 queue_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR,
+                 tmp_dir: str = None,
+                 serializer: Optional[FileSystemSerializerBase] = None,
+                 output_filename_format: str = None,
+                 bookkeeping_path: Optional[str] = None):
+        """
+        ctor
+
+        :param root_folder: the root folder to read/write from
+        :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
+        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
+        :param output_filename_format: the filename format to save a product, "{filename}-{item_id}"
+        :param bookkeeping_path: optional path for the bookkeeping folder (it may be outside root folder)
+        """
+        super(FileSystemOutputDeviceManager, self).__init__(root_folder=root_folder,
+                                                            queue_dir_name=queue_dir_name,
+                                                            tmp_dir=tmp_dir,
+                                                            bookkeeping_path=bookkeeping_path,
+                                                            serializer=serializer)
+        self._output_filename_format = output_filename_format
+
+    def get_output_device(self, device_name: str) -> FileSystemOutputDevice:
+        """
+        Returns an outgoing device by name
+
+        :param device_name: the name of the device to write to
+        :return: an outgoing device for 'device_name'
+        """
+        try:
+            return FileSystemOutputDevice(device_manager=self,
+                                          tmp_folder=self._tmp_folder,
+                                          queues_folder=self._queues_folder,
+                                          device_name=device_name,
+                                          format_filename=self._output_filename_format,
+                                          serializer=self._serializer)
+        except Exception as e:
+            raise KwargsException("Error getting output device") from e  # TODO: raise another type of exception

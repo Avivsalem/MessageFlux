@@ -117,6 +117,7 @@ class SingleProcessHandler:
                                         args=(self._service_factory, child_pipe, self._instance_index))
 
         def _run_process():
+            assert self._process is not None
             self._process.start()
             self._process.join()
             self._cleanup()
@@ -151,10 +152,12 @@ class SingleProcessHandler:
 
     def terminate(self):
         if self.is_alive():
+            assert self._process is not None
             self._process.terminate()
 
     def kill(self):
         if self.is_alive():
+            assert self._process is not None
             self._process.kill()
 
     def _cleanup(self):

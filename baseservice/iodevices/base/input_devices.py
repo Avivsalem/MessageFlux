@@ -9,6 +9,7 @@ from baseservice.iodevices.base.input_transaction import InputTransaction, NULLT
 from baseservice.utils import KwargsException, StatefulListIterator
 
 TManagerType = TypeVar('TManagerType', bound='InputDeviceManager')
+TInputDeviceType = TypeVar('TInputDeviceType', bound='InputDevice')
 
 
 class InputDeviceException(KwargsException):
@@ -140,7 +141,7 @@ class AggregateInputDevice(InputDevice):
         return read_result
 
 
-class InputDeviceManager(metaclass=ABCMeta):
+class InputDeviceManager(Generic[TInputDeviceType], metaclass=ABCMeta):
     """
     this is the base class for input device managers. this class is used to create input devices.
     """
@@ -164,7 +165,7 @@ class InputDeviceManager(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def get_input_device(self, name: str) -> InputDevice:
+    def get_input_device(self, name: str) -> TInputDeviceType:
         """
         creates an input device. should be implemented in child classes
 
