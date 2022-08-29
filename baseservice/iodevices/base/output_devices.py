@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, TypeVar, Generic
 
-from baseservice.iodevices.base.common import Message, DeviceHeaders
+from baseservice.iodevices.base.common import Message, DeviceHeaders, MessageBundle
 from baseservice.utils import KwargsException
 
 TManagerType = TypeVar('TManagerType', bound='OutputDeviceManager')
@@ -51,16 +51,14 @@ class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
         those headers are not part of the message, but contains extra data for the device, that can modify its operation
         """
         device_headers = device_headers or {}
-        self._send_message(message=message, device_headers=device_headers)
+        self._send_message(MessageBundle(message=message, device_headers=device_headers))
 
     @abstractmethod
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message_bundle: MessageBundle):
         """
         sends a message to the device. this should be implemented by child classes
 
-        :param message: the message to send
-        :param device_headers: optional headers to send to underlying device.
-        those headers are not part of the message, but contains extra data for the device, that can modify its operation
+        :param message_bundle: the message bundle to send
         """
         pass
 

@@ -29,13 +29,13 @@ def sanity_test(input_device_manager: InputDeviceManager,
     input_device_manager.connect()
     try:
         input_device = input_device_manager.get_input_device(device_name)
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_1
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result.message == test_message_1
+        read_result.commit()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_2
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result.message == test_message_2
+        read_result.commit()
     finally:
         input_device_manager.disconnect()
 
@@ -63,19 +63,19 @@ def rollback_test(input_device_manager: InputDeviceManager,
     input_device_manager.connect()
     try:
         input_device = input_device_manager.get_input_device(device_name)
-        msg, headers, transaction1 = input_device.read_message()
-        assert msg == test_message_1
-        msg, headers, transaction2 = input_device.read_message()
-        assert msg == test_message_2
-        transaction1.rollback()
-        transaction2.rollback()
+        read_result1 = input_device.read_message()
+        assert read_result1.message == test_message_1
+        read_result2 = input_device.read_message()
+        assert read_result2.message == test_message_2
+        read_result1.rollback()
+        read_result2.rollback()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_1
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result.message == test_message_1
+        read_result.commit()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_2
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result.message == test_message_2
+        read_result.commit()
     finally:
         input_device_manager.disconnect()

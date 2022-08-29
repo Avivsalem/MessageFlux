@@ -1,4 +1,5 @@
-from baseservice.iodevices.base import OutputDevice, OutputDeviceManager, Message, DeviceHeaders
+from baseservice.iodevices.base import OutputDevice, OutputDeviceManager
+from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
@@ -12,9 +13,9 @@ class TransformerOutputDevice(OutputDevice):
         self._transformer = transformer
         self._inner_device = inner_device
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
-        new_message, new_device_headers = self._transformer.transform_outgoing_message(message, device_headers)
-        self._inner_device.send_message(new_message, new_device_headers)
+    def _send_message(self, message_bundle: MessageBundle):
+        message_bundle = self._transformer.transform_outgoing_message(message_bundle)
+        self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
 
 
 class TransformerOutputDeviceManager(OutputDeviceManager):

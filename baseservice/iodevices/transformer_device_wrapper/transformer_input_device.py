@@ -1,6 +1,6 @@
 from typing import Optional
 
-from baseservice.iodevices.base import InputDevice, ReadMessageResult, EMPTY_RESULT, InputDeviceManager
+from baseservice.iodevices.base import InputDevice, ReadResult, InputDeviceManager
 from baseservice.iodevices.transformer_device_wrapper.transformer_base import TransformerBase
 
 
@@ -14,13 +14,12 @@ class TransformerInputDevice(InputDevice):
         self._transformer = transformer
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
-        message, headers, transaction = self._inner_device.read_message(timeout=timeout,
-                                                                        with_transaction=with_transaction)
-        if message is None:
-            return EMPTY_RESULT
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
+        read_result = self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)
+        if read_result is not None:
+            read_result = self._transformer.transform_incoming_message(read_result)
 
-        return self._transformer.transform_incoming_message(message, headers, transaction)
+        return read_result
 
 
 class TransformerInputDeviceManager(InputDeviceManager):

@@ -1,4 +1,5 @@
 import copy
+from dataclasses import field, dataclass
 from io import BytesIO
 from typing import BinaryIO, Dict, Any, Optional, Union
 
@@ -60,3 +61,16 @@ class Message:
 
 
 DeviceHeaders = Dict[str, Any]  # this is the type for device specific headers, used to pass arguments to/from device
+
+
+@dataclass
+class MessageBundle:
+    """
+    this class holds a message and device headers (to get from device, or send to device)
+
+    Attributes:
+        message (Message): The Message.
+        device_headers (str): Additional Headers that may return data from device, or affect its operation.
+    """
+    message: Message
+    device_headers: DeviceHeaders = field(default_factory=dict)

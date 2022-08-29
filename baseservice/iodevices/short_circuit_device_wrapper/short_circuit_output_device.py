@@ -1,4 +1,5 @@
-from baseservice.iodevices.base import OutputDevice, OutputDeviceManager, Message, DeviceHeaders
+from baseservice.iodevices.base import OutputDevice, OutputDeviceManager
+from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.short_circuit_device_wrapper.common import ShortCircuitDeviceBase
 
 
@@ -13,10 +14,10 @@ class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice):
         ShortCircuitDeviceBase.__init__(self, short_circuit_fail_count, short_circuit_time)
         self._inner_device = inner_device
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
+    def _send_message(self, message_bundle: MessageBundle):
         self._validate_short_circuit()
         try:
-            self._inner_device.send_message(message, device_headers)
+            self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
         except Exception:
             self._report_failure()
             raise

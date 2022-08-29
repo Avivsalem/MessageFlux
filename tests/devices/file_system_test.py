@@ -44,15 +44,14 @@ def test_sanity(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        msg: Message
-        msg, _, _ = input_device.read_message(with_transaction=False)
-        assert msg is not None
-        assert msg.stream.read() == b'data'
-        msg.stream.seek(0)
+        read_result = input_device.read_message(with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.stream.read() == b'data'
+        read_result.message.stream.seek(0)
 
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
-        output_device.send_message(msg)
+        output_device.send_message(read_result.message)
 
     assert not os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     assert not os.listdir(input_manager.tmp_folder)
@@ -71,10 +70,10 @@ def test_sanity_unsorted(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        msg, _, _ = input_device.read_message(with_transaction=False)
+        read_result = input_device.read_message(with_transaction=False)
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
-        output_device.send_message(msg)
+        output_device.send_message(read_result.message)
 
     assert not os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     assert not os.listdir(input_manager.tmp_folder)
@@ -96,8 +95,8 @@ def test_rollback(tmpdir):
         with input_manager:
             input_device = input_manager.get_input_device(QUEUE_NAME)
             with InputTransactionScope(input_device) as transaction_scope:
-                msg, _ = transaction_scope.read_message()
-                msg, _ = transaction_scope.read_message()
+                read_result = transaction_scope.read_message()
+                read_result = transaction_scope.read_message()
                 assert len(os.listdir(input_manager.bookkeeping_folder)) == 1
                 tran_log = TransactionLog._load_file(
                     os.path.join(input_manager.bookkeeping_folder, os.listdir(input_manager.bookkeeping_folder)[0]))
@@ -124,13 +123,13 @@ def test_backout(tmpdir):
     with input_manager:
         for i in range(3):
             queue = input_manager.get_input_device(QUEUE_NAME)
-            product, meta, transaction = queue.read_message()
-            assert product is not None
-            transaction.rollback()
+            read_result = queue.read_message()
+            assert read_result is not None
+            read_result.rollback()
 
         queue = input_manager.get_input_device(QUEUE_NAME)
-        product, meta, _ = queue.read_message()
-        assert product is None
+        read_result = queue.read_message()
+        assert read_result is None
 
         assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'BACKOUT'))) == 1
 

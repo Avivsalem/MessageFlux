@@ -9,7 +9,8 @@ from baseservice.iodevices.base import (InputDeviceManager,
                                         InputDevice,
                                         Message,
                                         DeviceHeaders,
-                                        ReadMessageResult, EMPTY_RESULT)
+                                        ReadResult)
+from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
     ShortCircuitOutputDeviceManager
 
@@ -23,14 +24,14 @@ class ErrorDevice(InputDevice, OutputDevice):
         InputDevice.__init__(self, None, None)
         OutputDevice.__init__(self, None, None)
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         if with_transaction:
             raise MyException()
         else:
-            return EMPTY_RESULT
+            return None
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
-        if device_headers.get("fail", True):
+    def _send_message(self, message_bundle: MessageBundle):
+        if message_bundle.device_headers.get("fail", True):
             raise MyException()
 
 

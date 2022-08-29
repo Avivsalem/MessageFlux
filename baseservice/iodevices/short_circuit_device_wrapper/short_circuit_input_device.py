@@ -1,6 +1,6 @@
 from typing import Optional
 
-from baseservice.iodevices.base import InputDevice, ReadMessageResult, InputDeviceManager
+from baseservice.iodevices.base import InputDevice, ReadResult, InputDeviceManager
 from baseservice.iodevices.short_circuit_device_wrapper.common import ShortCircuitDeviceBase
 
 
@@ -15,7 +15,7 @@ class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice):
         ShortCircuitDeviceBase.__init__(self, short_circuit_fail_count, short_circuit_time)
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         self._validate_short_circuit()
         try:
             result = self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)

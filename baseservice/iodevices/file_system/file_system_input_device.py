@@ -1,16 +1,16 @@
-from collections import defaultdict
-
 import json
 import logging
 import os
 import random
 import threading
-import time
+from collections import defaultdict
 from random import randint
 from typing import Optional, Tuple, Dict, List, Generator
 
-from baseservice.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadMessageResult, \
-    InputDeviceException, Message, EMPTY_RESULT
+import time
+
+from baseservice.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadResult, \
+    InputDeviceException, Message
 from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from baseservice.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
     DefaultFileSystemSerializer
@@ -70,8 +70,7 @@ class FileSystemInputTransaction(InputTransaction):
                   org_path: str,
                   tmp_folder: str,
                   with_transaction: bool,
-                  serializer: FileSystemSerializerBase) -> Tuple[Optional[Message],
-                                                                 Optional['FileSystemInputTransaction']]:
+                  serializer: FileSystemSerializerBase) -> Optional[ReadResult]:
         """
         reads the file from org_path, and adds the file to transaction if it exists, or delete if it doesn't
         :param device: the input device for this transaction
@@ -85,20 +84,21 @@ class FileSystemInputTransaction(InputTransaction):
         try:
             if not atomic_move(org_path, tmp_path,
                                FileSystemInputTransaction._calc_lockfile_name(tmp_folder, org_path)):
-                return None, None
+                return None
         except AtomicMoveException as ex:
             FileSystemInputTransaction._logger.exception(f'Atomic move could not move the file {org_path}')
-            return None, None
+            return None
 
         with open(tmp_path, 'rb') as f:
             data, headers = serializer.deserialize(f)
 
         if with_transaction:
-            return Message(data, headers), FileSystemInputTransaction(device=device, org_path=org_path,
-                                                                      tmp_path=tmp_path)
+            return ReadResult(message=Message(data, headers),
+                              transaction=FileSystemInputTransaction(device=device, org_path=org_path,
+                                                                     tmp_path=tmp_path))
         else:
             os.remove(tmp_path)
-            return Message(data, headers), None
+            return ReadResult(Message(data, headers))
 
     def _commit(self):
         """
@@ -116,8 +116,7 @@ class FileSystemInputTransaction(InputTransaction):
         """
         rolls back the transaction
         """
-        FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] = \
-            FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] + 1
+        FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] += 1
         if FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] >= FileSystemInputTransaction._MAX_BACKOUT:
             dest = FileSystemInputTransaction._get_backout_filename(org_path)
             FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE.pop(org_path, None)
@@ -426,8 +425,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
         """
         self._current_batch_size = max(self._MIN_BATCH_SIZE, int(self._current_batch_size / 2))
 
-    def _read_file(self, direntry: os.DirEntry, with_transaction: bool = True) -> Tuple[Optional[Message],
-                                                                                        Optional[InputTransaction]]:
+    def _read_file(self, direntry: os.DirEntry, with_transaction: bool = True) -> Optional[ReadResult]:
         """
         tries to read a single filename from queue
 
@@ -436,11 +434,11 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
         :return: None, None if the file can't be read or (BytesIO, dict) if it succeeded
         """
         if direntry.path in self._black_listed_files:
-            return None, None
+            return None
 
         if not direntry.is_file():
             self._black_listed_files.add(direntry.path)
-            return None, None
+            return None
 
         self._logger.debug(f"found input file {direntry.name} in directory {self._input_folder}")
 
@@ -451,7 +449,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                                                     with_transaction=with_transaction,
                                                     serializer=self._serializer)
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
+    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
         try:
             dead_line = time.perf_counter() + timeout
             if self._sorted:
@@ -463,9 +461,10 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                                            self.STAT_HEADER_NAME: direntry.stat()}
                         except FileNotFoundError:  # file was deleted before we read it
                             continue
-                        msg, trans = self._read_file(direntry, with_transaction=with_transaction)
-                        if msg is not None:
-                            return msg, fs_metadata, trans
+                        read_result = self._read_file(direntry, with_transaction=with_transaction)
+                        if read_result is not None:
+                            read_result.device_headers.update(fs_metadata)
+                            return read_result
 
                     if time.perf_counter() >= dead_line:
                         break
@@ -481,10 +480,11 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                                            self.STAT_HEADER_NAME: direntry.stat()}
                         except FileNotFoundError:  # file was deleted before we read it
                             continue
-                        msg, trans = self._read_file(direntry, with_transaction=with_transaction)
-                        if msg is not None:
+                        read_result = self._read_file(direntry, with_transaction=with_transaction)
+                        if read_result is not None:
                             self._decrease_batch_size()
-                            return msg, fs_metadata, trans
+                            read_result.device_headers.update(fs_metadata)
+                            return read_result
 
                     # couldn't read any file from batch. try bigger batch next time
                     self._increase_batch_size()
@@ -493,7 +493,7 @@ class FileSystemInputDevice(InputDevice[FileSystemInputDeviceManager]):
                     if not got_file:
                         time.sleep(1)
 
-            return EMPTY_RESULT
+            return None
 
         except Exception as e:
             raise InputDeviceException('Error reading product from device') from e

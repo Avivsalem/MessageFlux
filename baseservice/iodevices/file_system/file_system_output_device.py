@@ -3,7 +3,8 @@ import os
 import shutil
 from typing import BinaryIO, Optional, Dict, Any
 
-from baseservice.iodevices.base import OutputDeviceManager, OutputDevice, Message, DeviceHeaders, OutputDeviceException
+from baseservice.iodevices.base import OutputDeviceManager, OutputDevice, OutputDeviceException
+from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from baseservice.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
     DefaultFileSystemSerializer
@@ -87,10 +88,10 @@ class FileSystemOutputDevice(OutputDevice[FileSystemOutputDeviceManager]):
         self._logger = logging.getLogger(__name__)
         self._serializer = serializer or DefaultFileSystemSerializer()
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
-        item_id = device_headers.get(MetadataHeaders.ITEM_ID)
+    def _send_message(self, message_bundle: MessageBundle):
+        item_id = message_bundle.device_headers.get(MetadataHeaders.ITEM_ID, '')
         self._logger.debug('Sending product to {} device'.format(self.name))
-        self._save_to_folder(message.stream, item_id, message.headers)
+        self._save_to_folder(message_bundle.message.stream, item_id, message_bundle.message.headers)
 
     def _save_to_folder(self, stream: BinaryIO, item_id: str, headers: Dict[str, Any]):
         """

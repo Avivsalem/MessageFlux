@@ -1,20 +1,20 @@
 from io import BytesIO
 from threading import Thread, Event
 from time import sleep
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 
 from baseservice.iodevices.base import InputDevice, Message, DeviceHeaders
+from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
-from baseservice.pipeline_service import PipelineHandlerBase, PipelineService
+from baseservice.pipeline_service import PipelineHandlerBase, PipelineService, PipelineResult
 
 
 class TestPipelineHandler(PipelineHandlerBase):
-    def handle_message(self, input_device: InputDevice,
-                       message: Message,
-                       device_headers: DeviceHeaders) -> Union[Tuple[None, None, None],
-                                                               Tuple[str, Message, DeviceHeaders]]:
-        output_device_name = message.bytes.decode()
-        return output_device_name, message, device_headers
+    def handle_message(self,
+                       input_device: InputDevice,
+                       message_bundle: MessageBundle) -> Optional[PipelineResult]:
+        output_device_name = message_bundle.message.bytes.decode()
+        return PipelineResult(output_device_name, message_bundle)
 
 
 def test_sanity():
@@ -34,16 +34,16 @@ def test_sanity():
     try:
         Thread(target=service.start).start()
         loop_ended.wait(3)
-        message, _, _ = output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
-        assert message is not None
-        assert message.bytes == b'output_device1'
+        read_result= output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'output_device1'
 
-        message, _, _ = output_device_manager.get_input_device('output_device2').read_message(with_transaction=False)
-        assert message is not None
-        assert message.bytes == b'output_device2'
+        read_result = output_device_manager.get_input_device('output_device2').read_message(with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'output_device2'
 
-        message, _, _ = output_device_manager.get_input_device('output_device3').read_message(with_transaction=False)
-        assert message is not None
-        assert message.bytes == b'output_device3'
+        read_result = output_device_manager.get_input_device('output_device3').read_message(with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'output_device3'
     finally:
         service.stop()
