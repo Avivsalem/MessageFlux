@@ -1,9 +1,7 @@
-from io import BytesIO
 from threading import Thread, Event
-from time import sleep
-from typing import Union, Tuple, Optional
+from typing import Optional
 
-from baseservice.iodevices.base import InputDevice, Message, DeviceHeaders
+from baseservice.iodevices.base import InputDevice, Message
 from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
 from baseservice.pipeline_service import PipelineHandlerBase, PipelineService, PipelineResult
@@ -34,7 +32,7 @@ def test_sanity():
     try:
         Thread(target=service.start).start()
         loop_ended.wait(3)
-        read_result= output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
+        read_result = output_device_manager.get_input_device('output_device1').read_message(with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'output_device1'
 

@@ -8,7 +8,6 @@ from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.base.input_transaction import InputTransaction, NULLTransaction
 from baseservice.utils import KwargsException, StatefulListIterator
 
-
 TManagerType = TypeVar('TManagerType', bound='InputDeviceManager')
 
 
@@ -195,7 +194,6 @@ class _NullDevice(InputDevice):
         return None
 
 
-
 NULL_TRANSACTION = NULLTransaction(_NullDevice())
 
 
@@ -217,4 +215,3 @@ class ReadResult(MessageBundle):
         rolls back this read result
         """
         self.transaction.rollback()
-

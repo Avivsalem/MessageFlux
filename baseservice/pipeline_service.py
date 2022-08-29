@@ -1,9 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, Union, Optional
+from typing import List, Tuple, Optional
 
 from baseservice.device_reader_service import DeviceReaderService
-from baseservice.iodevices.base import InputDevice, Message, DeviceHeaders, OutputDeviceManager, ReadResult
+from baseservice.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
 from baseservice.iodevices.base.common import MessageBundle
 
 
@@ -55,7 +55,7 @@ class PipelineService(DeviceReaderService):
 
     def _handle_messages(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
-            pipeline_result = self._pipeline_handler.handle_message(input_device,read_result)
+            pipeline_result = self._pipeline_handler.handle_message(input_device, read_result)
             if pipeline_result is not None:
                 output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
                 output_device.send_message(message=pipeline_result.message_bundle.message,

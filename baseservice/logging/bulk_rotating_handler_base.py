@@ -1,6 +1,3 @@
-from os import scandir
-
-import itertools
 import os
 import random
 import socket
@@ -9,9 +6,12 @@ import traceback
 from abc import ABCMeta, abstractmethod
 from datetime import datetime
 from logging.handlers import BaseRotatingHandler
+from os import scandir
 from shutil import move
-from time import sleep, time
 from typing import Optional, Iterator
+
+import itertools
+from time import sleep, time
 
 from baseservice.utils import get_random_id
 from baseservice.utils.filesystem import create_dir_if_not_exists

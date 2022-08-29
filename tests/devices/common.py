@@ -1,7 +1,7 @@
-import time
-
 import uuid
 from typing import Optional
+
+import time
 
 from baseservice.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
 

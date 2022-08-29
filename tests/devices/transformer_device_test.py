@@ -1,7 +1,6 @@
 import uuid
-from typing import Tuple
 
-from baseservice.iodevices.base import Message, DeviceHeaders, InputTransaction, ReadResult
+from baseservice.iodevices.base import Message, ReadResult
 from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
 from baseservice.iodevices.transformer_device_wrapper import TransformerBase, TransformerInputDeviceManager, \
@@ -58,10 +57,10 @@ def test_zlib():
     output_device.send_message(Message(b'hello2'))
 
     input_device = zlib_input_device_manager.get_input_device(test_device_name)
-    read_result= input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(with_transaction=False)
     assert read_result.message.bytes == b'hello1'
 
-    read_result= input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(with_transaction=False)
     assert read_result.message.bytes == b'hello2'
 
     output_device = zlib_output_device_manager.get_output_device(test_device_name)

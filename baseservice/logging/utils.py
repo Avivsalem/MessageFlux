@@ -1,4 +1,5 @@
 import logging
+
 import sys
 
 DEFAULT_LOG_FORMATTER = logging.Formatter(

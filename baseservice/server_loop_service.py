@@ -1,7 +1,8 @@
 import threading
 from abc import ABCMeta, abstractmethod
-from time import time
 from typing import Optional
+
+from time import time
 
 from baseservice.base_service import BaseService
 from baseservice.utils import ObservableEvent

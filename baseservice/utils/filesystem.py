@@ -1,6 +1,7 @@
-import errno
 import os
 import shutil
+
+import errno
 import time
 
 from baseservice.utils import KwargsException

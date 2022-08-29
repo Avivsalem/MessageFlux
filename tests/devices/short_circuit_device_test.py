@@ -21,6 +21,7 @@ class MyException(Exception):
 # noinspection Mypy
 class ErrorInputDevice(InputDevice):
     def __init__(self):
+        # noinspection PyTypeChecker
         super(ErrorInputDevice, self).__init__(None, '')
 
     def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
@@ -32,11 +33,13 @@ class ErrorInputDevice(InputDevice):
 
 class ErrorOutputDevice(OutputDevice):
     def __init__(self):
+        # noinspection PyTypeChecker
         super(ErrorOutputDevice, self).__init__(None, '')
 
     def _send_message(self, message_bundle: MessageBundle):
         if message_bundle.device_headers.get("fail", True):
             raise MyException()
+
 
 class ErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
     def get_input_device(self, name: str) -> InputDevice:

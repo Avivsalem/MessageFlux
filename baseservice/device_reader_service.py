@@ -5,8 +5,6 @@ from typing import List, Optional, Tuple
 from time import time
 
 from baseservice.iodevices.base import (InputTransactionScope,
-                                        Message,
-                                        DeviceHeaders,
                                         InputDeviceManager,
                                         AggregateInputDevice,
                                         InputDevice, ReadResult)

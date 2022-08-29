@@ -1,7 +1,6 @@
-from os import scandir
-
 import os
 import socket
+from os import scandir
 from typing import List, Optional
 
 from baseservice.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
