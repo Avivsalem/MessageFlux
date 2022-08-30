@@ -33,6 +33,9 @@ jobs:
         # Display the Python version being used
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+        # generate the all-extra-requirements.txt file
+      - name: Generate all-extra-requirements.txt
+        run: python make_all_extra_requirements.py
         # Install any basic dependencies required to run the tests
       - name: Install dependencies
         run: |
