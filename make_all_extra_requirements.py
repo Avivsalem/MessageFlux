@@ -5,7 +5,7 @@ from typing import List, Set
 this_directory = Path(__file__).parent
 
 
-def load_requirements(path: Path , filename) -> List[str]:
+def load_requirements(path: Path, filename) -> List[str]:
     return (path / filename).read_text().splitlines()
 
 
@@ -23,4 +23,9 @@ def load_all_extra_requirements(path: Path = this_directory) -> List[str]:
     return list(all_requirements)
 
 
-(this_directory / "all-extra-requirements.txt").write_text(os.linesep.join(load_all_extra_requirements()))
+all_extras = os.linesep.join(load_all_extra_requirements())
+file_to_write_to = "all-extra-requirements.txt"
+print(f'Writing the requirements to {file_to_write_to}:')
+print(all_extras)
+(this_directory / "all-extra-requirements.txt").write_text(all_extras)
+print('Done!!!')
