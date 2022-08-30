@@ -16,7 +16,7 @@ def test_folder_creation(tmpdir):
     tmpdir = str(tmpdir)
     manager = FileSystemInputDeviceManager(tmpdir)
     with manager:
-        device = manager.get_input_device(QUEUE_NAME)
+        _ = manager.get_input_device(QUEUE_NAME)
     assert FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR in os.listdir(tmpdir)
     assert QUEUE_NAME in os.listdir(manager.queues_folder)
 
