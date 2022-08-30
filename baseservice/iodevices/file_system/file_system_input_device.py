@@ -85,7 +85,7 @@ class FileSystemInputTransaction(InputTransaction):
             if not atomic_move(org_path, tmp_path,
                                FileSystemInputTransaction._calc_lockfile_name(tmp_folder, org_path)):
                 return None
-        except AtomicMoveException as ex:
+        except AtomicMoveException:
             FileSystemInputTransaction._logger.exception(f'Atomic move could not move the file {org_path}')
             return None
 
@@ -132,7 +132,7 @@ class FileSystemInputTransaction(InputTransaction):
         try:
             self.rollback_path(tmp_path=self._tmp_path, org_path=self._org_path)
             self._device_manager.transaction_log.remove_transaction(self)
-        except AtomicMoveException as ex:
+        except AtomicMoveException:
             self._logger.exception(f"Could not rollback file:{self._org_path}")
 
 
@@ -164,33 +164,33 @@ class TransactionLog:
         self._transactions[transaction.tmp_path] = transaction.org_path
         try:
             self.write_log()
-        except:
+        except Exception:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def remove_transaction(self, transaction: FileSystemInputTransaction):
         self._transactions.pop(transaction.tmp_path, None)
         try:
             self.write_log()
-        except:
+        except Exception:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def rollback_all(self):
         for tmp_path, org_path in self._transactions.items():
             try:
                 FileSystemInputTransaction.rollback_path(tmp_path=tmp_path, org_path=org_path)
-            except AtomicMoveException as ex:
+            except AtomicMoveException:
                 self._logger.exception(f"Could not rollback file:{org_path}")
         self._transactions.clear()
         try:
             self.write_log()
-        except:
+        except Exception:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def write_log(self):
         if not self._transactions:
             try:
                 os.remove(self._filepath)
-            except:
+            except OSError:
                 pass
         else:
             with open(self._filepath, 'w') as f:

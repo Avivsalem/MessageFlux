@@ -58,7 +58,7 @@ def _start_service_and_listen_queue(service_factory: ServiceFactory,
         t.start()
         _logger.info(f'Starting Service #{instance_index}')
         service.start()
-    except Exception as ex:
+    except Exception:
         _logger.exception(f'Error starting service #{instance_index}')
         raise
 

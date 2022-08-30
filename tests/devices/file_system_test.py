@@ -96,8 +96,8 @@ def test_rollback(tmpdir):
         with input_manager:
             input_device = input_manager.get_input_device(QUEUE_NAME)
             with InputTransactionScope(input_device) as transaction_scope:
-                read_result = transaction_scope.read_message()
-                read_result = transaction_scope.read_message()
+                _ = transaction_scope.read_message()
+                _ = transaction_scope.read_message()
                 assert len(os.listdir(input_manager.bookkeeping_folder)) == 1
                 tran_log = TransactionLog._load_file(
                     os.path.join(input_manager.bookkeeping_folder, os.listdir(input_manager.bookkeeping_folder)[0]))
