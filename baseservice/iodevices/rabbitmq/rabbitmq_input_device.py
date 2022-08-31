@@ -112,10 +112,13 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         reconnects the RabbitMQ device manager
         """
         if self._channel is not None and self._channel.is_open:
+            assert self._channel is not None
             if self._use_consumer:
                 self._channel.cancel()
             self._channel.close()
         self._channel = self._device_manager.connection.channel()
+
+        assert self._channel is not None
         self._channel.basic_qos(prefetch_count=self._prefetch_count)
 
     def _get_channel(self) -> 'BlockingChannel':
@@ -191,11 +194,16 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
                 channel.cancel()
                 self._last_consumer_auto_ack = auto_ack
 
-            method_frame, header_frame, body = next(channel.consume(queue=self._queue_name,  # type: ignore
+            method_frame: Optional[Union[spec.Basic.Deliver, spec.Basic.GetOk]]
+            header_frame: Optional[spec.BasicProperties]
+            body: Optional[bytes]
+
+            method_frame, header_frame, body = next(channel.consume(queue=self._queue_name,
                                                                     inactivity_timeout=timeout,
                                                                     arguments=self._consumer_args, auto_ack=auto_ack))
         else:
-            method_frame, header_frame, body = channel.basic_get(queue=self._queue_name, auto_ack=auto_ack)
+            method_frame, header_frame, body = channel.basic_get(queue=self._queue_name,  # type: ignore
+                                                                 auto_ack=auto_ack)
 
         return body, header_frame, method_frame
 

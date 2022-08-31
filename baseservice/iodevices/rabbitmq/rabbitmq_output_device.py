@@ -298,6 +298,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         """
         if self._outgoing_channel is None or not self._outgoing_channel.is_open or not self.connection.is_open:
             self._outgoing_channel = self.connection.channel()
+            assert self._outgoing_channel is not None
             if self._publish_confirm:
                 self._outgoing_channel.confirm_delivery()
 

@@ -143,7 +143,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                         connection_attempts=connection_attempts or self._connection_attempts,
                         client_properties=client_properties or self._client_args,
                         virtual_host=virtual_host or self._virtual_host,
-                        blocked_connection_timeout=(blocked_connection_timeout or  # type: ignore
+                        blocked_connection_timeout=(blocked_connection_timeout or
                                                     self._blocked_connection_timeout)
                     )
                 )
@@ -189,6 +189,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                 not self._maintenance_channel.connection.is_open):
             self._maintenance_channel = self.connection.channel()
 
+        assert self._maintenance_channel is not None
         return self._maintenance_channel
 
     def create_queue(self,
@@ -221,7 +222,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                                                      durable=durable,
                                                      exclusive=exclusive,
                                                      auto_delete=auto_delete,
-                                                     arguments=arguments)  # type: ignore
+                                                     arguments=arguments)
         if direct_bind_to_exchange is not None:
             self.bind_queue(queue_name, direct_bind_to_exchange, queue_name)
         return res
