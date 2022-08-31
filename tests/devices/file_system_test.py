@@ -6,7 +6,7 @@ from baseservice.iodevices.file_system import FileSystemInputDeviceManager, File
     NoHeadersFileSystemSerializer, DefaultFileSystemSerializer
 from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from baseservice.iodevices.file_system.file_system_input_device import TransactionLog
-from tests.devices.common import sanity_test
+from tests.devices.common import sanity_test, rollback_test
 
 QUEUE_NAME = "Test"
 OUTPUT_NAME = "OUTPUT"
@@ -27,10 +27,10 @@ def test_generic_sanity(tmpdir):
     sanity_test(input_manager, output_manager, sleep_between_sends=1)
 
 
-def rollback_test(tmpdir):
+def test_generic_rollback(tmpdir):
     input_manager = FileSystemInputDeviceManager(tmpdir)
     output_manager = FileSystemOutputDeviceManager(tmpdir)
-    sanity_test(input_manager, output_manager, sleep_between_sends=1)
+    rollback_test(input_manager, output_manager, sleep_between_sends=1)
 
 
 def test_sanity(tmpdir):
@@ -129,7 +129,7 @@ def test_backout(tmpdir):
             read_result.rollback()
 
         queue = input_manager.get_input_device(QUEUE_NAME)
-        read_result = queue.read_message()
+        read_result = queue.read_message(timeout=1)
         assert read_result is None
 
         assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'BACKOUT'))) == 1

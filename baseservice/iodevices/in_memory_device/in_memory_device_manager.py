@@ -52,7 +52,7 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
         self._queue = queue
         self._queue_not_empty = queue_not_empty_condition
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
         with self._queue_not_empty:
             if self._queue_not_empty.wait_for(lambda: any(self._queue), timeout):
                 message = heapq.heappop(self._queue)

@@ -346,7 +346,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                                                     with_transaction=with_transaction,
                                                     serializer=self._serializer)
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
         try:
             deadline = 0.0
             if timeout is not None:

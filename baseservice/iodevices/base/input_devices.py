@@ -49,7 +49,7 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         return self._manager
 
     def read_message(self,
-                     timeout: Optional[float] = 0,
+                     timeout: Optional[float] = None,
                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
@@ -69,7 +69,7 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
 
     @abstractmethod
     def _read_message(self,
-                      timeout: Optional[float] = 0,
+                      timeout: Optional[float] = None,
                       with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device (should be implemented by child classes)
@@ -128,7 +128,7 @@ class AggregateInputDevice(InputDevice):
         return None
 
     def _read_message(self,
-                      timeout: Optional[float] = 0,
+                      timeout: Optional[float] = None,
                       with_transaction: bool = True) -> Optional['ReadResult']:
         end_time = 0.0
         if timeout is not None:
@@ -191,7 +191,7 @@ class _NullDevice(InputDevice):
     def __init__(self):
         super(_NullDevice, self).__init__(_NullInputDeviceManager(), '__NULL__')
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
         return None
 
 

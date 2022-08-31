@@ -24,7 +24,7 @@ class ErrorInputDevice(InputDevice):
         # noinspection PyTypeChecker
         super(ErrorInputDevice, self).__init__(None, '')
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
         if with_transaction:
             raise MyException()
         else:

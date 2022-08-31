@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from pika.adapters.blocking_connection import BlockingChannel
     from pika.frame import Method as PikaMethod
 
-
+#TODO: support tls connection
 class RabbitMQDeviceManagerBase:
     """
     base class for rabbitmq device managers

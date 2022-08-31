@@ -104,7 +104,7 @@ class InputTransactionScope(InputTransaction):
         self._with_transaction = with_transaction
         self._transactions: List[InputTransaction] = []
 
-    def read_message(self, timeout: Optional[float] = 0) -> Optional['ReadResult']:
+    def read_message(self, timeout: Optional[float] = None) -> Optional['ReadResult']:
         read_result = self.device.read_message(timeout=timeout, with_transaction=self._with_transaction)
 
         if read_result is not None:
