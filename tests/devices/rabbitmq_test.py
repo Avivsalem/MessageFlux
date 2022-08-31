@@ -1,7 +1,6 @@
 import os
 
 import pytest
-from time import sleep
 
 from baseservice.iodevices.base import Message, InputTransactionScope
 from baseservice.iodevices.rabbitmq.fs_poison_counter import FileSystemPoisonCounter
