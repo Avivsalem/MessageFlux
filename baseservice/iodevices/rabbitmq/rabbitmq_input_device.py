@@ -4,8 +4,6 @@ import socket
 from io import BytesIO
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, List
 
-from time import perf_counter
-
 from baseservice.iodevices.base import InputDevice, InputTransaction, ReadResult, InputDeviceException, Message, \
     InputDeviceManager
 from baseservice.iodevices.base.input_transaction import NULLTransaction
