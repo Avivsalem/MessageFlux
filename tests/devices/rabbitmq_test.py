@@ -1,8 +1,14 @@
 import os
 
-from baseservice.iodevices.base import Message
+import pytest
+from time import sleep
+
+from baseservice.iodevices.base import Message, InputTransactionScope
+from baseservice.iodevices.rabbitmq.fs_poison_counter import FileSystemPoisonCounter
 from baseservice.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDeviceManager
-from baseservice.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutputDeviceManager
+from baseservice.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutputDeviceManager, LengthValidationException
+from baseservice.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase, \
+    RabbitMQPoisonCountingInputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
 
 NULL_PASSWORD = "NULL_PASSWORD"
@@ -121,3 +127,100 @@ def test_generic_rollback():
                       device_name=queue_name)
     finally:
         output_manager.delete_queue(queue_name, only_if_empty=False)
+
+
+def test_message_and_headers_size():
+    mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
+                                      user=RABBIT_USERNAME,
+                                      password=RABBIT_PASSWORD,
+                                      port=RABBIT_PORT,
+                                      virtual_host=RABBIT_VHOST,
+                                      max_message_length=5,
+                                      max_header_name_length=100,
+                                      max_header_value_length=150)
+
+    res = mgr.create_queue('', auto_delete=True, exclusive=True)
+    queue_name = res.method.queue
+    with mgr:
+        outqueue = mgr.get_output_device(queue_name)
+        headers = {'test_header': 'test_value'}
+        with pytest.raises(LengthValidationException):
+            outqueue.send_message(Message(b"TEST_DATA", headers=headers))
+        with pytest.raises(LengthValidationException):
+            outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1" * 151}))
+        with pytest.raises(LengthValidationException):
+            outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1"}))
+        with pytest.raises(LengthValidationException):
+            outqueue.send_message(Message(b"TEST", headers={"1": "1" * 151}))
+        outqueue.send_message(Message(b"TEST", headers={"1" * 100: "1" * 150}))
+        outqueue.send_message(Message(b"TEST", headers={"1": "1"}))
+
+
+def _no_poison_rollback(poison_counter: PoisonCounterBase):
+    in_mgr = RabbitMQPoisonCountingInputDeviceManager(hosts=[RABBIT_HOST],
+                                                      user=RABBIT_USERNAME,
+                                                      password=RABBIT_PASSWORD,
+                                                      port=RABBIT_PORT,
+                                                      virtual_host=RABBIT_VHOST,
+                                                      prefetch_count=5,
+                                                      max_poison_count=2,
+                                                      poison_counter=poison_counter)
+
+    out_mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
+                                          user=RABBIT_USERNAME,
+                                          password=RABBIT_PASSWORD,
+                                          port=RABBIT_PORT,
+                                          virtual_host=RABBIT_VHOST)
+
+    res = out_mgr.create_queue('', auto_delete=True)
+    queue_name = res.method.queue
+    with out_mgr:
+        outqueue = out_mgr.get_output_device(queue_name)
+        outqueue.send_message(Message(data=b"TEST_DATA", headers={'test_header': 'test_value'}))
+        with in_mgr:
+            inqueue = in_mgr.get_input_device(queue_name)
+            with InputTransactionScope(inqueue) as transaction_scope:
+                read_result = transaction_scope.read_message(5)
+                assert read_result is not None
+                assert read_result.message.bytes == b"TEST_DATA"
+                assert read_result.message.headers['test_header'] == 'test_value'
+                transaction_scope.rollback()
+
+            with InputTransactionScope(inqueue) as transaction_scope:
+                read_result = transaction_scope.read_message(5)
+                assert read_result is not None
+                assert read_result.message.bytes == b"TEST_DATA"
+                assert read_result.message.headers['test_header'] == 'test_value'
+                transaction_scope.rollback()
+
+            with InputTransactionScope(inqueue) as transaction_scope:
+                read_result = transaction_scope.read_message(1)
+                assert read_result is None
+                read_result = transaction_scope.read_message(1)
+                assert read_result is None
+
+
+def test_no_poison_rollback():
+    class InMemoryPoisonCounter(PoisonCounterBase):
+        def __init__(self):
+            self.poison_counter = dict()
+
+        def increment_and_return_counter(self, message_id: str) -> int:
+            old_value = self.poison_counter.get(message_id, 0)
+            new_value = old_value + 1
+            self.poison_counter[message_id] = new_value
+            return new_value
+
+        def delete_counter(self, message_id: str):
+            self.poison_counter.pop(message_id, None)
+
+    poison_counter = InMemoryPoisonCounter()
+    _no_poison_rollback(poison_counter)
+    assert len(poison_counter.poison_counter) == 0
+
+
+def test_no_poison_rollback_fs_counter(tmpdir):
+    tmpdir = str(tmpdir)
+    poison_counter = FileSystemPoisonCounter(tmpdir)
+    _no_poison_rollback(poison_counter)
+    assert len(os.listdir(tmpdir)) == 0

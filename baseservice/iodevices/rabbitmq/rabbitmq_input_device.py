@@ -141,7 +141,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         channel = self._get_channel()
         get_timeout: Optional[float] = None
         if timeout is not None:
-            get_timeout = max(0.01, timeout - perf_counter())
+            get_timeout = max(0.01, timeout)
 
         body, header_frame, method_frame = self._get_frames_from_queue(channel,
                                                                        get_timeout,
