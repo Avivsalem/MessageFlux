@@ -43,13 +43,13 @@ class RabbitMQInputTransaction(InputTransaction):
     def _commit(self):
         try:
             self._channel.basic_ack(self._delivery_tag)
-        except Exception as ex:
+        except Exception:
             self._logger.warning('commit failed', exc_info=True)
 
     def _rollback(self):
         try:
             self._channel.basic_nack(self._delivery_tag, requeue=True)
-        except Exception as ex:
+        except Exception:
             self._logger.warning('rollback failed', exc_info=True)
 
 
@@ -112,7 +112,8 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         reconnects the RabbitMQ device manager
         """
         if self._channel is not None and self._channel.is_open:
-            self._channel.cancel()
+            if self._use_consumer:
+                self._channel.cancel()
             self._channel.close()
         self._channel = self._device_manager.connection.channel()
         self._channel.basic_qos(prefetch_count=self._prefetch_count)
@@ -238,7 +239,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
             if self._channel is not None and self._channel.is_open:
                 self._channel.cancel()
                 self._channel.close()
-        except Exception as e:
+        except Exception:
             self._logger.warning('Error Closing Device', exc_info=True)
 
         self._channel = None

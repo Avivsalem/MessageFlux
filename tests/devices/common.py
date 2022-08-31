@@ -5,10 +5,12 @@ import time
 
 from baseservice.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
 
-def _assert_messages_equal(org_message:Message, new_message:Message):
+
+def _assert_messages_equal(org_message: Message, new_message: Message):
     assert org_message.bytes == new_message.bytes
     for key, value in org_message.headers.items():
         assert new_message.headers[key] == value
+
 
 def sanity_test(input_device_manager: InputDeviceManager,
                 output_device_manager: OutputDeviceManager,

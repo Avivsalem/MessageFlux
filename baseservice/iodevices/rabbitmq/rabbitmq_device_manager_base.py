@@ -20,16 +20,18 @@ for handler in pika_logger.handlers:
 pika_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 if TYPE_CHECKING:
-    from pika import BlockingConnection, ConnectionParameters, PlainCredentials
+    from pika import BlockingConnection, PlainCredentials
     from pika.adapters.blocking_connection import BlockingChannel
     from pika.frame import Method as PikaMethod
 
-#TODO: support tls connection
-class RabbitMQDeviceManagerBase:
+
+class RabbitMQDeviceManagerBase:  # TODO: support tls connection
+
     """
     base class for rabbitmq device managers
 
-    Notice that pika is imported inside the methods here, since it causes trouble when using this device in multiprocess.
+    Notice that pika is imported inside the methods here,
+    since it causes trouble when using this device in multiprocess.
     """
     _connection: Union[ThreadLocalMember[Optional['BlockingConnection']],
                        Optional['BlockingConnection']] = ThreadLocalMember(init_value=None)
@@ -113,7 +115,7 @@ class RabbitMQDeviceManagerBase:
                 """
                 try:
                     self.process_data_events()
-                except:
+                except Exception:
                     pass
 
                 return super().is_open
@@ -125,7 +127,7 @@ class RabbitMQDeviceManagerBase:
                 try:
                     if self.is_open:
                         self.close()
-                except:
+                except Exception:
                     pass
 
         shuffle(self._hosts)
@@ -141,7 +143,8 @@ class RabbitMQDeviceManagerBase:
                         connection_attempts=connection_attempts or self._connection_attempts,
                         client_properties=client_properties or self._client_args,
                         virtual_host=virtual_host or self._virtual_host,
-                        blocked_connection_timeout=blocked_connection_timeout or self._blocked_connection_timeout  # type: ignore
+                        blocked_connection_timeout=(blocked_connection_timeout or  # type: ignore
+                                                    self._blocked_connection_timeout)
                     )
                 )
             except AMQPConnectionError as ex:
@@ -176,12 +179,14 @@ class RabbitMQDeviceManagerBase:
         if self._connection is not None:
             try:
                 self._connection.close()
-            except Exception as e:
+            except Exception:
                 self._logger.warning('Error Closing Device', exc_info=True)
 
     @property
     def maintenance_channel(self) -> 'BlockingChannel':
-        if self._maintenance_channel is None or not self._maintenance_channel.is_open or not self._maintenance_channel.connection.is_open:
+        if (self._maintenance_channel is None or
+                not self._maintenance_channel.is_open or
+                not self._maintenance_channel.connection.is_open):
             self._maintenance_channel = self.connection.channel()
 
         return self._maintenance_channel

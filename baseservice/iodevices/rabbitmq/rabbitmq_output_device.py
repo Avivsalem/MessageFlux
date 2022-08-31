@@ -1,6 +1,7 @@
 import logging
-import time
 from typing import BinaryIO, Dict, Any, Union, Optional, List, TYPE_CHECKING
+
+import time
 
 from baseservice.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from baseservice.iodevices.base.common import MessageBundle
@@ -211,24 +212,25 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         try:
             self._inner_publish(routing_key, data, exchange, headers, app_id, message_id,
                                 persistent, mandatory, priority, expiration)
-        except NackError as ex:
+        except NackError:
             self._logger.exception(
                 f'Publish on routing key "{routing_key}" was NACKed. (possibly the queue reached its max size)')
             raise
-        except UnroutableError as ex:
+        except UnroutableError:
             self._logger.exception(f"could not route message. routing key: {routing_key}")
             raise
-        except ConnectionBlockedTimeout as ex:
+        except ConnectionBlockedTimeout:
             self._logger.exception(
-                f"could not publish message, due to ConnectionBlocked (possibly Memory Alarm). routing key: {routing_key}")
+                f"could not publish message, due to ConnectionBlocked (possibly Memory Alarm). "
+                f"routing key: {routing_key}")
             raise
 
-        except (AMQPConnectionError, AMQPChannelError) as ex:
+        except (AMQPConnectionError, AMQPChannelError):
             self._logger.warning(f"failed to send message to queue. routing key: {routing_key}", exc_info=True)
             try:
                 self._inner_publish(routing_key, data, exchange, headers, app_id, message_id,
                                     persistent, mandatory, priority, expiration)
-            except (AMQPConnectionError, AMQPChannelError) as ex:
+            except (AMQPConnectionError, AMQPChannelError):
                 self._logger.exception(f"failed to send message to queue. routing key: {routing_key}")
                 raise
 
@@ -273,7 +275,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
 
         data.seek(0)
 
-        str_expiration:Optional[str] = None
+        str_expiration: Optional[str] = None
         if expiration is not None:
             str_expiration = str(expiration)
 

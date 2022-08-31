@@ -5,12 +5,13 @@ from baseservice.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDe
 from baseservice.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
 
+NULL_PASSWORD = "NULL_PASSWORD"
 RABBIT_HOST = "rattlesnake.rmq.cloudamqp.com"
 RABBIT_PORT = 5672
 RABBIT_USERNAME = "uiwayyvm"
 RABBIT_VHOST = RABBIT_USERNAME
-RABBIT_PASSWORD = os.environ.get("RABBITMQ_PASSWORD")
-assert RABBIT_PASSWORD is not None
+RABBIT_PASSWORD = os.environ.get("RABBITMQ_PASSWORD", NULL_PASSWORD)
+assert RABBIT_PASSWORD != NULL_PASSWORD
 
 
 def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceManager):
