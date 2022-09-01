@@ -2,10 +2,12 @@ import zlib
 
 from baseservice.iodevices.base import Message, ReadResult
 from baseservice.iodevices.base.common import MessageBundle
-from baseservice.iodevices.transformer_device_wrapper import TransformerBase
+from baseservice.iodevices.transformer_device_wrapper import InputTransformerBase, OutputTransformerBase
+from baseservice.iodevices.transformer_device_wrapper.transformer_input_device import TransformerInputDevice
+from baseservice.iodevices.transformer_device_wrapper.transformer_output_device import TransformerOutputDevice
 
 
-class ZLIBTransformer(TransformerBase):
+class ZLIBTransformer(InputTransformerBase, OutputTransformerBase):
     """
     This class uses zlib to compress data before sending it to the underlying device, and decompress data coming out of
     the underlying device, if necessary.
@@ -17,13 +19,14 @@ class ZLIBTransformer(TransformerBase):
         if not (-1 <= self._level <= 9):
             raise ValueError("ZLIBTransformer: level must be between -1 and 9")
 
-    def transform_outgoing_message(self, message_bundle: MessageBundle) -> MessageBundle:
+    def transform_outgoing_message(self, output_device: TransformerOutputDevice,
+                                   message_bundle: MessageBundle) -> MessageBundle:
 
         compressed_data = self.ZLIB_TRANSFORMER_MAGIC + zlib.compress(message_bundle.message.bytes, level=self._level)
         return MessageBundle(message=Message(compressed_data, message_bundle.message.headers),
                              device_headers=message_bundle.device_headers)
 
-    def transform_incoming_message(self, read_result: ReadResult) -> ReadResult:
+    def transform_incoming_message(self, input_device: TransformerInputDevice, read_result: ReadResult) -> ReadResult:
         if read_result.message.stream.read(len(self.ZLIB_TRANSFORMER_MAGIC)) != self.ZLIB_TRANSFORMER_MAGIC:
             # This is not a zlib-compressed message
             read_result.message.stream.seek(0)

@@ -15,6 +15,12 @@ class KwargsException(Exception):
         self.kwargs = kwargs
 
 
+class AggregateException(KwargsException):
+    def __init__(self, *args, inner_exceptions: List[Exception], **kwargs):
+        super(AggregateException, self).__init__(*args, **kwargs)
+        self.inner_exceptions = inner_exceptions
+
+
 TItemType = TypeVar('TItemType')
 
 

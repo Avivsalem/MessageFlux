@@ -3,21 +3,24 @@ import uuid
 from baseservice.iodevices.base import Message, ReadResult
 from baseservice.iodevices.base.common import MessageBundle
 from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
-from baseservice.iodevices.transformer_device_wrapper import TransformerBase, TransformerInputDeviceManager, \
-    TransformerOutputDeviceManager
+from baseservice.iodevices.transformer_device_wrapper import TransformerInputDeviceManager, \
+    TransformerOutputDeviceManager, InputTransformerBase, OutputTransformerBase
+from baseservice.iodevices.transformer_device_wrapper.transformer_input_device import TransformerInputDevice
+from baseservice.iodevices.transformer_device_wrapper.transformer_output_device import TransformerOutputDevice
 from baseservice.iodevices.transformer_device_wrapper.zlib_transformer import ZLIBTransformer
 
 
-class MockMessageStoreTransformer(TransformerBase):
+class MockMessageStoreTransformer(InputTransformerBase, OutputTransformerBase):
     def __init__(self):
         self.messages = {}
 
-    def transform_outgoing_message(self, message_bundle: MessageBundle) -> MessageBundle:
+    def transform_outgoing_message(self, output_device: TransformerOutputDevice,
+                                   message_bundle: MessageBundle) -> MessageBundle:
         key = uuid.uuid4().bytes
         self.messages[key] = message_bundle.message
         return MessageBundle(Message(key), message_bundle.device_headers)
 
-    def transform_incoming_message(self, read_result: ReadResult) -> ReadResult:
+    def transform_incoming_message(self, input_device: TransformerInputDevice, read_result: ReadResult) -> ReadResult:
         key = read_result.message.bytes
         return ReadResult(self.messages[key], read_result.device_headers, read_result.transaction)
 
