@@ -190,7 +190,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                                          ConnectionBlockedTimeout,
                                          NackError)
         except ImportError as ex:
-            raise ImportError('Please Install the required extra: servicebase[rabbitmq]') from ex
+            raise ImportError('Please Install the required extra: baseservice[rabbitmq]') from ex
 
         if headers is not None:
             # Safety measure for removing input device headers
@@ -265,7 +265,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         try:
             import pika
         except ImportError as ex:
-            raise ImportError('Please Install the required extra: servicebase[rabbitmq]') from ex
+            raise ImportError('Please Install the required extra: baseservice[rabbitmq]') from ex
 
         if headers is None:
             headers = {}

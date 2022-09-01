@@ -13,7 +13,7 @@ from baseservice.utils import ThreadLocalMember
 try:
     from pika import spec
 except ImportError as ex:
-    raise ImportError('Please Install the required extra: servicebase[rabbitmq]') from ex
+    raise ImportError('Please Install the required extra: baseservice[rabbitmq]') from ex
 
 if TYPE_CHECKING:
     from pika.adapters.blocking_connection import BlockingChannel
@@ -217,7 +217,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         try:
             from pika.exceptions import AMQPConnectionError, AMQPChannelError
         except ImportError as exc:
-            raise ImportError('Please Install the required extra: servicebase[rabbitmq]') from exc
+            raise ImportError('Please Install the required extra: baseservice[rabbitmq]') from exc
 
         try:
             return self._get_data_from_queue(timeout=timeout, with_transaction=with_transaction)
@@ -243,7 +243,8 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         """
         try:
             if self._channel is not None and self._channel.is_open:
-                self._channel.cancel()
+                if self._use_consumer:
+                    self._channel.cancel()
                 self._channel.close()
         except Exception:
             self._logger.warning('Error Closing Device', exc_info=True)

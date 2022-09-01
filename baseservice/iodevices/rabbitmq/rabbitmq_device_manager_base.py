@@ -104,7 +104,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
             import pika
             from pika.exceptions import AMQPConnectionError
         except ImportError as ex:
-            raise ImportError('Please Install the required extra: servicebase[rabbitmq]') from ex
+            raise ImportError('Please Install the required extra: baseservice[rabbitmq]') from ex
 
         class SelfClosingBlockingConnection(pika.BlockingConnection):
 
