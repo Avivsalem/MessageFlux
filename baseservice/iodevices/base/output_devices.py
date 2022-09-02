@@ -2,13 +2,13 @@ from abc import ABCMeta, abstractmethod
 from typing import Optional, TypeVar, Generic
 
 from baseservice.iodevices.base.common import Message, DeviceHeaders, MessageBundle
-from baseservice.utils import KwargsException
+from baseservice.utils import AggregatedException
 
 TManagerType = TypeVar('TManagerType', bound='OutputDeviceManager')
 TOutputDeviceType = TypeVar('TOutputDeviceType', bound='OutputDevice')
 
 
-class OutputDeviceException(KwargsException):
+class OutputDeviceException(AggregatedException):
     """
     a base exception class for all output device related exceptions
     """

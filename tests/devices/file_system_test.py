@@ -66,7 +66,7 @@ def test_sanity_unsorted(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
@@ -88,10 +88,10 @@ def test_rollback(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file1.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file2.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
     try:
         with input_manager:
             input_device = input_manager.get_input_device(QUEUE_NAME)
@@ -119,7 +119,7 @@ def test_backout(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with input_manager:
         for i in range(3):
@@ -132,7 +132,7 @@ def test_backout(tmpdir):
         read_result = queue.read_message(timeout=1)
         assert read_result is None
 
-        assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'BACKOUT'))) == 1
+        assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'POISON'))) == 1
 
 
 def test_output_file_system_manager_format(tmpdir):
@@ -146,4 +146,4 @@ def test_output_file_system_manager_format(tmpdir):
 
     assert len(os.listdir(os.path.join(tmpdir, 'test'))) == 1
     with open(os.path.join(tmpdir, 'test', 'abc.txt'), "rb") as f:
-        assert serializer.deserialize(f)[0].read() == b'ABC'
+        assert serializer.deserialize(f).bytes == b'ABC'

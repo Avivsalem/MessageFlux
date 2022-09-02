@@ -15,9 +15,9 @@ class KwargsException(Exception):
         self.kwargs = kwargs
 
 
-class AggregateException(KwargsException):
-    def __init__(self, *args, inner_exceptions: List[Exception], **kwargs):
-        super(AggregateException, self).__init__(*args, **kwargs)
+class AggregatedException(KwargsException):
+    def __init__(self, *args, inner_exceptions: Optional[List[Exception]] = None, **kwargs):
+        super(AggregatedException, self).__init__(*args, **kwargs)
         self.inner_exceptions = inner_exceptions
 
 

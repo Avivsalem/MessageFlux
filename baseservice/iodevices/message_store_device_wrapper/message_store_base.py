@@ -2,14 +2,14 @@ from abc import ABCMeta, abstractmethod
 from typing import List
 
 from baseservice.iodevices.base import Message
-from baseservice.utils import KwargsException, AggregateException
+from baseservice.utils import KwargsException, AggregatedException
 
 
 class MessageStoreException(KwargsException):
     pass
 
 
-class MessageStoreAggregateException(AggregateException):
+class MessageStoreAggregateException(AggregatedException):
     """
     an aggregate exception to raise on errors
     """

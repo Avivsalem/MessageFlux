@@ -6,7 +6,7 @@ from time import time
 
 from baseservice.iodevices.base import (InputTransactionScope,
                                         InputDeviceManager,
-                                        AggregateInputDevice,
+                                        AggregatedInputDevice,
                                         InputDevice, ReadResult)
 from baseservice.server_loop_service import ServerLoopService
 
@@ -39,7 +39,7 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
         self._read_timeout = max(read_timeout, 0)
         self._max_batch_read_count = max(max_batch_read_count, 1)
         self._wait_for_batch_count = wait_for_batch_count
-        self._aggregate_input_device: Optional[AggregateInputDevice] = None
+        self._aggregate_input_device: Optional[AggregatedInputDevice] = None
 
     def _prepare_service(self):
         self._input_device_manager.connect()

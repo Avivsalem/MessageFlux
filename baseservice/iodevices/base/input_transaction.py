@@ -12,11 +12,15 @@ class InputTransaction(metaclass=ABCMeta):
 
     after reading a message from the device (using 'with_transaction=True') the reader should commit/rollback
     the transaction, to signal the device if the message is done processing or not
+
+    calling commit/rollback on a transaction, finishes it. further calls to commit/rollback are ignored
+
+    if using the transaction as context (i.e 'with transaction:') it will commit at the end of the context.
+    if an exception was raised during the context, the transaction will be rolled back.
     """
 
     def __init__(self, device: 'InputDevice'):
         """
-
         :param device: the input device that returned that transaction
         """
         self._device: 'InputDevice' = device
@@ -32,7 +36,7 @@ class InputTransaction(metaclass=ABCMeta):
     @property
     def finished(self) -> bool:
         """
-        :return: 'True' if the transaction committed/rolled-back, 'False' otherwise
+        :return: 'True' if the transaction was committed/rolled-back, 'False' otherwise
         """
         return self._finished.is_set()
 
@@ -40,7 +44,7 @@ class InputTransaction(metaclass=ABCMeta):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if (exc_type is None) and (exc_val is None) and (exc_tb is None):
+        if (exc_type, exc_val, exc_tb) == (None, None, None):
             self.commit()  # no exception, commit the transaction
         else:
             self.rollback()  # exception, rollback the transaction
@@ -96,7 +100,6 @@ class InputTransactionScope(InputTransaction):
 
     def __init__(self, device: 'InputDevice', with_transaction: bool = True):
         """
-
         :param device: the input device to read the messages from
         :param with_transaction: 'True' if we should actually use transactions, 'False' otherwise
         """
@@ -105,6 +108,16 @@ class InputTransactionScope(InputTransaction):
         self._transactions: List[InputTransaction] = []
 
     def read_message(self, timeout: Optional[float] = None) -> Optional['ReadResult']:
+        """
+        this method returns a message from the device, and adds its transaction to the transaction scope
+
+        :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
+        after 'timeout' seconds, if the device doesn't have a message to return, it will return None
+
+        :return: a ReadResult object or None if no message was available.
+        the device headers can contain extra information about the device that returned the message
+        """
+
         read_result = self.device.read_message(timeout=timeout, with_transaction=self._with_transaction)
 
         if read_result is not None:
@@ -131,7 +144,7 @@ class InputTransactionScope(InputTransaction):
 
 class NULLTransaction(InputTransaction):
     """
-    a transaction object that does nothing. used as placeholder for some places
+    a transaction object that does nothing. used as placeholder for reading with with_transaction=False
     """
 
     def _commit(self):

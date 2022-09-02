@@ -10,27 +10,29 @@ from typing import Optional, Dict, List, Set, Iterator
 import time
 
 from baseservice.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadResult, \
-    InputDeviceException, Message
+    InputDeviceException
 from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from baseservice.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
     DefaultFileSystemSerializer
 from baseservice.metadata_headers import MetadataHeaders
-from baseservice.utils import get_random_id, KwargsException
+from baseservice.utils import get_random_id
 from baseservice.utils.filesystem import create_dir_if_not_exists, atomic_move, AtomicMoveException
 
 
 class FileSystemInputTransaction(InputTransaction):
     """
-    represents a ReadTransaction for filesystem
+    represents an InputTransaction for filesystem
     """
 
-    _MAX_BACKOUT = 3
-    _BACKOUT_COUNTS_PER_FILE: Dict[str, int] = defaultdict(lambda: 0)
+    MAX_POISON_COUNT = 3  # TODO: get this from the user.
+    _POISON_COUNTS_PER_FILE: Dict[str, int] = defaultdict(lambda: 0)
     _logger = logging.getLogger(__name__)
 
     def __init__(self, device: 'FileSystemInputDevice', org_path: str, tmp_path: str):
         """
-        ctor
+        :param device: the device that returned this transaction
+        :param org_path: the original path of the file we read
+        :param tmp_path: the temp path of the file we read
         """
         super(FileSystemInputTransaction, self).__init__(device=device)
         self._org_path = org_path
@@ -40,29 +42,42 @@ class FileSystemInputTransaction(InputTransaction):
 
     @property
     def org_path(self) -> str:
+        """
+        the original path of the file in this transaction
+        """
         return self._org_path
 
     @property
     def tmp_path(self) -> str:
+        """
+        the temp (current) path of the file in this transaction
+        """
         return self._tmp_path
 
     @staticmethod
-    def _get_backout_filename(org_filename: str) -> str:
+    def _get_poison_filename(org_filename: str) -> str:
         """
-        gets a filename for backout
+        gets a filename for poison messages
 
         :param org_filename: the original filename
-        :return: filepath for backout
+        :return: filepath for the poison message
         """
         basename = os.path.basename(org_filename)
         dirname = os.path.dirname(org_filename)
-        backout_folder = os.path.join(dirname, 'BACKOUT')
-        create_dir_if_not_exists(backout_folder)
-        backout_filename = os.path.join(backout_folder, get_random_id() + basename)
-        return backout_filename
+        poison_folder = os.path.join(dirname, 'POISON')  # TODO: get this from the user
+        create_dir_if_not_exists(poison_folder)
+        poison_filepath = os.path.join(poison_folder, get_random_id() + basename)
+        return poison_filepath
 
     @staticmethod
-    def _calc_lockfile_name(tmp_folder: str, org_path: str):
+    def _calc_lockfile_name(tmp_folder: str, org_path: str) -> str:
+        """
+        calculates a name for the lockfile
+
+        :param tmp_folder: the tmp folder
+        :param org_path: the original file path
+        :return: the path for the lockfile
+        """
         return os.path.join(tmp_folder, '{}.lockfile'.format(os.path.basename(org_path)))
 
     @staticmethod
@@ -82,23 +97,26 @@ class FileSystemInputTransaction(InputTransaction):
 
         tmp_path = os.path.join(tmp_folder, get_random_id())
         try:
-            if not atomic_move(org_path, tmp_path,
-                               FileSystemInputTransaction._calc_lockfile_name(tmp_folder, org_path)):
+            if not atomic_move(org_path,
+                               tmp_path,
+                               FileSystemInputTransaction._calc_lockfile_name(tmp_folder,
+                                                                              org_path)):
                 return None
         except AtomicMoveException:
             FileSystemInputTransaction._logger.exception(f'Atomic move could not move the file {org_path}')
             return None
 
         with open(tmp_path, 'rb') as f:
-            data, headers = serializer.deserialize(f)
+            message = serializer.deserialize(f)
 
         if with_transaction:
-            return ReadResult(message=Message(data, headers),
-                              transaction=FileSystemInputTransaction(device=device, org_path=org_path,
+            return ReadResult(message=message,
+                              transaction=FileSystemInputTransaction(device=device,
+                                                                     org_path=org_path,
                                                                      tmp_path=tmp_path))
         else:
             os.remove(tmp_path)
-            return ReadResult(Message(data, headers))
+            return ReadResult(message)
 
     def _commit(self):
         """
@@ -108,18 +126,22 @@ class FileSystemInputTransaction(InputTransaction):
             os.remove(self._tmp_path)
         except FileNotFoundError:
             pass
-        self._BACKOUT_COUNTS_PER_FILE.pop(self._org_path, None)
+        self._POISON_COUNTS_PER_FILE.pop(self._org_path, None)
         self._device_manager.transaction_log.remove_transaction(self)
 
     @staticmethod
-    def rollback_path(tmp_path: str, org_path: str):
+    def rollback_path(tmp_path: str, org_path: str, max_poison_count: int):
         """
         rolls back the transaction
+
+        :param tmp_path: the temp (current) path of the file
+        :param org_path: the original path of the file
+        :param max_poison_count: the maximum time we allow the file to be rolled back
         """
-        FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] += 1
-        if FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE[org_path] >= FileSystemInputTransaction._MAX_BACKOUT:
-            dest = FileSystemInputTransaction._get_backout_filename(org_path)
-            FileSystemInputTransaction._BACKOUT_COUNTS_PER_FILE.pop(org_path, None)
+        FileSystemInputTransaction._POISON_COUNTS_PER_FILE[org_path] += 1
+        if FileSystemInputTransaction._POISON_COUNTS_PER_FILE[org_path] >= max_poison_count:
+            dest = FileSystemInputTransaction._get_poison_filename(org_path)
+            FileSystemInputTransaction._POISON_COUNTS_PER_FILE.pop(org_path, None)
         else:
             dest = org_path
 
@@ -130,7 +152,9 @@ class FileSystemInputTransaction(InputTransaction):
         rolls back the transaction
         """
         try:
-            self.rollback_path(tmp_path=self._tmp_path, org_path=self._org_path)
+            self.rollback_path(tmp_path=self._tmp_path,
+                               org_path=self._org_path,
+                               max_poison_count=self.MAX_POISON_COUNT)
             self._device_manager.transaction_log.remove_transaction(self)
         except AtomicMoveException:
             self._logger.exception(f"Could not rollback file:{self._org_path}")
@@ -143,12 +167,20 @@ class TransactionLog:
     _logger = logging.getLogger(__name__)
 
     def __init__(self, filepath: str):
+        """
+        :param filepath: the full path of the file used to persist this log
+        """
         self._filepath = filepath
         self._transactions: Dict[str, str] = {}
         self._transactions.update(self._load_file(filepath))
 
     @staticmethod
     def _load_file(filepath: str) -> Dict[str, str]:
+        """
+        loads the transaction log from file
+
+        :param filepath: the path of the file to read
+        """
         if os.path.exists(filepath):
             with open(filepath, 'r') as f:
                 data = json.load(f)
@@ -158,9 +190,17 @@ class TransactionLog:
 
     @property
     def filepath(self):
+        """
+        the path to the file holding this transaction log
+        """
         return self._filepath
 
     def add_transaction(self, transaction: FileSystemInputTransaction):
+        """
+        adds a transaction to the log
+
+        :param transaction: the transaction to add
+        """
         self._transactions[transaction.tmp_path] = transaction.org_path
         try:
             self.write_log()
@@ -168,6 +208,11 @@ class TransactionLog:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def remove_transaction(self, transaction: FileSystemInputTransaction):
+        """
+        removes a transaction from the log
+
+        :param transaction: the transaction to remove
+        """
         self._transactions.pop(transaction.tmp_path, None)
         try:
             self.write_log()
@@ -175,9 +220,14 @@ class TransactionLog:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def rollback_all(self):
+        """
+        rolls back all the transaction in the log
+        """
         for tmp_path, org_path in self._transactions.items():
             try:
-                FileSystemInputTransaction.rollback_path(tmp_path=tmp_path, org_path=org_path)
+                FileSystemInputTransaction.rollback_path(tmp_path=tmp_path,
+                                                         org_path=org_path,
+                                                         max_poison_count=FileSystemInputTransaction.MAX_POISON_COUNT)
             except AtomicMoveException:
                 self._logger.exception(f"Could not rollback file:{org_path}")
         self._transactions.clear()
@@ -187,6 +237,9 @@ class TransactionLog:
             self._logger.warning("Couldn't save transaction log", exc_info=True)
 
     def write_log(self):
+        """
+        writes the transaction log to the file
+        """
         if not self._transactions:
             try:
                 os.remove(self._filepath)
@@ -204,32 +257,33 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
 
     _MAX_BATCH_SIZE = 300
     _MIN_BATCH_SIZE = 8
+    _SLEEP_BETWEEN_BATCHES = 1
     STAT_HEADER_NAME = "__STAT__"
     FILENAME_HEADER_NAME = MetadataHeaders.FILENAME
 
     def __init__(self,
-                 device_manager: 'FileSystemInputDeviceManager',
+                 manager: 'FileSystemInputDeviceManager',
+                 name: str,
                  tmp_folder: str,
                  queues_folder: str,
-                 device_name: str,
                  fifo: bool = True,
                  min_file_age: int = 0,
                  serializer: Optional[FileSystemSerializerBase] = None):
         """
         ctor
 
-        :param device_manager: the device manager which created this input device
+        :param manager: the device manager which created this input device
         :param tmp_folder: the folder to create temporary files in
         :param queues_folder: the base folder for all queues
         :param device_name: the name of the queue to read from
         :param fifo: should we read the files sorted by time (Notice! when fifo=false, you might get file starvation)
         :param min_file_age: the minimum time in seconds since last modification to file, before we to try to read it...
         """
-        super(FileSystemInputDevice, self).__init__(device_manager, device_name)
+        super(FileSystemInputDevice, self).__init__(manager, name)
         self.min_file_age = min_file_age
         self._sorted = fifo
         self._tmp_folder = tmp_folder
-        self._input_folder = os.path.join(queues_folder, device_name)
+        self._input_folder = os.path.join(queues_folder, name)
         try:
             create_dir_if_not_exists(self._tmp_folder)
             create_dir_if_not_exists(self._input_folder)
@@ -281,6 +335,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
         """
         returns a batch of generator direntries for files under input_folder, unsorted
         None when have no more direnties in the scandir
+
         :return: generator of direntries
         """
         if not self._current_generator:
@@ -347,6 +402,18 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                                                     serializer=self._serializer)
 
     def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+        """
+        this method returns a message from the file system
+
+        :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
+        after 'timeout' seconds, if the device doesn't have a message to return, it will return None
+
+        :param with_transaction: 'True' if the device should read message within transaction,
+        or 'False' if the message is automatically committed
+
+        :return: a ReadResult object or None if no message was available.
+        the device headers contains the filename, and stat struct for the file
+        """
         try:
             deadline = 0.0
             if timeout is not None:
@@ -369,7 +436,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
 
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
-                    time.sleep(1)
+                    time.sleep(self._SLEEP_BETWEEN_BATCHES)
             else:
                 while True:
                     got_file = False
@@ -391,7 +458,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
                     if not got_file:
-                        time.sleep(1)
+                        time.sleep(self._SLEEP_BETWEEN_BATCHES)
 
             return None
 
@@ -400,31 +467,34 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
 
 
 class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManager[FileSystemInputDevice]):
+    """
+    this is an input manager that creates file system input devices
+    """
+
     def __init__(self,
                  root_folder: str,
                  queue_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR,
-                 tmp_dir: str = None,
+                 tmp_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_TMPDIR_SUB_DIR,
+                 bookkeeping_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_BOOKKEEPING_SUB_DIR,
                  serializer: Optional[FileSystemSerializerBase] = None,
                  fifo: bool = True,
                  min_input_file_age: int = 0,
-                 transaction_log_save_interval: int = 10,
-                 bookkeeping_path: Optional[str] = None):
+                 transaction_log_save_interval: int = 10):
         """
-        ctor
-
-        :param root_folder: the root folder to read/write from
+        :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
-        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
+        :param tmp_dir_name: the name of the subdirectory under root_folder to use for temp files
+        :param bookkeeping_dir_name: the name of the subdirectory under root_folder that holds the book-keeping data
+        :param serializer: the serializer to use to write messages to files. None will use the default serializer
         :param fifo: should we read the files sorted by time (Notice! when fifo=false, you might get file starvation)
         :param min_input_file_age: the minimum time in seconds since last modification, before we to try to read it...
         :param transaction_log_save_interval: the interval in seconds to save the transaction log
-        :param bookkeeping_path: optional path for the bookkeeping folder (may be outside of root folder)
         """
-        super(FileSystemInputDeviceManager, self).__init__(root_folder=root_folder,
-                                                           queue_dir_name=queue_dir_name,
-                                                           tmp_dir=tmp_dir,
-                                                           bookkeeping_path=bookkeeping_path,
-                                                           serializer=serializer)
+        super().__init__(root_folder=root_folder,
+                         queue_dir_name=queue_dir_name,
+                         tmp_dir_name=tmp_dir_name,
+                         bookkeeping_dir_name=bookkeeping_dir_name,
+                         serializer=serializer)
         self._fifo = fifo
         self._min_input_file_age = min_input_file_age
         transaction_log_filename = os.path.join(self.bookkeeping_folder, f'{self._unique_manager_id}.transactionlog')
@@ -435,6 +505,9 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
         self._logger = logging.getLogger(__name__)
 
     def _do_transaction_log_thread(self):
+        """
+        a thread that looks for old transaction logs, and rolls them back
+        """
         while not self._should_stop.is_set():
             try:
                 self._transaction_log.write_log()
@@ -470,34 +543,42 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
             self._should_stop.wait(self._transaction_log_save_interval)
 
     @property
-    def transaction_log(self):
+    def transaction_log(self) -> TransactionLog:
+        """
+        the transaction log
+        """
         return self._transaction_log
 
-    def get_input_device(self, device_name: str) -> FileSystemInputDevice:
+    def get_input_device(self, name: str) -> FileSystemInputDevice:
         """
         Returns an input device by name
 
-        :param device_name: the name of the device to read from
+        :param name: the name of the device to read from
         :return: an input device for 'device_name'
         """
         try:
-            return FileSystemInputDevice(device_manager=self,
+            return FileSystemInputDevice(manager=self,
+                                         name=name,
                                          tmp_folder=self._tmp_folder,
                                          queues_folder=self._queues_folder,
-                                         device_name=device_name,
                                          fifo=self._fifo,
                                          min_file_age=self._min_input_file_age,
                                          serializer=self._serializer)
         except Exception as e:
-            raise KwargsException("Error getting input device") from e  # TODO: raise another type of exception
+            raise InputDeviceException("Error getting input device") from e
 
     def connect(self):
-        super(FileSystemInputDeviceManager, self).connect()
+        """
+        connects to the device manager
+        """
+        self._create_all_directories()
         self._should_stop.clear()
         self._transaction_log_thread = threading.Thread(target=self._do_transaction_log_thread, daemon=True)
         self._transaction_log_thread.start()
 
-    def close(self):
-        super(FileSystemInputDeviceManager, self).close()
+    def disconnect(self):
+        """
+        disconnects from the device manager
+        """
         self._should_stop.set()
         self._transaction_log.rollback_all()

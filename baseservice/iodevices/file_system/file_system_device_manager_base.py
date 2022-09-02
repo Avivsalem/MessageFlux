@@ -11,68 +11,71 @@ from baseservice.utils.filesystem import create_dir_if_not_exists
 
 class FileSystemDeviceManagerBase:
     """
-    this manager is used to create FileSystem IO Devices
+    this manager is used to create IO Devices over a shared file system
     """
     DEFAULT_QUEUES_SUB_DIR = 'QUEUES'
+    DEFAULT_BOOKKEEPING_SUB_DIR = 'BOOKKEEPING'
+    DEFAULT_TMPDIR_SUB_DIR = 'TMP'
 
     def __init__(self,
                  root_folder: str,
                  queue_dir_name: str = DEFAULT_QUEUES_SUB_DIR,
-                 tmp_dir: Optional[str] = None,
-                 bookkeeping_path: Optional[str] = None,
+                 tmp_dir_name: str = DEFAULT_TMPDIR_SUB_DIR,
+                 bookkeeping_dir_name: str = DEFAULT_BOOKKEEPING_SUB_DIR,
                  serializer: Optional[FileSystemSerializerBase] = None):
         """
-        ctor
-
-        :param root_folder: the root folder to read/write from
+        :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
-        :param tmp_dir: the full path of directory to use for temp files (None will generate a default under root_path)
+        :param tmp_dir_name: the name of the subdirectory under root_folder to use for temp files
+        :param bookkeeping_dir_name: the name of the subdirectory under root_folder that holds the book-keeping data
+        :param serializer: the serializer to use to write messages to files. None will use the default serializer
         """
         self._root_folder = root_folder
-        if tmp_dir is None:
-            tmp_dir = os.path.join(root_folder, 'TMP')
-        self._tmp_folder = tmp_dir
-        if bookkeeping_path is None:
-            bookkeeping_path = os.path.join(root_folder, 'BOOKKEEPING')
-
-        self._bookkeeping_folder = bookkeeping_path
-
         self._queues_folder = os.path.join(root_folder, queue_dir_name)
+        self._tmp_folder = os.path.join(root_folder, tmp_dir_name)
+        self._bookkeeping_folder = os.path.join(root_folder, bookkeeping_dir_name)
         self._unique_manager_id = f'{socket.gethostname()}-{get_random_id()}'
         self._serializer = serializer or DefaultFileSystemSerializer()
 
     @property
-    def unique_manager_id(self):
+    def unique_manager_id(self) -> str:
+        """
+        this is a unique id for this manager instance
+        """
         return self._unique_manager_id
 
     @property
-    def bookkeeping_folder(self):
+    def bookkeeping_folder(self) -> str:
+        """
+        the full path for the book keeping folder
+        """
         return self._bookkeeping_folder
 
     @property
     def queues_folder(self) -> str:
         """
-        the queues folder for this manager
-        :return: the queues folder for this manager
+        the full path for the queues folder
         """
         return self._queues_folder
 
     @property
     def tmp_folder(self) -> str:
         """
-        the temp folder for this manager
-        :return: the temp folder for this manager
+        the full path for the temp folder
         """
         return self._tmp_folder
 
     def list_available_devices(self) -> List[str]:
+        """
+        returns a list of available 'queues' in the queue folder
+        """
         available_devices = []
         for dir_entry in scandir(self._queues_folder):
             if dir_entry.is_dir():
                 available_devices.append(dir_entry.name)
         return available_devices
 
-    def connect(self):
+    def _create_all_directories(self):
         """
         connects to device manager
         """
@@ -82,9 +85,3 @@ class FileSystemDeviceManagerBase:
             create_dir_if_not_exists(self._bookkeeping_folder)
         except Exception as e:
             raise KwargsException('Error creating directories') from e  # TODO: raise another type of exception
-
-    def close(self):
-        """
-        closes the connection to IODeviceManager
-        """
-        pass
