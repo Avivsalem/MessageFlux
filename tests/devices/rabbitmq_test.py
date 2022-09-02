@@ -19,6 +19,7 @@ RABBIT_PASSWORD = os.environ.get("RABBITMQ_PASSWORD", NULL_PASSWORD)
 assert RABBIT_PASSWORD != NULL_PASSWORD
 
 
+# TODO: use fixtures for the device managers
 def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceManager):
     res = out_mgr.create_queue('', auto_delete=True)
     queue_name = res.method.queue
@@ -94,14 +95,15 @@ def test_generic_sanity():
         port=RABBIT_PORT,
         virtual_host=RABBIT_VHOST)
 
-    res = output_manager.create_queue('', auto_delete=False)
-    queue_name = res.method.queue
-    try:
-        sanity_test(input_device_manager=input_manager,
-                    output_device_manager=output_manager,
-                    device_name=queue_name)
-    finally:
-        output_manager.delete_queue(queue_name, only_if_empty=False)
+    with input_manager, output_manager:
+        res = output_manager.create_queue('', auto_delete=False)
+        queue_name = res.method.queue
+        try:
+            sanity_test(input_device_manager=input_manager,
+                        output_device_manager=output_manager,
+                        device_name=queue_name)
+        finally:
+            output_manager.delete_queue(queue_name, only_if_empty=False)
 
 
 def test_generic_rollback():
@@ -118,14 +120,15 @@ def test_generic_rollback():
         port=RABBIT_PORT,
         virtual_host=RABBIT_VHOST)
 
-    res = output_manager.create_queue('', auto_delete=False)
-    queue_name = res.method.queue
-    try:
-        rollback_test(input_device_manager=input_manager,
-                      output_device_manager=output_manager,
-                      device_name=queue_name)
-    finally:
-        output_manager.delete_queue(queue_name, only_if_empty=False)
+    with input_manager, output_manager:
+        res = output_manager.create_queue('', auto_delete=False)
+        queue_name = res.method.queue
+        try:
+            rollback_test(input_device_manager=input_manager,
+                          output_device_manager=output_manager,
+                          device_name=queue_name)
+        finally:
+            output_manager.delete_queue(queue_name, only_if_empty=False)
 
 
 def test_message_and_headers_size():
@@ -137,22 +140,22 @@ def test_message_and_headers_size():
                                       max_message_length=5,
                                       max_header_name_length=100,
                                       max_header_value_length=150)
-
-    res = mgr.create_queue('', auto_delete=True, exclusive=True)
-    queue_name = res.method.queue
     with mgr:
-        outqueue = mgr.get_output_device(queue_name)
-        headers = {'test_header': 'test_value'}
-        with pytest.raises(LengthValidationException):
-            outqueue.send_message(Message(b"TEST_DATA", headers=headers))
-        with pytest.raises(LengthValidationException):
-            outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1" * 151}))
-        with pytest.raises(LengthValidationException):
-            outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1"}))
-        with pytest.raises(LengthValidationException):
-            outqueue.send_message(Message(b"TEST", headers={"1": "1" * 151}))
-        outqueue.send_message(Message(b"TEST", headers={"1" * 100: "1" * 150}))
-        outqueue.send_message(Message(b"TEST", headers={"1": "1"}))
+        res = mgr.create_queue('', auto_delete=True, exclusive=True)
+        queue_name = res.method.queue
+        with mgr:
+            outqueue = mgr.get_output_device(queue_name)
+            headers = {'test_header': 'test_value'}
+            with pytest.raises(LengthValidationException):
+                outqueue.send_message(Message(b"TEST_DATA", headers=headers))
+            with pytest.raises(LengthValidationException):
+                outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1" * 151}))
+            with pytest.raises(LengthValidationException):
+                outqueue.send_message(Message(b"TEST", headers={"1" * 101: "1"}))
+            with pytest.raises(LengthValidationException):
+                outqueue.send_message(Message(b"TEST", headers={"1": "1" * 151}))
+            outqueue.send_message(Message(b"TEST", headers={"1" * 100: "1" * 150}))
+            outqueue.send_message(Message(b"TEST", headers={"1": "1"}))
 
 
 def _no_poison_rollback(poison_counter: PoisonCounterBase):
@@ -170,10 +173,9 @@ def _no_poison_rollback(poison_counter: PoisonCounterBase):
                                           password=RABBIT_PASSWORD,
                                           port=RABBIT_PORT,
                                           virtual_host=RABBIT_VHOST)
-
-    res = out_mgr.create_queue('', auto_delete=True)
-    queue_name = res.method.queue
     with out_mgr:
+        res = out_mgr.create_queue('', auto_delete=True)
+        queue_name = res.method.queue
         outqueue = out_mgr.get_output_device(queue_name)
         outqueue.send_message(Message(data=b"TEST_DATA", headers={'test_header': 'test_value'}))
         with in_mgr:
