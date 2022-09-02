@@ -321,3 +321,15 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
             message = f"Couldn't create output device '{device_name}'"
             self._logger.exception(message)
             raise OutputDeviceException(message) from e
+
+    def connect(self):
+        """
+        connects to the device manager
+        """
+        self._connect()
+
+    def disconnect(self):
+        """
+        disconnects from the device manager
+        """
+        self._close()

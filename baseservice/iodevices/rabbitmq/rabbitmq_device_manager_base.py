@@ -171,11 +171,11 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
 
         return self._connection
 
-    def connect(self):
+    def _connect(self):
         if self._connection is None or not self._connection.is_open:
             self._connection = self._create_connection()
 
-    def close(self):
+    def _close(self):
         if self._connection is not None:
             try:
                 self._connection.close()

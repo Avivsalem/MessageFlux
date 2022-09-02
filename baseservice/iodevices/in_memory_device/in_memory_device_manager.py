@@ -11,15 +11,19 @@ from baseservice.iodevices.base import (Message,
                                         OutputDevice,
                                         InputDevice,
                                         InputTransaction,
-                                        NULL_TRANSACTION,
                                         ReadResult)
 from baseservice.iodevices.base.common import MessageBundle
+from baseservice.iodevices.base.input_transaction import NULLTransaction
 
 MESSAGE_TIMESTAMP_HEADER = 'message_timestamp'
 
 
 @total_ordering
 class _QueueMessage:
+    """
+    an object containing a message in the queue
+    """
+
     def __init__(self, message: Message, timestamp: Optional[float] = None):
         self.message = message.copy()
         self.timestamp = timestamp or time.time()
@@ -32,7 +36,15 @@ class _QueueMessage:
 
 
 class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
+    """
+    an input device which is stored in memory
+    """
+
     class InMemoryTransaction(InputTransaction):
+        """
+        a transaction object for the in memory device
+        """
+
         def __init__(self, device: 'InMemoryInputDevice', message: _QueueMessage):
             super().__init__(device)
             self._message = message
@@ -42,6 +54,9 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
             pass
 
         def _rollback(self):
+            """
+            returns the message back to queue
+            """
             self._device._push_to_queue(self._message)
 
     def __init__(self, manager: 'InMemoryDeviceManager',
@@ -55,10 +70,14 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
     def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
         with self._queue_not_empty:
             if self._queue_not_empty.wait_for(lambda: any(self._queue), timeout):
-                message = heapq.heappop(self._queue)
-                transaction = self.InMemoryTransaction(self, message) if with_transaction else NULL_TRANSACTION
-                device_headers = {MESSAGE_TIMESTAMP_HEADER: message.timestamp}
-                return ReadResult(message=message.message.copy(),
+                queue_message = heapq.heappop(self._queue)
+                transaction: InputTransaction
+                if with_transaction:
+                    transaction = self.InMemoryTransaction(self, queue_message)
+                else:
+                    transaction = NULLTransaction(self)
+                device_headers = {MESSAGE_TIMESTAMP_HEADER: queue_message.timestamp}
+                return ReadResult(message=queue_message.message.copy(),
                                   device_headers=device_headers,
                                   transaction=transaction)
             else:
@@ -71,6 +90,10 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
 
 
 class InMemoryOutputDevice(OutputDevice['InMemoryDeviceManager']):
+    """
+    an output device which is stored in memory
+    """
+
     def __init__(self, manager: 'InMemoryDeviceManager',
                  name: str,
                  queue: List[_QueueMessage],
@@ -80,12 +103,21 @@ class InMemoryOutputDevice(OutputDevice['InMemoryDeviceManager']):
         self._queue_not_empty = queue_not_empty_condition
 
     def _send_message(self, message_bundle: MessageBundle):
+        """
+        sends a message to the device.
+
+        :param message_bundle: the message bundle to send
+        """
         with self._queue_not_empty:
             heapq.heappush(self._queue, _QueueMessage(message_bundle.message))
             self._queue_not_empty.notify()
 
 
 class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDeviceManager[InMemoryOutputDevice]):
+    """
+    the in memory device manager. it serves as both input and output device manager.
+    notice that the messages are shared only within the same manager!
+    """
 
     def __init__(self):
         self._queues: Dict[str, Tuple[List[_QueueMessage], Condition]] = {}
@@ -102,10 +134,22 @@ class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDevic
         return queue, condition
 
     def get_input_device(self, name: str) -> InMemoryInputDevice:
+        """
+        creates an input device.
+
+        :param name: the name of the input device to create
+        :return: the created input device
+        """
         queue, condition = self._get_queue_tuple(name)
 
         return InMemoryInputDevice(self, name, queue, condition)
 
     def get_output_device(self, name: str) -> InMemoryOutputDevice:
+        """
+        creates an output device. this should be implemented by child classes
+
+        :param name: the name of the output device to create
+        :return: the created output device
+        """
         queue, condition = self._get_queue_tuple(name)
         return InMemoryOutputDevice(self, name, queue, condition)

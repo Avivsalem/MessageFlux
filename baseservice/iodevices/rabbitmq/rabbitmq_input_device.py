@@ -237,7 +237,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         """
         self._device_manager.connect()
 
-    def close(self):
+    def close(self):  # TODO: this is never called... we should call this somewhen
         """
         closes the connection to device
         """
@@ -337,3 +337,15 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
             message = f"Couldn't create input device '{device_name}'"
             self._logger.exception(message)
             raise InputDeviceException(message) from e
+
+    def connect(self):
+        """
+        connects to the device manager
+        """
+        self._connect()
+
+    def disconnect(self):
+        """
+        disconnects from the device manager
+        """
+        self._close()

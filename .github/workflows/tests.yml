@@ -37,16 +37,38 @@ jobs:
       - name: Generate all-extra-requirements.txt
         run: python make_all_extra_requirements.py
         # Install any basic dependencies required to run the tests
+
       - name: Install dependencies
         run: |
           python -m pip install pip -U
-          pip install tox tox-gh-actions
-        # Run the tests using tox.
-      - name: Test with tox
+          pip install .[all]
+
+      - name: Run Mypy
+        run: |
+          pip install mypy
+          mypy baseservice
+
+      - name: Run Flake8
+        run: |
+          pip install flake8
+          flake8 baseservice tests
+
+      - name: Run Tests
         env:
-          PLATFORM: ${{ matrix.platform }}
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
-        run: tox
+        run: |
+          pip install pytest pytest-cov
+          pytest tests
+
+#        # Run the tests using tox.
+#      - name: Test with tox
+#        env:
+#          PLATFORM: ${{ matrix.platform }}
+#          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+#        run: |
+#          pip install tox tox-gh-actions
+#          tox
+
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
         if: always() # always run even if the previous step fails
@@ -56,12 +78,12 @@ jobs:
           include_passed: true
           check_name: ${{ matrix.python-version }}-${{ matrix.platform }} JUnit Test Report
 
-      - name: Publish Coverage Comment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-coverage-path: ./reports/test-console-results.txt
-          junitxml-path: ./reports/test-results.xml
-          title: ${{ matrix.python-version }}-${{ matrix.platform }} Test Coverage
+#      - name: Publish Coverage Comment
+#        uses: MishaKav/pytest-coverage-comment@main
+#        with:
+#          pytest-coverage-path: ./reports/test-console-results.txt
+#          junitxml-path: ./reports/test-results.xml
+#          title: ${{ matrix.python-version }}-${{ matrix.platform }} Test Coverage
 
       # Upload mypy artifact
       - name: Upload mypy artifact

@@ -230,9 +230,9 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
         self._poison_counter.start()
         super().connect()
 
-    def close(self):
+    def disconnect(self):
         self._poison_counter.stop()
-        super().close()
+        super().disconnect()
 
     def _device_factory(self, device_name: str) -> RabbitMQPoisonCountingInputDevice:
         return RabbitMQPoisonCountingInputDevice(device_manager=self,

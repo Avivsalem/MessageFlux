@@ -116,6 +116,12 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
                                                             serializer=serializer)
         self._output_filename_format = output_filename_format
 
+    def connect(self):
+        """
+        connects to the device manager
+        """
+        self._create_all_directories()
+
     def get_output_device(self, name: str) -> FileSystemOutputDevice:
         """
         Returns an outgoing device by name
