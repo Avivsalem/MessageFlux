@@ -143,8 +143,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                         connection_attempts=connection_attempts or self._connection_attempts,
                         client_properties=client_properties or self._client_args,
                         virtual_host=virtual_host or self._virtual_host,
-                        blocked_connection_timeout=(blocked_connection_timeout or
-                                                    self._blocked_connection_timeout)
+                        blocked_connection_timeout=(blocked_connection_timeout or self._blocked_connection_timeout)
                     )
                 )
             except AMQPConnectionError as ex:
@@ -185,8 +184,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
     @property
     def maintenance_channel(self) -> 'BlockingChannel':
         if (self._maintenance_channel is None or
-                not self._maintenance_channel.is_open or
-                not self._maintenance_channel.connection.is_open):
+                not self._maintenance_channel.is_open or not self._maintenance_channel.connection.is_open):
             self._maintenance_channel = self.connection.channel()
 
         assert self._maintenance_channel is not None

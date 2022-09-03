@@ -10,52 +10,58 @@ from baseservice.iodevices.transformer_device_wrapper.transformer_output_device 
 
 class MessageStoreOutputTransformer(_MessageStoreTransformerBase, OutputTransformerBase):
     """
-    this header can be added to send_stream in order to control whether the message store is used or not.
-    'True' means that we always use the message store
-    'False' means that we don't uses the message store (unless message size is over 'always_store_threshold')
-
-    if the header does not exist, the message store is used only if the message size is over 'size_threshold'
+    a transformer class that converts key to message from the message store
     """
 
-    USE_MESSAGE_STORE_HEADER_NAME = '__USE_MESSAGE_STORE_HEADER_NAME__'
     ORIGINAL_MESSAGE_SIZE_HEADER = '__ORIGINAL_MESSAGE_SIZE_HEADER__'
 
     def __init__(self,
                  message_store: MessageStoreBase,
-                 size_threshold: int = -1,
-                 always_store_threshold: int = -1
-                 ):
+                 size_threshold: int = -1):
+        """
+        :param message_store: the message store to use
+        :param size_threshold: the minimum message size, the only above we store the message in message store.
+        """
         super().__init__(message_store=message_store)
         self._size_threshold = size_threshold
-        self._always_store_threshold = always_store_threshold
 
     def transform_outgoing_message(self,
                                    output_device: TransformerOutputDevice,
                                    message_bundle: MessageBundle) -> MessageBundle:
+        """
+        Transform the message before it is sent to the underlying device.
+        in our case, stores the message in message store, and returns the key as the output message
+
+        if the message size is under size_threshold, nothing is done
+
+        :param output_device: the output device that the transformer runs on
+        :param message_bundle: the message bundle to transform
+        :return: the transformed message bundle to send through the underlying device
+        """
+
         stream_size = message_bundle.message.stream.seek(0, 2)
         message_bundle.message.stream.seek(0)
-        use_message_store = message_bundle.device_headers.get(self.USE_MESSAGE_STORE_HEADER_NAME, None)
-        if 0 < self._always_store_threshold < stream_size:
-            use_message_store = True
 
-        if use_message_store is None:
-            if stream_size > self._size_threshold:
-                use_message_store = True
-            else:
-                use_message_store = False
-
-        if use_message_store:
+        if stream_size > self._size_threshold:
             # send using massage store
-            result_message = self._send_over_message_store(output_device, message_bundle.message)
+            result_message = self._store_in_message_store(output_device, message_bundle.message)
             result_message.headers[self.ORIGINAL_MESSAGE_SIZE_HEADER] = stream_size
             return MessageBundle(result_message, message_bundle.device_headers)
         else:
             # send without message store
             return message_bundle
 
-    def _send_over_message_store(self,
-                                 output_device: TransformerOutputDevice,
-                                 message: Message) -> Message:
+    def _store_in_message_store(self,
+                                output_device: TransformerOutputDevice,
+                                message: Message) -> Message:
+        """
+        stores the message in the message store
+
+        :param output_device: the output device that the transformer runs on
+        :param message: the message to store
+
+        :return: the message containing the key to the message store
+        """
         try:
             # save to object storage and get the key
             key = self._message_store.put_message(output_device.name, message)
@@ -83,8 +89,7 @@ class MessageStoreOutputDeviceManagerWrapper(TransformerOutputDeviceManager):
     def __init__(self,
                  inner_manager: OutputDeviceManager,
                  message_store: MessageStoreBase,
-                 size_threshold: int = -1,
-                 always_store_threshold: int = -1):
+                 size_threshold: int = -1):
         """
         This class is used to wrap IODeviceManager with message store functionality
 
@@ -92,15 +97,10 @@ class MessageStoreOutputDeviceManagerWrapper(TransformerOutputDeviceManager):
         :param MessageStoreBase message_store: the message store to use to store files
         :param size_threshold: only use message store if the size of the product (in bytes) is larger than this.
                                set to -1 to always use message store (default: -1).
-        :param always_store_threshold: above this size - the message will always be in the message store
-                                       (even if USE_MESSAGE_STORE_HEADER_NAME is False)
-                                       use -1 to always respect the USE_MESSAGE_STORE_HEADER_NAME header (default: -1)
 
         """
         transformer = MessageStoreOutputTransformer(message_store=message_store,
-                                                    size_threshold=size_threshold,
-                                                    always_store_threshold=always_store_threshold)
+                                                    size_threshold=size_threshold)
 
         super(MessageStoreOutputDeviceManagerWrapper, self).__init__(inner_manager, transformer)
         self.size_threshold = size_threshold
-        self.always_store_threshold = always_store_threshold

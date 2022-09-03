@@ -17,7 +17,13 @@ class FileSystemMessageStore(MessageStoreBase):
 
     DATE_FORMAT = "%Y-%m-%d"
 
-    def __init__(self, root_folder: str, num_of_subdirs: int = 4000):
+    def __init__(self,
+                 root_folder: str,
+                 num_of_subdirs: int = 4000):
+        """
+        :param root_folder: the root folders to use
+        :param num_of_subdirs: number of subdirectories to create under each date in root_folder
+        """
         self._root_folder = root_folder
         self._logger = logging.getLogger(__name__)
         self._num_of_subdirs = num_of_subdirs
@@ -28,7 +34,7 @@ class FileSystemMessageStore(MessageStoreBase):
         """
         create_dir_if_not_exists(self._root_folder)
 
-    def close(self):
+    def disconnect(self):
         """
         closes the connection to Message Store
         """
@@ -45,6 +51,7 @@ class FileSystemMessageStore(MessageStoreBase):
     def read_message(self, key: str) -> Message:
         """
         reads a message according to the key given
+
         :param str key: the key to the message
         :return: the Message
         """
@@ -61,10 +68,10 @@ class FileSystemMessageStore(MessageStoreBase):
 
         :return: The relative path to use together with the root path in order to save the file.
         """
-        filename = get_random_id() + ".SBM"
+        filename = get_random_id() + ".FSMS"
         current_date = datetime.now().strftime(self.DATE_FORMAT)
         random_str = str(random.randint(0, self._num_of_subdirs))
-        subdir = '-'.join([current_date, random_str])
+        subdir = f'{current_date}-{random_str}'
         return posixpath.join(subdir, filename)
 
     def get_absolute_path(self, relative_path: str) -> str:
@@ -79,6 +86,7 @@ class FileSystemMessageStore(MessageStoreBase):
     def put_message(self, device_name: str, message: Message) -> str:
         """
         puts a message in the message store
+
         :param str device_name: the name of the device putting the item in the store
         :param message: the Message to write to the store
         :return: the key to the message in the message store
@@ -98,6 +106,7 @@ class FileSystemMessageStore(MessageStoreBase):
     def delete_message(self, key: str):
         """
         deletes a message from the message store
+
         :param str key: the key to the message
         """
         file_path = self.get_absolute_path(key)

@@ -146,7 +146,7 @@ class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDevic
 
     def get_output_device(self, name: str) -> InMemoryOutputDevice:
         """
-        creates an output device. this should be implemented by child classes
+        creates an output device.
 
         :param name: the name of the output device to create
         :return: the created output device

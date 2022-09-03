@@ -2,16 +2,12 @@ from abc import ABCMeta, abstractmethod
 from typing import List
 
 from baseservice.iodevices.base import Message
-from baseservice.utils import KwargsException, AggregatedException
+from baseservice.utils import AggregatedException
 
 
-class MessageStoreException(KwargsException):
-    pass
-
-
-class MessageStoreAggregateException(AggregatedException):
+class MessageStoreException(AggregatedException):
     """
-    an aggregate exception to raise on errors
+    base exception for message store exceptions
     """
     pass
 
@@ -43,7 +39,7 @@ class MessageStoreBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def close(self):
+    def disconnect(self):
         """
         closes the connection to Message Store
         """
@@ -66,12 +62,13 @@ class MessageStoreBase(metaclass=ABCMeta):
         :param exc_val:
         :param exc_tb:
         """
-        self.close()
+        self.disconnect()
 
     @abstractmethod
     def read_message(self, key: str) -> Message:
         """
         reads a message according to the key given
+
         :param str key: the key to the message
         :return: a Message from the store
         """
@@ -81,6 +78,7 @@ class MessageStoreBase(metaclass=ABCMeta):
     def put_message(self, device_name: str, message: Message) -> str:
         """
         puts a message in the message store
+
         :param device_name: the name of the device putting the item in the store
         :param message: the Message to write to the store
         :return: the key to the message in the message store
@@ -91,6 +89,7 @@ class MessageStoreBase(metaclass=ABCMeta):
     def delete_message(self, key: str):
         """
         deletes a message from the message store
+
         :param str key: the key to the message
         """
         pass
@@ -98,6 +97,7 @@ class MessageStoreBase(metaclass=ABCMeta):
     def delete_messages(self, keys: List[str]):
         """
         deletes multiple messages from the message store
+
         :param list[str] keys: the list of keys to the messages
         """
         failures = []
@@ -109,6 +109,6 @@ class MessageStoreBase(metaclass=ABCMeta):
                 failures.append(ex)
 
         if failures:
-            raise MessageStoreAggregateException(
+            raise MessageStoreException(
                 "Error deleting {} out of {} messages from store".format(len(failures), len(keys)),
                 inner_exceptions=failures)

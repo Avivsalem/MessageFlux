@@ -24,6 +24,7 @@ class MessageStoreInputTransactionWrapper(InputTransaction):
         """
         represents an message store wrapper transaction
 
+        :param device: the input device that returned that transaction
         :param inner_transaction: the actual transaction
         :param MessageStoreBase message_store: the message store that stores this item
         :param str key: the key to this message
@@ -55,14 +56,30 @@ class MessageStoreInputTransactionWrapper(InputTransaction):
 
 
 class MessageStoreInputTransformer(_MessageStoreTransformerBase, InputTransformerBase):
+    """
+    a transformer class that converts key to message from the message store
+    """
 
     def __init__(self,
                  message_store: MessageStoreBase,
                  delete_on_commit: bool = True):
+        """
+        :param message_store: the message store to use
+        :param delete_on_commit: should we the delete the message from the message store on transaction commit?
+        """
         super(MessageStoreInputTransformer, self).__init__(message_store=message_store)
         self._delete_on_commit = delete_on_commit
 
     def transform_incoming_message(self, input_device: TransformerInputDevice, read_result: ReadResult) -> ReadResult:
+        """
+        Transform the message that was received from the underlying device.
+        in our case, converts the key received from the device, to the actual message from the message store
+        in case the message received is not a key, doesn't do anything
+
+        :param input_device: the input device that the transformer runs on
+        :param read_result: the original ReadResult received from the underlying device
+        :return: the transformed ReadResult
+        """
         try:
             if not self.is_key(read_result.message.stream):
                 return read_result
@@ -75,6 +92,7 @@ class MessageStoreInputTransformer(_MessageStoreTransformerBase, InputTransforme
                                                                       message_store=self._message_store,
                                                                       key=key,
                                                                       delete_on_commit=self._delete_on_commit)
+            # TODO: do we need this?
             headers = read_result.message.headers.copy()
             headers.update(store_message.headers)
             store_message.headers.update(headers)

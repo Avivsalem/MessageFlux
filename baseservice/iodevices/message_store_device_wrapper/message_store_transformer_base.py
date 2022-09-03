@@ -5,9 +5,15 @@ from baseservice.iodevices.message_store_device_wrapper.message_store_base impor
 
 
 class _MessageStoreTransformerBase:
+    """
+    this is a base class for message store transformer
+    """
     MAGIC_HEADER = b"__MSGSTORE_WRAPPER__"
 
     def __init__(self, message_store: MessageStoreBase):
+        """
+        :param message_store: the message store to use
+        """
         self._message_store = message_store
         self._logger = logging.getLogger(__name__)
         self._full_magic = b"|".join([self.MAGIC_HEADER,
@@ -39,11 +45,11 @@ class _MessageStoreTransformerBase:
         """
         self._message_store.connect()
 
-    def close(self):
+    def disconnect(self):
         """
         closes the connection to IODeviceManager
         """
-        self._message_store.close()
+        self._message_store.disconnect()
 
     def serialize_key(self, key: str) -> bytes:
         """
