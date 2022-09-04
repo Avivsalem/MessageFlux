@@ -1,1 +1,1 @@
-# This File Is Intentionally left empty - and it's generated at the ci/cd while building the package
+# This file is generated at the ci/cd while building the package

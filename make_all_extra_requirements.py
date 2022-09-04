@@ -20,7 +20,7 @@ def load_all_extra_requirements(path: Path = this_directory) -> List[str]:
         if match:
             all_requirements.update((path / file.name).read_text().splitlines())
 
-    return list(all_requirements)
+    return sorted(list(all_requirements))
 
 
 all_extras = os.linesep.join(load_all_extra_requirements())
