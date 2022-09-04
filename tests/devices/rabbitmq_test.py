@@ -9,10 +9,10 @@ from baseservice.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutput
 from baseservice.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase, \
     RabbitMQPoisonCountingInputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
+import ssl
 
 NULL_PASSWORD = "NULL_PASSWORD"
 RABBIT_HOST = "rattlesnake.rmq.cloudamqp.com"
-RABBIT_PORT = 5672
 RABBIT_USERNAME = "uiwayyvm"
 RABBIT_VHOST = RABBIT_USERNAME
 RABBIT_PASSWORD = os.environ.get("RABBITMQ_PASSWORD", NULL_PASSWORD)
@@ -54,13 +54,13 @@ def test_sanity():
     in_mgr = RabbitMQInputDeviceManager(hosts=[RABBIT_HOST],
                                         user=RABBIT_USERNAME,
                                         password=RABBIT_PASSWORD,
-                                        port=RABBIT_PORT,
+                                        ssl_context=ssl.create_default_context(),
                                         virtual_host=RABBIT_VHOST)
 
     out_mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
                                           user=RABBIT_USERNAME,
                                           password=RABBIT_PASSWORD,
-                                          port=RABBIT_PORT,
+                                          ssl_context=ssl.create_default_context(),
                                           virtual_host=RABBIT_VHOST)
     _sanity(in_mgr, out_mgr)
 
@@ -69,14 +69,14 @@ def test_sanity_non_consumer():
     in_mgr = RabbitMQInputDeviceManager(hosts=[RABBIT_HOST],
                                         user=RABBIT_USERNAME,
                                         password=RABBIT_PASSWORD,
-                                        port=RABBIT_PORT,
+                                        ssl_context=ssl.create_default_context(),
                                         virtual_host=RABBIT_VHOST,
                                         use_consumer=False)
 
     out_mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
                                           user=RABBIT_USERNAME,
                                           password=RABBIT_PASSWORD,
-                                          port=RABBIT_PORT,
+                                          ssl_context=ssl.create_default_context(),
                                           virtual_host=RABBIT_VHOST)
     _sanity(in_mgr, out_mgr)
 
@@ -85,14 +85,14 @@ def test_generic_sanity():
     input_manager = RabbitMQInputDeviceManager(hosts=[RABBIT_HOST],
                                                user=RABBIT_USERNAME,
                                                password=RABBIT_PASSWORD,
-                                               port=RABBIT_PORT,
+                                               ssl_context=ssl.create_default_context(),
                                                virtual_host=RABBIT_VHOST,
                                                prefetch_count=5)
     output_manager = RabbitMQOutputDeviceManager(
         hosts=[RABBIT_HOST],
         user=RABBIT_USERNAME,
         password=RABBIT_PASSWORD,
-        port=RABBIT_PORT,
+        ssl_context=ssl.create_default_context(),
         virtual_host=RABBIT_VHOST)
 
     with input_manager, output_manager:
@@ -110,14 +110,14 @@ def test_generic_rollback():
     input_manager = RabbitMQInputDeviceManager(hosts=[RABBIT_HOST],
                                                user=RABBIT_USERNAME,
                                                password=RABBIT_PASSWORD,
-                                               port=RABBIT_PORT,
+                                               ssl_context=ssl.create_default_context(),
                                                virtual_host=RABBIT_VHOST,
                                                prefetch_count=5)
     output_manager = RabbitMQOutputDeviceManager(
         hosts=[RABBIT_HOST],
         user=RABBIT_USERNAME,
         password=RABBIT_PASSWORD,
-        port=RABBIT_PORT,
+        ssl_context=ssl.create_default_context(),
         virtual_host=RABBIT_VHOST)
 
     with input_manager, output_manager:
@@ -135,7 +135,7 @@ def test_message_and_headers_size():
     mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
                                       user=RABBIT_USERNAME,
                                       password=RABBIT_PASSWORD,
-                                      port=RABBIT_PORT,
+                                      ssl_context=ssl.create_default_context(),
                                       virtual_host=RABBIT_VHOST,
                                       max_message_length=5,
                                       max_header_name_length=100,
@@ -162,7 +162,7 @@ def _no_poison_rollback(poison_counter: PoisonCounterBase):
     in_mgr = RabbitMQPoisonCountingInputDeviceManager(hosts=[RABBIT_HOST],
                                                       user=RABBIT_USERNAME,
                                                       password=RABBIT_PASSWORD,
-                                                      port=RABBIT_PORT,
+                                                      ssl_context=ssl.create_default_context(),
                                                       virtual_host=RABBIT_VHOST,
                                                       prefetch_count=5,
                                                       max_poison_count=2,
@@ -171,7 +171,7 @@ def _no_poison_rollback(poison_counter: PoisonCounterBase):
     out_mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
                                           user=RABBIT_USERNAME,
                                           password=RABBIT_PASSWORD,
-                                          port=RABBIT_PORT,
+                                          ssl_context=ssl.create_default_context(),
                                           virtual_host=RABBIT_VHOST)
     with out_mgr:
         res = out_mgr.create_queue('', auto_delete=True)

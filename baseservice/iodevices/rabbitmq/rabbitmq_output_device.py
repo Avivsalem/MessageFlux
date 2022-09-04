@@ -1,4 +1,5 @@
 import logging
+import ssl
 from typing import BinaryIO, Dict, Any, Union, Optional, List, TYPE_CHECKING
 
 import time
@@ -55,7 +56,7 @@ class RabbitMQOutputDevice(OutputDevice['RabbitMQOutputDeviceManager']):
             headers=message_bundle.message.headers,
             app_id=rabbit_headers.get('app_id', "BASESERVICE"),
             message_id=rabbit_headers.get('message_id',
-                                          custom_headers.get(MetadataHeaders.ITEM_ID, get_random_id())),
+                                          message_bundle.message.headers.get(MetadataHeaders.ITEM_ID, get_random_id())),
             persistent=rabbit_headers.get('persistent', True),
             mandatory=rabbit_headers.get('mandatory', self.manager.publish_confirm),
             priority=rabbit_headers.get('priority', None),
@@ -84,6 +85,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                  user: str,
                  password: str,
                  port: Optional[int] = None,
+                 ssl_context: ssl.SSLContext = None,
                  virtual_host: Optional[str] = None,
                  default_output_exchange: str = '',
                  publish_confirm: bool = True,
@@ -103,6 +105,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         :param user: the username for the rabbitMQ manager
         :param password: the password for the rabbitMQ manager
         :param port: the port to connect the hosts to
+        :param ssl_context: the ssl context to use. None means don't use ssl at all
         :param virtual_host: the virtual host to connect to
         :param default_output_exchange: the default exchange used for output devices
         :param publish_confirm: should the send fail if the message is unroutable?
@@ -126,6 +129,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                                                           user=user,
                                                           password=password,
                                                           port=port,
+                                                          ssl_context=ssl_context,
                                                           virtual_host=virtual_host,
                                                           client_args=client_args,
                                                           connection_type="Output",
@@ -152,10 +156,16 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
 
     @property
     def default_rabbit_headers(self) -> Dict[str, Any]:
+        """
+        returns the default rabbit headers
+        """
         return self._default_rabbit_headers
 
     @property
     def publish_confirm(self) -> bool:
+        """
+        returns the publish_confirm flag
+        """
         return self._publish_confirm
 
     def publish_message(self,
@@ -195,7 +205,6 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         if headers is not None:
             # Safety measure for removing input device headers
             for header_name, header_value in headers.items():
-                header_name, header_value = header_name, header_value
                 if hasattr(header_name, '__len__') and len(header_name) > self._max_header_name_length > 0:
                     raise LengthValidationException(
                         f"Header name ({header_name}) is longer than {self._max_header_name_length}")
@@ -294,6 +303,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
     def get_outgoing_channel(self) -> 'BlockingChannel':
         """
         returns a rabbitmq channel for publishing messages
+
         :return: a rabbit mq channel
         """
         if self._outgoing_channel is None or not self._outgoing_channel.is_open or not self.connection.is_open:
@@ -332,4 +342,4 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         """
         disconnects from the device manager
         """
-        self._close()
+        self._disconnect()

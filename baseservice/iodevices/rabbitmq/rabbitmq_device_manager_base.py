@@ -1,7 +1,8 @@
 import logging
 import socket
+import ssl
 from random import shuffle
-from typing import TYPE_CHECKING, List, Optional, Dict, Any, Union
+from typing import TYPE_CHECKING, List, Optional, Dict, Any, Union, Type
 
 import sys
 
@@ -25,8 +26,7 @@ if TYPE_CHECKING:
     from pika.frame import Method as PikaMethod
 
 
-class RabbitMQDeviceManagerBase:  # TODO: support tls connection
-
+class RabbitMQDeviceManagerBase:
     """
     base class for rabbitmq device managers
 
@@ -43,6 +43,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                  user: str,
                  password: str,
                  port: Optional[int] = None,
+                 ssl_context: ssl.SSLContext = None,
                  virtual_host: Optional[str] = None,
                  client_args: Optional[Dict[str, str]] = None,
                  connection_type: str = "None",
@@ -56,6 +57,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
         :param user: the username for the rabbitMQ manager
         :param password: the password for the rabbitMQ manager
         :param port: the port to connect the hosts to
+        :param ssl_context: the ssl context to use. None means don't use ssl at all
         :param virtual_host: the virtual host to connect to
         :param client_args: the arguments to create the client with
         :param heartbeat: heartbeat interval for the connection (between 0 and 65536
@@ -77,8 +79,12 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
         self._hosts = hosts
         self._user = user
         self._password = password
+        self._ssl_context = ssl_context
         if port is None:
-            port = pika.ConnectionParameters.DEFAULT_PORT
+            if self._ssl_context is not None:
+                port = pika.ConnectionParameters.DEFAULT_SSL_PORT
+            else:
+                port = pika.ConnectionParameters.DEFAULT_PORT
         self._port = port
         if virtual_host is None:
             virtual_host = pika.ConnectionParameters.DEFAULT_VIRTUAL_HOST
@@ -100,6 +106,25 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
                            client_properties: Optional[Dict[str, str]] = None,
                            virtual_host: Optional[str] = None,
                            blocked_connection_timeout: Optional[float] = None) -> 'BlockingConnection':
+        """
+        creates a BlockingConnection object
+
+        :param credentials: possible alternate credentials
+        :param heartbeat: heartbeat interval for the connection (between 0 and 65536
+        :param connection_attempts: Maximum number of retry attempts
+        :param client_properties: the client properties for the connection
+        :param virtual_host: the virtual host to connect to
+        :param blocked_connection_timeout: If not None,
+            the value is a non-negative timeout, in seconds, for the
+            connection to remain blocked (triggered by Connection.Blocked from
+            broker); if the timeout expires before connection becomes unblocked,
+            the connection will be torn down, triggering the adapter-specific
+            mechanism for informing client app about the closed connection:
+            passing `ConnectionBlockedTimeout` exception to on_close_callback
+            in asynchronous adapters or raising it in `BlockingConnection`.
+
+        :return: a newly created connection
+        """
         try:
             import pika
             from pika.exceptions import AMQPConnectionError
@@ -134,18 +159,24 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
         exceptions = []
         for host in self._hosts:
             try:
-                return SelfClosingBlockingConnection(
-                    pika.ConnectionParameters(
-                        host=host,
-                        port=self._port,
-                        credentials=credentials or pika.PlainCredentials(username=self._user, password=self._password),
-                        heartbeat=heartbeat or self._heartbeat,
-                        connection_attempts=connection_attempts or self._connection_attempts,
-                        client_properties=client_properties or self._client_args,
-                        virtual_host=virtual_host or self._virtual_host,
-                        blocked_connection_timeout=(blocked_connection_timeout or self._blocked_connection_timeout)
-                    )
-                )
+                ssl_options: Union[pika.SSLOptions, Type[pika.ConnectionParameters._DEFAULT]]
+                if self._ssl_context is not None:
+                    ssl_options = pika.SSLOptions(self._ssl_context, host)
+                else:
+                    ssl_options = pika.ConnectionParameters._DEFAULT
+
+                return SelfClosingBlockingConnection(pika.ConnectionParameters(
+                    host=host,
+                    port=self._port,
+                    ssl_options=ssl_options,
+                    credentials=credentials or pika.PlainCredentials(username=self._user, password=self._password),
+
+                    heartbeat=heartbeat or self._heartbeat,
+                    connection_attempts=connection_attempts or self._connection_attempts,
+                    client_properties=client_properties or self._client_args,
+                    virtual_host=virtual_host or self._virtual_host,
+                    blocked_connection_timeout=(blocked_connection_timeout or self._blocked_connection_timeout)))
+
             except AMQPConnectionError as ex:
                 message = f"RabbitMQ on host {host} is not available"
                 io_device_exception = KwargsException(message)  # TODO: better exception type
@@ -174,7 +205,7 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
         if self._connection is None or not self._connection.is_open:
             self._connection = self._create_connection()
 
-    def _close(self):
+    def _disconnect(self):
         if self._connection is not None:
             try:
                 self._connection.close()
@@ -183,6 +214,9 @@ class RabbitMQDeviceManagerBase:  # TODO: support tls connection
 
     @property
     def maintenance_channel(self) -> 'BlockingChannel':
+        """
+        returns a channel used for maintenance (create/bind etc...)
+        """
         if (self._maintenance_channel is None or
                 not self._maintenance_channel.is_open or not self._maintenance_channel.connection.is_open):
             self._maintenance_channel = self.connection.channel()

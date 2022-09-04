@@ -1,8 +1,9 @@
 import logging
 import os
 import socket
+import ssl
 from io import BytesIO
-from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, List
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, List, Any
 
 from baseservice.iodevices.base import InputDevice, InputTransaction, ReadResult, InputDeviceException, Message, \
     InputDeviceManager
@@ -24,7 +25,16 @@ class RabbitMQInputTransaction(InputTransaction):
     represents a InputTransaction for RabbitMQ
     """
 
-    def __init__(self, device: 'RabbitMQInputDevice', channel: 'BlockingChannel', delivery_tag: int):
+    def __init__(self,
+                 device: 'RabbitMQInputDevice',
+                 channel: 'BlockingChannel',
+                 delivery_tag: int):
+        """
+
+        :param device: the device that returned this transaction
+        :param channel: the BlockingChannel that the item was read from
+        :param delivery_tag: the delivery tag for this item
+        """
         super(RabbitMQInputTransaction, self).__init__(device=device)
         self._channel = channel
         self._delivery_tag = delivery_tag
@@ -32,10 +42,16 @@ class RabbitMQInputTransaction(InputTransaction):
 
     @property
     def channel(self) -> 'BlockingChannel':
+        """
+        the channel that the item was read from
+        """
         return self._channel
 
     @property
     def delivery_tag(self) -> int:
+        """
+        the delivery tag for this item
+        """
         return self._delivery_tag
 
     def _commit(self):
@@ -56,7 +72,6 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
     represents an RabbitMQ input device
     """
 
-    RABBIT_INPUT_HEADERS_NAME = "__RABBIT_INPUT_HEADERS_NAME__"
     _channel: Union[ThreadLocalMember[Optional['BlockingChannel']],
                     Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
 
@@ -90,7 +105,9 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         :param device_manager: the RabbitMQ device Manager that holds this device
         :param queue_name: the name for the queue
         :param consumer_args: the arguments to create the consumer with
+        only relevent if "use_consumer" is True
         :param int prefetch_count: the number of unacked messages that can be consumed
+        only relevent if "use_consumer" is True
         :param bool use_consumer: True to use the 'consume' method, False to use 'basic_get'
         """
         super().__init__(device_manager, queue_name)
@@ -132,6 +149,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
     def _get_data_from_queue(self, timeout: Optional[float], with_transaction: bool) -> Optional['ReadResult']:
         """
         performs a single read from queue
+
         :param timeout: the timeout in seconds to block. negative number means no blocking
         :param with_transaction: does this read is to be done with transaction?
         :return: the stream and metadata, or None,None if no message in queue
@@ -140,6 +158,9 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         get_timeout: Optional[float] = None
         if timeout is not None:
             get_timeout = max(0.01, timeout)
+        body: Optional[bytes]
+        header_frame: Optional[spec.BasicProperties]
+        method_frame: Optional[Union[spec.Basic.Deliver, spec.Basic.GetOk]]
 
         body, header_frame, method_frame = self._get_frames_from_queue(channel,
                                                                        get_timeout,
@@ -147,16 +168,40 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         if method_frame is None:  # no message in queue
             return None
 
-        return self._create_response_from_frames(body, header_frame, method_frame, channel,
+        assert body is not None
+        assert header_frame is not None
+
+        return self._create_response_from_frames(body,
+                                                 header_frame,
+                                                 method_frame,
+                                                 channel,
                                                  with_transaction)
 
-    def _create_response_from_frames(self, body, header_frame, method_frame, channel, with_transaction) -> ReadResult:
+    def _create_response_from_frames(self,
+                                     body: bytes,
+                                     header_frame: spec.BasicProperties,
+                                     method_frame: Union[spec.Basic.Deliver, spec.Basic.GetOk],
+                                     channel: 'BlockingChannel',
+                                     with_transaction: bool) -> ReadResult:
+        """
+        creates the read result from the data returned from rabbitmq
+
+        :param body: the body of the message
+        :param header_frame: the header frame of the message
+        :param method_frame: the method frame of the message
+        :param channel: the channel we read the message from
+        :param with_transaction: should we use a transaction
+
+        :return: ReadResult object
+        """
+
         delivery_tag = method_frame.delivery_tag
+        assert delivery_tag is not None
         if with_transaction:
             transaction: InputTransaction = RabbitMQInputTransaction(self, channel, delivery_tag)
         else:
             transaction = NULLTransaction(self)
-        headers = header_frame.headers or {}
+        headers: Dict[str, Any] = header_frame.headers or {}  # type: ignore
         # get the rabbitmq headers as for device headers
         rabbit_headers = self._get_rabbit_headers(method_frame, header_frame)
 
@@ -172,7 +217,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
                                                                 Optional[spec.BasicProperties],
                                                                 Optional[Union[spec.Basic.Deliver, spec.Basic.GetOk]]]:
         """
-        gets the actual frame from queue. can be overridden to use basic.get instead
+        gets the actual frame from queue. use_consumer effects this method
 
         :param BlockingChannel channel: the channel
         :param float timeout: the timeout
@@ -206,10 +251,8 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         return body, header_frame, method_frame
 
     def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
-        pass
-
         """
-        reads a stream from InputDevice
+        reads a stream from InputDevice (tries getting a message. if it fails, reconnects and tries again once)
 
         :param timeout: the timeout in seconds to block. negative number means no blocking
         :return: a tuple of stream and metadata from InputDevice, or (None, None) if no message is available
@@ -262,6 +305,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                  user: str,
                  password: str,
                  port: Optional[int] = None,
+                 ssl_context: ssl.SSLContext = None,
                  virtual_host: Optional[str] = None,
                  client_args: Optional[Dict[str, str]] = None,
                  heartbeat: int = 300,
@@ -278,6 +322,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
         :param user: the username for the rabbitMQ manager
         :param password: the password for the rabbitMQ manager
         :param port: the port to connect the hosts to
+        :param ssl_context: the ssl context to use. None means don't use ssl at all
         :param virtual_host: the virtual host to connect to
         :param client_args: the arguments to create the client with
         :param int heartbeat: heartbeat interval for the connection (between 0 and 65536
@@ -300,6 +345,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                          user=user,
                          password=password,
                          port=port,
+                         ssl_context=ssl_context,
                          virtual_host=virtual_host,
                          client_args=client_args,
                          connection_type="Input",
@@ -348,4 +394,4 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
         """
         disconnects from the device manager
         """
-        self._close()
+        self._disconnect()

@@ -26,7 +26,8 @@ class FileSystemPoisonCounter(PoisonCounterBase):
 
     def __init__(self, base_folder: str, file_cleanup_timeout: int = 600):
         """
-        :param base_folder: the shared folder path, to use for counter files
+        :param base_folder: the shared folder path, to use for counter files.
+        it is recommended that it will be unique per consumer group
         :param file_cleanup_timeout: the time (in seconds), after which, the counter file is considered old,
         and should be deleted
         """
@@ -75,7 +76,7 @@ class FileSystemPoisonCounter(PoisonCounterBase):
 
                         os.remove(counter_file)
                     except FileNotFoundError:
-                        continue  # Couldn't handle the file, because someone else got to it first
+                        continue  # Couldn't handle the file, probably because someone else got to it first
             except Exception:
                 logger.warning('Error in cleanup thread', exc_info=True)
             # sleep for at least a few seconds so we won't spam

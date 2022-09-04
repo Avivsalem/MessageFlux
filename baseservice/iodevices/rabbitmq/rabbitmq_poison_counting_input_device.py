@@ -1,10 +1,11 @@
+import ssl
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict, Optional
 
 from time import perf_counter
 
 from baseservice.iodevices.base import InputTransaction, ReadResult
-from baseservice.iodevices.rabbitmq import RabbitMQInputDevice, RabbitMQInputDeviceManager
+from baseservice.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDevice, RabbitMQInputDeviceManager
 
 
 class PoisonCounterBase(metaclass=ABCMeta):
@@ -47,10 +48,19 @@ class PoisonCounterBase(metaclass=ABCMeta):
 
 class RabbitMQNoPoisonInputTransactionWrapper(InputTransaction):
     """
-    represents a InputTransaction for RabbitMQ
+    represents a wrapper for InputTransaction for RabbitMQ with poison counter
     """
 
-    def __init__(self, inner_transaction: InputTransaction, poison_counter: PoisonCounterBase, message_id: str):
+    def __init__(self,
+                 inner_transaction: InputTransaction,
+                 poison_counter: PoisonCounterBase,
+                 message_id: str):
+        """
+
+        :param inner_transaction: the inner transaction
+        :param poison_counter: the poison counter
+        :param message_id: the message id in this transaction
+        """
         super().__init__(inner_transaction.device)
         self._inner_transaction = inner_transaction
         self._poison_counter = poison_counter
@@ -118,6 +128,8 @@ class RabbitMQPoisonCountingInputDevice(RabbitMQInputDevice):
                                                                            with_transaction=with_transaction)
             if method_frame is None:  # no message in queue
                 return None
+            assert body is not None
+            assert header_frame is not None
 
             redelivered = method_frame.redelivered
 
@@ -175,6 +187,7 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
                  poison_counter: PoisonCounterBase,
                  max_poison_count: int = 3,
                  port: Optional[int] = None,
+                 ssl_context: ssl.SSLContext = None,
                  virtual_host: Optional[str] = None,
                  client_args: Optional[Dict[str, str]] = None,
                  heartbeat: int = 300,
@@ -193,6 +206,7 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
         :param PoisonCounterBase poison_counter: the poison counter to use
         :param int max_poison_count: the number of times to try to handle a message before backout
         :param port: the port to connect the hosts to
+        :param ssl_context: the ssl context to use. None means don't use ssl at all
         :param virtual_host: the virtual host to connect to
         :param client_args: the arguments to create the client with
         :param int heartbeat: heartbeat interval for the connection (between 0 and 65536
@@ -214,6 +228,7 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
                          user=user,
                          password=password,
                          port=port,
+                         ssl_context=ssl_context,
                          virtual_host=virtual_host,
                          client_args=client_args,
                          heartbeat=heartbeat,
@@ -227,10 +242,16 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
         self._poison_counter = poison_counter
 
     def connect(self):
+        """
+        connects to the device manager
+        """
         self._poison_counter.start()
         super().connect()
 
     def disconnect(self):
+        """
+        disconnects from the device manager
+        """
         self._poison_counter.stop()
         super().disconnect()
 
