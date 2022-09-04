@@ -24,9 +24,10 @@ def load_all_extra_requirements(path: Path = this_directory) -> List[str]:
 
 
 all_extras = os.linesep.join(load_all_extra_requirements())
-file_to_write_to = "all-extra-requirements.txt"
+file_to_write_to = "requirements-all.txt"
+
 print(f'---------------> Writing the requirements to {file_to_write_to}:')
 print(all_extras)
-(this_directory / "all-extra-requirements.txt").write_text(all_extras)
+(this_directory / file_to_write_to).write_text(all_extras)
 print()
 print('---------------> Done!!!')

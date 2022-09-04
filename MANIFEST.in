@@ -1,0 +1,7 @@
+global-include py.typed
+include requirements*.txt
+include README.md
+
+include .flake8
+include mypy.ini
+include pytest.ini
