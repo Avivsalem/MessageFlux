@@ -71,7 +71,7 @@ def test_sanity_input():
     with pytest.raises(ShortCircuitException):
         input_device.read_message()
 
-    sleep(1)
+    sleep(1.1)
 
     with pytest.raises(MyException):
         input_device.read_message()
