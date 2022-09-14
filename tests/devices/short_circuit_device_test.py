@@ -107,7 +107,7 @@ def test_sanity_output():
     with pytest.raises(ShortCircuitException):
         output_device.send_message(Message(b'bla'))
 
-    sleep(1)
+    sleep(1.1)
 
     with pytest.raises(MyException):
         output_device.send_message(Message(b'bla'))
