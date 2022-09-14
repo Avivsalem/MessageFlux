@@ -8,6 +8,11 @@ from baseservice.server_loop_service import ServerLoopService, LoopMetrics
 
 
 class LoopHealthAddon:
+    """
+    an addon that can be attached to a service, to make sure he is healthy.
+    if the service gets stuck (service loop inactivity) or has to many consecutive failures,
+    the addons stops the service
+    """
     def __init__(self, service: ServerLoopService, *,
                  max_consecutive_failures: int = -1,
                  max_inactivity_timeout: float = -1):
@@ -27,10 +32,16 @@ class LoopHealthAddon:
 
     @property
     def consecutive_failures(self) -> int:
+        """
+        the number of consecutive failures the service has had
+        """
         return self._consecutive_failures
 
     @property
     def last_loop_time(self) -> float:
+        """
+        the last time that the service loop has ended
+        """
         return self._last_loop_time
 
     def _inactivity_watchdog_thread(self):

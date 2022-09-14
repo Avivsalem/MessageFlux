@@ -4,6 +4,10 @@ from baseservice.iodevices.short_circuit_device_wrapper.common import ShortCircu
 
 
 class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice['ShortCircuitOutputDeviceManager']):
+    """
+    this is an output device manager that wraps input devices in short circuit input devices
+    """
+
     def __init__(self,
                  manager: 'ShortCircuitOutputDeviceManager',
                  name: str,
@@ -16,16 +20,15 @@ class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice['ShortCircui
 
     def _send_message(self, message_bundle: MessageBundle):
         self._validate_short_circuit()
-        try:
+        with self._failure_count_context():
             self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
-        except Exception:
-            self._report_failure()
-            raise
-        else:
-            self._report_success()
 
 
 class ShortCircuitOutputDeviceManager(OutputDeviceManager[ShortCircuitOutputDevice]):
+    """
+    this is an output device manager that wraps output devices in short circuit output devices
+    """
+
     def __init__(self,
                  inner_device_manager: OutputDeviceManager,
                  short_circuit_fail_count: int,
@@ -35,12 +38,22 @@ class ShortCircuitOutputDeviceManager(OutputDeviceManager[ShortCircuitOutputDevi
         self._short_circuit_fail_time = short_circuit_time
 
     def connect(self):
+        """
+        connects to the device manager
+        """
         self._inner_device_manager.connect()
 
     def disconnect(self):
+        """
+        disconnects from the device manager
+        """
         self._inner_device_manager.disconnect()
 
     def get_output_device(self, name: str) -> ShortCircuitOutputDevice:
+        """
+        returns a wrapped output device
+        :param name: the name of the output device to get
+        """
         inner_device = self._inner_device_manager.get_output_device(name)
         return ShortCircuitOutputDevice(self,
                                         name,

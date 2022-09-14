@@ -88,3 +88,20 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
     @abstractmethod
     def _handle_messages(self, batch: List[Tuple[InputDevice, ReadResult]]):
         pass
+
+
+class SingleMessageDeviceReaderService(DeviceReaderService, metaclass=ABCMeta):
+    def __init__(self, **kwargs):
+        """
+        :param kwargs: passed to parent as is
+        """
+        super().__init__(max_batch_read_count=1, wait_for_batch_count=False, **kwargs)
+
+    @abstractmethod
+    def _handle_single_message(self, input_device: InputDevice, read_result: ReadResult):
+        pass
+
+    def _handle_messages(self, batch: List[Tuple[InputDevice, ReadResult]]):
+        input_device, read_result = batch[0]
+        self._handle_single_message(input_device=input_device,
+                                    read_result=read_result)

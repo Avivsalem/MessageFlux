@@ -7,8 +7,7 @@ from baseservice.logging.bulk_rotating_handler_base import BulkRotatingHandlerBa
 
 class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
     """
-    Handler for logging into an output device
-    to the next when the current file reaches a certain size or time.
+    Handler for logging into an output device when the current file reaches a certain size or time.
     """
 
     def __init__(self,

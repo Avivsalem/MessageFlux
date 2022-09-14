@@ -18,6 +18,10 @@ class ServiceFactory(metaclass=ABCMeta):
 
     @abstractmethod
     def create_service(self) -> BaseService:
+        """
+        creates the service instance. this will run in the child service
+        :return: an instance of BaseService
+        """
         pass
 
 
@@ -84,6 +88,9 @@ class SingleProcessHandler:
 
     @property
     def instance_index(self) -> int:
+        """
+        the index of this service instance
+        """
         return self._instance_index
 
     def _liveness_check(self):
@@ -105,8 +112,8 @@ class SingleProcessHandler:
         """
         Start the service.
 
-        :param exit_callback:
-        :return:
+        :param exit_callback: a callback to call when the process has exited
+        :return: a thread that runs that instance.
         """
 
         context = multiprocessing.get_context('spawn')
@@ -133,29 +140,48 @@ class SingleProcessHandler:
         return run_process_thread
 
     def stop(self):
+        """
+        requests the child process to stop
+        """
         self._stop_was_called.set()
         if self._parent_pipe is not None:
             self._parent_pipe.send(_STOP_MESSAGE)
 
     def is_alive(self) -> bool:
+        """
+        returns whether the child process is alive
+        :return: True if the child process is alive, False otherwise
+        """
         return self._process is not None and self._process.is_alive()
 
     @property
     def pid(self) -> Optional[int]:
+        """
+        the pid of the child process (or None if no child process exists)
+        """
         if self._process is None:
             return None
         return self._process.pid
 
     @property
     def process(self) -> Optional[BaseProcess]:
+        """
+        the child process object for this instance (if exists.)
+        """
         return self._process
 
     def terminate(self):
+        """
+        tries to forcefully terminate the child process
+        """
         if self.is_alive():
             assert self._process is not None
             self._process.terminate()
 
     def kill(self):
+        """
+        tries to forcefully KILL the child process
+        """
         if self.is_alive():
             assert self._process is not None
             self._process.kill()

@@ -36,11 +36,22 @@ class InputTransformerBase(metaclass=ABCMeta):
 
 
 class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
+    """
+    an input device that transforms the input
+    """
+
     def __init__(self,
                  manager: 'TransformerInputDeviceManager',
                  name: str,
                  inner_device: InputDevice,
                  transformer: InputTransformerBase):
+        """
+
+        :param manager: the input device manager
+        :param name: the name of this device
+        :param inner_device: the inner device that it wraps
+        :param transformer: the transformer to use to transform the incoming messages
+        """
         super(TransformerInputDevice, self).__init__(manager, name)
         self._transformer = transformer
         self._inner_device = inner_device
@@ -54,18 +65,39 @@ class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
 
 
 class TransformerInputDeviceManager(InputDeviceManager[TransformerInputDevice]):
+    """
+    a wrapper input device manager, that wraps the devices in transformer input devices
+    """
+
     def __init__(self, inner_device_manager: InputDeviceManager, transformer: InputTransformerBase):
+        """
+
+        :param inner_device_manager: the inner device manager
+        :param transformer: the input transformer to use
+        """
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
     def connect(self):
+        """
+        connects the inner device manager and the transformer
+        """
         self._transformer.connect()
         self._inner_device_manager.connect()
 
     def disconnect(self):
+        """
+        disconnects the inner device manager and the transformer
+        """
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
     def get_input_device(self, name: str) -> TransformerInputDevice:
+        """
+        returns a wrapped input device
+
+        :param name: the name of the input device to get
+        """
+
         inner_input_device = self._inner_device_manager.get_input_device(name)
         return TransformerInputDevice(self, name, inner_input_device, self._transformer)

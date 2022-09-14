@@ -13,6 +13,9 @@ INSTANCE_COUNT_ENV_VAR = 'MULTI_PROCESS_INSTANCE_COUNT'
 
 
 class MultiProcessRunner(BaseService):
+    """
+    a class that runs multiple services in processes. it handles the child process, and check liveness
+    """
     def __init__(self,
                  service_factory: ServiceFactory,
                  instance_count: int,
@@ -20,6 +23,14 @@ class MultiProcessRunner(BaseService):
                  live_check_interval: int = 60,
                  live_check_timeout: int = 10,
                  restart_on_failure: bool = True):
+        """
+            :param service_factory: a factory class that creates the service to run in a different process
+            :param instance_count: the number of processes to run
+            :param shutdown_timeout: the time (seconds) to wait after calling 'stop' to violently stop the subprocesses
+            :param live_check_interval: the interval in seconds to send the liveness message to queue
+            :param live_check_timeout: the time to wait for the process answer to liveness test
+            :param restart_on_failure: should we restart a process if it fails?
+        """
 
         super().__init__()
         self._service_factory = service_factory
@@ -47,6 +58,9 @@ class MultiProcessRunner(BaseService):
 
     @property
     def processes(self) -> List[BaseProcess]:
+        """
+        the list of child processes that runs the service instances
+        """
         return [handler.process for handler in self._process_handlers if handler.process is not None]
 
     def _run_service_instance(self, instance_index: int):
@@ -95,3 +109,31 @@ class MultiProcessRunner(BaseService):
                     self._logger.error(
                         f'{len(still_running)} processes still running after {self._shutdown_timeout} seconds')
                     pass
+
+
+def get_service_runner(service_factory: ServiceFactory,
+                       instance_count: int,
+                       shutdown_timeout: int = 5,
+                       live_check_interval: int = 60,
+                       live_check_timeout: int = 10,
+                       restart_on_failure: bool = True) -> BaseService:
+    """
+    a helper method, that the creates the MultiProcessRunner if instance_count is greater then 1.
+    otherwise, it just returns the service itself.
+
+    :param service_factory: a factory class that creates the service to run in a different process
+    :param instance_count: the number of processes to run
+    :param shutdown_timeout: the time (seconds) to wait after calling 'stop' to violently stop the subprocesses
+    :param live_check_interval: the interval in seconds to send the liveness message to queue
+    :param live_check_timeout: the time to wait for the process answer to liveness test
+    :param restart_on_failure: should we restart a process if it fails?
+    """
+    if instance_count <= 1:
+        return service_factory.create_service()
+    else:
+        return MultiProcessRunner(service_factory=service_factory,
+                                  instance_count=instance_count,
+                                  shutdown_timeout=shutdown_timeout,
+                                  live_check_interval=live_check_interval,
+                                  live_check_timeout=live_check_timeout,
+                                  restart_on_failure=restart_on_failure)

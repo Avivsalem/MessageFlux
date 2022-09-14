@@ -5,6 +5,9 @@ from baseservice.iodevices.base.common import MessageBundle
 
 
 class OutputTransformerBase(metaclass=ABCMeta):
+    """
+    transformer for output devices
+    """
 
     def connect(self):
         """
@@ -33,11 +36,22 @@ class OutputTransformerBase(metaclass=ABCMeta):
 
 
 class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
+    """
+    a wrapper device that transforms outgoing messages
+    """
+
     def __init__(self,
                  manager: 'TransformerOutputDeviceManager',
                  name: str,
                  inner_device: OutputDevice,
                  transformer: OutputTransformerBase):
+        """
+
+        :param manager: the device manager
+        :param name: the name of the device
+        :param inner_device: the inner device that this device wraps
+        :param transformer: the output transformer to use
+        """
         super().__init__(manager, name)
         self._transformer = transformer
         self._inner_device = inner_device
@@ -48,18 +62,37 @@ class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
 
 
 class TransformerOutputDeviceManager(OutputDeviceManager[TransformerOutputDevice]):
+    """
+    a wrapper output device manager, that wraps the devices in transformer output devices
+    """
+
     def __init__(self, inner_device_manager: OutputDeviceManager, transformer: OutputTransformerBase):
+        """
+
+        :param inner_device_manager: the inner device manager
+        :param transformer: the transformer to use
+        """
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
     def connect(self):
+        """
+        connects the inner device manager and the transformer
+        """
         self._transformer.connect()
         self._inner_device_manager.connect()
 
     def disconnect(self):
+        """
+        disconnects the inner device manager and the transformer
+        """
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
     def get_output_device(self, name: str) -> TransformerOutputDevice:
+        """
+        returns a wrapped output device
+        :param name: the name of the device to get
+        """
         inner_device = self._inner_device_manager.get_output_device(name)
         return TransformerOutputDevice(self, name, inner_device, self._transformer)

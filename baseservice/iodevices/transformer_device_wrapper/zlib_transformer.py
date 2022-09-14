@@ -15,6 +15,10 @@ class ZLIBTransformer(InputTransformerBase, OutputTransformerBase):
     ZLIB_TRANSFORMER_MAGIC = b'__ZLIBTRANSFORMER__'
 
     def __init__(self, level: int = -1):
+        """
+
+        :param level: the compression level for zlib. only matters for outgoing messages
+        """
         self._level = level
         if not (-1 <= self._level <= 9):
             raise ValueError("ZLIBTransformer: level must be between -1 and 9")
