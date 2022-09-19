@@ -52,7 +52,6 @@ python main.py
 ### Using Multi Processing for concurrency
 ```python
 from baseservice import SingleMessageDeviceReaderService, InputDevice, ReadResult
-from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
 from baseservice.multiprocessing import get_service_runner, ServiceFactory
 
 
@@ -65,6 +64,10 @@ class MyExampleService(SingleMessageDeviceReaderService):
 class MyServiceFactory(ServiceFactory):
 
     def create_service(self) -> MyExampleService:
+        # we import the devices in 'create_service' so that all the imports will be in the child process.
+        # this is only a precaution, but recommended
+        from baseservice.iodevices.in_memory_device import InMemoryDeviceManager 
+        
         input_device_manager = InMemoryDeviceManager()
         # write messages to devices here...
 
