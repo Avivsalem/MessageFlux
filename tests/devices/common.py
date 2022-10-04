@@ -3,7 +3,7 @@ from typing import Optional
 
 import time
 
-from baseservice.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
+from messageflux.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
 
 
 def _assert_messages_equal(org_message: Message, new_message: Message):

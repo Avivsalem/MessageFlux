@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from baseservice.utils import ThreadLocalMember
+from messageflux.utils import ThreadLocalMember
 
 executor = ThreadPoolExecutor()
 

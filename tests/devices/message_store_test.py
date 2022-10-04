@@ -1,12 +1,12 @@
 import os
 
-from baseservice.iodevices.base import Message
-from baseservice.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager
-from baseservice.iodevices.message_store_device_wrapper.file_system_message_store import FileSystemMessageStore
-from baseservice.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
-from baseservice.iodevices.message_store_device_wrapper.message_store_input_device import \
+from messageflux.iodevices.base import Message
+from messageflux.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager
+from messageflux.iodevices.message_store_device_wrapper.file_system_message_store import FileSystemMessageStore
+from messageflux.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
+from messageflux.iodevices.message_store_device_wrapper.message_store_input_device import \
     MessageStoreInputDeviceManagerWrapper
-from baseservice.iodevices.message_store_device_wrapper.message_store_output_device import \
+from messageflux.iodevices.message_store_device_wrapper.message_store_output_device import \
     MessageStoreOutputDeviceManagerWrapper
 
 QUEUE_NAME = "Test"

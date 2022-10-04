@@ -6,8 +6,8 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "baseservice"
-version = "0.0.1a"
+name = "messageflux"
+version = "0.0.2a"
 requires-python = '>=3.7,<3.11'
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -39,7 +39,7 @@ name = "Nir Schulman"
 email = "narsssx@gmail.com"
 
 [tool.setuptools]
-packages = ["baseservice"]
+packages = ["messageflux"]
 platforms = [
     "win32",
     "linux"

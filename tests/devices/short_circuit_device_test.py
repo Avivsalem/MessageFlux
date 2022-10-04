@@ -3,14 +3,14 @@ from typing import Optional
 import pytest
 from time import sleep
 
-from baseservice.iodevices.base import (InputDeviceManager,
+from messageflux.iodevices.base import (InputDeviceManager,
                                         OutputDeviceManager,
                                         OutputDevice,
                                         InputDevice,
                                         Message,
                                         ReadResult)
-from baseservice.iodevices.base.common import MessageBundle
-from baseservice.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
+from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
     ShortCircuitOutputDeviceManager
 
 

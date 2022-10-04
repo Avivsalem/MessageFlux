@@ -1,4 +1,4 @@
-# BaseService
+# MessageFlux
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 this package helps create long running services (that may handle items that comes from devices) 
@@ -9,23 +9,23 @@ Python 3.7+
 
 ## Installation
 ```console
-$ pip install baseservice
+$ pip install messageflux
 ```
 
 ### Extra Requirements (Example) 
 ```console
-$ pip install baseservice[rabbitmq]
+$ pip install messageflux[rabbitmq]
 ```
 
-## Example #TODO: make examples
+## Example
 
 ### Create it 
 
 * Create a file `main.py` with:
 
 ```Python
-from baseservice import SingleMessageDeviceReaderService, InputDevice, ReadResult
-from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
+from messageflux import SingleMessageDeviceReaderService, InputDevice, ReadResult
+from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
 
 
 class MyExampleService(SingleMessageDeviceReaderService):
@@ -50,9 +50,10 @@ python main.py
 ```
 
 ### Using Multi Processing for concurrency
+
 ```python
-from baseservice import SingleMessageDeviceReaderService, InputDevice, ReadResult
-from baseservice.multiprocessing import get_service_runner, ServiceFactory
+from messageflux import SingleMessageDeviceReaderService, InputDevice, ReadResult
+from messageflux.multiprocessing import get_service_runner, ServiceFactory
 
 
 class MyExampleService(SingleMessageDeviceReaderService):
@@ -66,7 +67,7 @@ class MyServiceFactory(ServiceFactory):
     def create_service(self) -> MyExampleService:
         # we import the devices in 'create_service' so that all the imports will be in the child process.
         # this is only a precaution, but recommended
-        from baseservice.iodevices.in_memory_device import InMemoryDeviceManager 
+        from messageflux.iodevices.in_memory_device import InMemoryDeviceManager 
         
         input_device_manager = InMemoryDeviceManager()
         # write messages to devices here...
@@ -83,6 +84,6 @@ service_to_run.start()  # this starts the child processes and blocks indefinitel
 ```
 
 ## Optional Requirements
-* baseservice[rabbitmq] - for using the rabbitmq device
-* baseservice[dev] - for running tests and developing for this package
-* baseservice[all] - all extras required for all devices
+* messageflux[rabbitmq] - for using the rabbitmq device
+* messageflux[dev] - for running tests and developing for this package
+* messageflux[all] - all extras required for all devices

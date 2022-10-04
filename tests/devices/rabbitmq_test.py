@@ -2,11 +2,11 @@ import os
 
 import pytest
 
-from baseservice.iodevices.base import Message, InputTransactionScope
-from baseservice.iodevices.rabbitmq.fs_poison_counter import FileSystemPoisonCounter
-from baseservice.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDeviceManager
-from baseservice.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutputDeviceManager, LengthValidationException
-from baseservice.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase, \
+from messageflux.iodevices.base import Message, InputTransactionScope
+from messageflux.iodevices.rabbitmq.fs_poison_counter import FileSystemPoisonCounter
+from messageflux.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDeviceManager
+from messageflux.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutputDeviceManager, LengthValidationException
+from messageflux.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase, \
     RabbitMQPoisonCountingInputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
 import ssl

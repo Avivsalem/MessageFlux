@@ -1,4 +1,4 @@
-from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
+from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
 from .common import sanity_test, rollback_test
 
 

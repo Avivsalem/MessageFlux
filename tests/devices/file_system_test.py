@@ -1,11 +1,11 @@
 import os
 from io import BytesIO
 
-from baseservice.iodevices.base import InputTransactionScope, Message
-from baseservice.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager, \
+from messageflux.iodevices.base import InputTransactionScope, Message
+from messageflux.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager, \
     NoHeadersFileSystemSerializer, DefaultFileSystemSerializer
-from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
-from baseservice.iodevices.file_system.file_system_input_device import TransactionLog
+from messageflux.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
+from messageflux.iodevices.file_system.file_system_input_device import TransactionLog
 from tests.devices.common import sanity_test, rollback_test
 
 QUEUE_NAME = "Test"

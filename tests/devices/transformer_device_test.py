@@ -1,13 +1,13 @@
 import uuid
 
-from baseservice.iodevices.base import Message, ReadResult
-from baseservice.iodevices.base.common import MessageBundle
-from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
-from baseservice.iodevices.transformer_device_wrapper import TransformerInputDeviceManager, \
+from messageflux.iodevices.base import Message, ReadResult
+from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
+from messageflux.iodevices.transformer_device_wrapper import TransformerInputDeviceManager, \
     TransformerOutputDeviceManager, InputTransformerBase, OutputTransformerBase
-from baseservice.iodevices.transformer_device_wrapper.transformer_input_device import TransformerInputDevice
-from baseservice.iodevices.transformer_device_wrapper.transformer_output_device import TransformerOutputDevice
-from baseservice.iodevices.transformer_device_wrapper.zlib_transformer import ZLIBTransformer
+from messageflux.iodevices.transformer_device_wrapper.transformer_input_device import TransformerInputDevice
+from messageflux.iodevices.transformer_device_wrapper.transformer_output_device import TransformerOutputDevice
+from messageflux.iodevices.transformer_device_wrapper.zlib_transformer import ZLIBTransformer
 
 
 class MockMessageStoreTransformer(InputTransformerBase, OutputTransformerBase):

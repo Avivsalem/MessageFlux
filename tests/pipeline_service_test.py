@@ -1,10 +1,10 @@
 from threading import Thread, Event
 from typing import Optional
 
-from baseservice.iodevices.base import InputDevice, Message
-from baseservice.iodevices.base.common import MessageBundle
-from baseservice.iodevices.in_memory_device import InMemoryDeviceManager
-from baseservice.pipeline_service import PipelineHandlerBase, PipelineService, PipelineResult
+from messageflux.iodevices.base import InputDevice, Message
+from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
+from messageflux.pipeline_service import PipelineHandlerBase, PipelineService, PipelineResult
 
 
 class TestPipelineHandler(PipelineHandlerBase):
