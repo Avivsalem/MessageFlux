@@ -117,7 +117,8 @@ class SingleProcessHandler:
         """
 
         context = multiprocessing.get_context('spawn')
-        self._parent_pipe, child_pipe = context.Pipe()  # type: ignore
+        child_pipe: Connection
+        self._parent_pipe, child_pipe = context.Pipe()
         self._stop_was_called.clear()
 
         self._process = context.Process(target=_start_service_and_listen_queue,
