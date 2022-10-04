@@ -4,7 +4,7 @@ import os
 import threading
 from abc import ABCMeta, abstractmethod
 from multiprocessing import process
-from multiprocessing.connection import Connection
+from multiprocessing.connection import _ConnectionBase
 from multiprocessing.process import BaseProcess
 from typing import Optional, Callable
 
@@ -33,13 +33,13 @@ _logger = logging.getLogger(__name__)
 
 
 def _start_service_and_listen_queue(service_factory: ServiceFactory,
-                                    child_pipe: Connection,
+                                    child_pipe: _ConnectionBase,
                                     instance_index: int):
     try:
         service = service_factory.create_service()
         os.environ[INSTANCE_INDEX_ENV_VAR] = str(instance_index)
 
-        def _listen_to_pipe(inner_service: BaseService, pipe: Connection):
+        def _listen_to_pipe(inner_service: BaseService, pipe: _ConnectionBase):
             try:
                 while True:
                     message = pipe.recv()
@@ -82,7 +82,7 @@ class SingleProcessHandler:
         self._live_check_timeout = live_check_timeout
         self._liveness_thread: Optional[threading.Thread] = None
         self._stop_was_called = threading.Event()
-        self._parent_pipe: Optional[Connection] = None
+        self._parent_pipe: Optional[_ConnectionBase] = None
         self._process: Optional[process.BaseProcess] = None
         self._instance_index = instance_index
 
@@ -117,7 +117,7 @@ class SingleProcessHandler:
         """
 
         context = multiprocessing.get_context('spawn')
-        child_pipe: Connection
+        child_pipe: _ConnectionBase
         self._parent_pipe, child_pipe = context.Pipe()
         self._stop_was_called.clear()
 
