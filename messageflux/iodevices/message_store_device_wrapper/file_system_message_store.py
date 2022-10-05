@@ -7,7 +7,6 @@ from datetime import datetime
 from messageflux.iodevices.base import Message
 from messageflux.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
 from messageflux.utils import get_random_id
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class FileSystemMessageStore(MessageStoreBase):
@@ -32,7 +31,7 @@ class FileSystemMessageStore(MessageStoreBase):
         """
         connects to Message Store
         """
-        create_dir_if_not_exists(self._root_folder)
+        os.makedirs(self._root_folder, exist_ok=True)
 
     def disconnect(self):
         """
@@ -95,7 +94,7 @@ class FileSystemMessageStore(MessageStoreBase):
         relative_path = self.generate_relative_path()
         file_path = self.get_absolute_path(relative_path)
 
-        create_dir_if_not_exists(os.path.dirname(file_path))
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         with open(file_path, 'wb') as f:
             f.write(message.bytes)

@@ -9,7 +9,6 @@ from typing import Optional, Dict, Any
 from time import time
 
 from messageflux.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class FileSystemPoisonCounter(PoisonCounterBase):
@@ -34,7 +33,7 @@ class FileSystemPoisonCounter(PoisonCounterBase):
         self._base_folder = base_folder
         self._file_cleanup_timeout = file_cleanup_timeout
 
-        create_dir_if_not_exists(self._base_folder)
+        os.makedirs(self._base_folder, exist_ok=True)
 
         self._should_stop = Event()
         self._cleanup_thread: Optional[threading.Thread] = None

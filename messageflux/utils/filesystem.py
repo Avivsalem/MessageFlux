@@ -64,12 +64,6 @@ def atomic_move(src: str, dest: str, lock_filename: str) -> bool:
                 pass
 
 
-def create_dir_if_not_exists(dir_name: str):
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
-        recursive_chmod(dir_name)
-
-
 def recursive_chmod(dir_name: str):
     os.chmod(dir_name, 0o777)
     for root, dirs, files in os.walk(dir_name):

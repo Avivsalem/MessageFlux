@@ -1,9 +1,29 @@
 from abc import ABCMeta, abstractmethod
+from enum import Enum, unique
 from threading import Event
 from typing import Optional, List, TYPE_CHECKING
 
+from messageflux.utils import KwargsException
+
 if TYPE_CHECKING:
     from messageflux.iodevices.base.input_devices import InputDevice, ReadResult
+
+
+class WrongTransactionStateException(KwargsException):
+    """
+    this exception is raised when transaction is in the wrong state for operation
+    """
+    pass
+
+
+@unique
+class TransactionState(Enum):
+    """
+    represents the current state of the transaction
+    """
+    ACTIVE = 'ACTIVE'
+    COMMITTED = 'COMMITTED'
+    ROLLEDBACK = 'ROLLEDBACK'
 
 
 class InputTransaction(metaclass=ABCMeta):
@@ -13,7 +33,8 @@ class InputTransaction(metaclass=ABCMeta):
     after reading a message from the device (using 'with_transaction=True') the reader should commit/rollback
     the transaction, to signal the device if the message is done processing or not
 
-    calling commit/rollback on a transaction, finishes it. further calls to commit/rollback are ignored
+    calling commit/rollback on a transaction, finishes it. calling commit or rollback multiple times on a transaction
+    is legal but will only execute once. calling rollback after commit or vice versa, will raise an exception
 
     if using the transaction as context (i.e 'with transaction:') it will commit at the end of the context.
     if an exception was raised during the context, the transaction will be rolled back.
@@ -25,6 +46,14 @@ class InputTransaction(metaclass=ABCMeta):
         """
         self._device: 'InputDevice' = device
         self._finished: Event = Event()
+        self._state: TransactionState = TransactionState.ACTIVE
+
+    @property
+    def state(self) -> TransactionState:
+        """
+        the current state of the transaction
+        """
+        return self._state
 
     @property
     def device(self) -> 'InputDevice':
@@ -44,6 +73,8 @@ class InputTransaction(metaclass=ABCMeta):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.finished:
+            return
         if (exc_type, exc_val, exc_tb) == (None, None, None):
             self.commit()  # no exception, commit the transaction
         else:
@@ -64,18 +95,26 @@ class InputTransaction(metaclass=ABCMeta):
         """
         commits the transaction
         """
-        if self.finished:
+        if self.state == TransactionState.ROLLEDBACK:
+            raise WrongTransactionStateException('Transaction Was Already Rolled Back')
+        if self.state == TransactionState.COMMITTED:
             return
+
         self._commit()
+        self._state = TransactionState.COMMITTED
         self._finished.set()
 
     def rollback(self):
         """
         rolls back the transaction
         """
-        if self.finished:
+        if self.state == TransactionState.COMMITTED:
+            raise WrongTransactionStateException('Transaction Was Already Committed')
+        if self.state == TransactionState.ROLLEDBACK:
             return
+
         self._rollback()
+        self._state = TransactionState.ROLLEDBACK
         self._finished.set()
 
     @abstractmethod
@@ -112,7 +151,8 @@ class InputTransactionScope(InputTransaction):
         this method returns a message from the device, and adds its transaction to the transaction scope
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
-        after 'timeout' seconds, if the device doesn't have a message to return, it will return None
+        after 'timeout' seconds (None means block until message is available).
+         if the device doesn't have a message to return after timeout seconds, it will return None
 
         :return: a ReadResult object or None if no message was available.
         the device headers can contain extra information about the device that returned the message

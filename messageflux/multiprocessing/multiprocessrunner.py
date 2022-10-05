@@ -16,6 +16,7 @@ class MultiProcessRunner(BaseService):
     """
     a class that runs multiple services in processes. it handles the child process, and check liveness
     """
+
     def __init__(self,
                  service_factory: ServiceFactory,
                  instance_count: int,

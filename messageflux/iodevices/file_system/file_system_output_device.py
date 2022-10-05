@@ -10,7 +10,6 @@ from messageflux.iodevices.file_system.file_system_serializer import FileSystemS
     DefaultFileSystemSerializer
 from messageflux.metadata_headers import MetadataHeaders
 from messageflux.utils import get_random_id
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class FileSystemOutputDevice(OutputDevice['FileSystemOutputDeviceManager']):
@@ -37,8 +36,8 @@ class FileSystemOutputDevice(OutputDevice['FileSystemOutputDeviceManager']):
         self._tmp_folder = tmp_folder
         self._output_folder = os.path.join(queues_folder, name)
         try:
-            create_dir_if_not_exists(self._tmp_folder)
-            create_dir_if_not_exists(self._output_folder)
+            os.makedirs(self._tmp_folder, exist_ok=True)
+            os.makedirs(self._output_folder, exist_ok=True)
         except Exception as e:
             raise OutputDeviceException('Error creating output device') from e
 

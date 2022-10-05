@@ -16,7 +16,7 @@ from messageflux.iodevices.file_system.file_system_serializer import FileSystemS
     DefaultFileSystemSerializer
 from messageflux.metadata_headers import MetadataHeaders
 from messageflux.utils import get_random_id
-from messageflux.utils.filesystem import create_dir_if_not_exists, atomic_move, AtomicMoveException
+from messageflux.utils.filesystem import atomic_move, AtomicMoveException
 
 
 class FileSystemInputTransaction(InputTransaction):
@@ -65,7 +65,7 @@ class FileSystemInputTransaction(InputTransaction):
         basename = os.path.basename(org_filename)
         dirname = os.path.dirname(org_filename)
         poison_folder = os.path.join(dirname, 'POISON')  # TODO: get this from the user
-        create_dir_if_not_exists(poison_folder)
+        os.makedirs(poison_folder, exist_ok=True)
         poison_filepath = os.path.join(poison_folder, get_random_id() + basename)
         return poison_filepath
 
@@ -115,7 +115,11 @@ class FileSystemInputTransaction(InputTransaction):
                                                                      org_path=org_path,
                                                                      tmp_path=tmp_path))
         else:
-            os.remove(tmp_path)
+            try:
+                os.remove(tmp_path)
+            except FileNotFoundError:
+                pass
+
             return ReadResult(message)
 
     def _commit(self):
@@ -285,8 +289,8 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
         self._tmp_folder = tmp_folder
         self._input_folder = os.path.join(queues_folder, name)
         try:
-            create_dir_if_not_exists(self._tmp_folder)
-            create_dir_if_not_exists(self._input_folder)
+            os.makedirs(self._tmp_folder, exist_ok=True)
+            os.makedirs(self._input_folder, exist_ok=True)
         except Exception as e:
             raise InputDeviceException('Error creating input device') from e
 

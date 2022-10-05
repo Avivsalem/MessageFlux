@@ -6,7 +6,6 @@ from typing import List, Optional
 from messageflux.iodevices.file_system.file_system_serializer import FileSystemSerializerBase, \
     DefaultFileSystemSerializer
 from messageflux.utils import get_random_id, KwargsException
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class FileSystemDeviceManagerBase:
@@ -65,7 +64,7 @@ class FileSystemDeviceManagerBase:
         """
         return self._tmp_folder
 
-    def list_available_devices(self) -> List[str]:
+    def get_available_device_names(self) -> List[str]:
         """
         returns a list of available 'queues' in the queue folder
         """
@@ -80,8 +79,8 @@ class FileSystemDeviceManagerBase:
         connects to device manager
         """
         try:
-            create_dir_if_not_exists(self._tmp_folder)
-            create_dir_if_not_exists(self._queues_folder)
-            create_dir_if_not_exists(self._bookkeeping_folder)
+            os.makedirs(self._tmp_folder, exist_ok=True)
+            os.makedirs(self._queues_folder, exist_ok=True)
+            os.makedirs(self._bookkeeping_folder, exist_ok=True)
         except Exception as e:
             raise KwargsException('Error creating directories') from e  # TODO: raise another type of exception

@@ -14,7 +14,6 @@ import itertools
 from time import sleep, time
 
 from messageflux.utils import get_random_id
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
@@ -44,7 +43,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         self._live_log_path = os.path.abspath(live_log_path)
         filename = os.path.join(self._live_log_path,
                                 f'{live_log_prefix}{socket.gethostname()}-{str(os.getpid())}-{id(self)}.log')
-        create_dir_if_not_exists(self._live_log_path)
+        os.makedirs(self._live_log_path, exist_ok=True)
 
         BaseRotatingHandler.__init__(self, filename, 'a', None, True)  # TODO: should encoding be utf-8?
 
@@ -52,7 +51,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
             self._bkp_log_path = self._live_log_path
         else:
             self._bkp_log_path = os.path.abspath(bkp_log_path)
-            create_dir_if_not_exists(self._bkp_log_path)
+            os.makedirs(self._bkp_log_path, exist_ok=True)
 
         self._max_records = max_records
         self._max_time = max_time
@@ -85,7 +84,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         except Exception:
             basedir = os.path.dirname(dst)
             tmpdir = os.path.join(basedir, '_TMP_')
-            create_dir_if_not_exists(tmpdir)  # create a tmp directory under the destination directory
+            os.makedirs(tmpdir, exist_ok=True)  # create a tmp directory under the destination directory
             tmpfile = os.path.join(tmpdir, "{}.tmp".format(get_random_id()))
             move(src, tmpfile)  # move the src to tmp dir in dest directory
             move(tmpfile, dst)  # move the tmp file to dest file (now they're in the same filesystem: should be atomic)

@@ -13,6 +13,7 @@ class LoopHealthAddon:
     if the service gets stuck (service loop inactivity) or has to many consecutive failures,
     the addons stops the service
     """
+
     def __init__(self, service: ServerLoopService, *,
                  max_consecutive_failures: int = -1,
                  max_inactivity_timeout: float = -1):

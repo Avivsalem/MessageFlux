@@ -2,7 +2,6 @@ import os
 from typing import Optional
 
 from messageflux.logging.bulk_rotating_handler_base import BulkRotatingHandlerBase
-from messageflux.utils.filesystem import create_dir_if_not_exists
 
 
 class BulkRotatingFileHandler(BulkRotatingHandlerBase):
@@ -31,7 +30,7 @@ class BulkRotatingFileHandler(BulkRotatingHandlerBase):
         :param live_log_prefix: the prefix for live log file
         """
         self._rotated_log_path = os.path.abspath(rotated_log_path)
-        create_dir_if_not_exists(self._rotated_log_path)
+        os.makedirs(self._rotated_log_path, exist_ok=True)
 
         super(BulkRotatingFileHandler, self).__init__(live_log_path=live_log_path,
                                                       bkp_log_path=bkp_log_path,
