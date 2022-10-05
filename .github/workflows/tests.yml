@@ -1,6 +1,6 @@
-# This is a basic workflow to help you get started with Actions
+# This workflow runs the tests and linters
 
-name: CI
+name: tests
 
 # Controls when the workflow will run
 on:
@@ -106,51 +106,3 @@ jobs:
           name: mypy-report
           path: reports/mypy.xml
 
-  deploy:
-    concurrency: production
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/master'
-    steps:
-        # Checkout the latest code from the repo
-      - name: Checkout repo
-        uses: actions/checkout@v2
-
-        # Setup Python
-      - name: Set Up Python 3.10
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.10
-
-        # generate the requirements-all.txt file
-      - name: Generate requirements-all.txt
-        run: python make_all_extra_requirements.py
-
-      - name: Bump Version
-        run: |
-          pip install bump2version
-          bump2version patch --allow-dirty
-
-      - name: Build Project
-        run: |
-          pip install build
-          python -m build
-
-      - name: Twine Install and Check
-        run: |
-          pip install twine
-          twine check dist/*
-
-      - name: Twine Upload TestPyPi
-        run: |
-          twine upload -r testpypi -u __token__ -p ${{ secrets.MESSAGEFLUX_TESTPYPI_TOKEN }} dist/*
-
-      - name: Twine Upload PyPi
-        run: |
-          twine upload -u __token__ -p ${{ secrets.MESSAGEFLUX_PYPI_TOKEN }} dist/*
-
-      - name: Push Version
-        run: |
-          git config --global user.name 'Aviv Salem'
-          git config --global user.email 'Avivsalem@users.noreply.github.com'
-          git push      
