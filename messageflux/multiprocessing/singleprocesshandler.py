@@ -4,11 +4,13 @@ import os
 import threading
 from abc import ABCMeta, abstractmethod
 from multiprocessing import process
-from multiprocessing.connection import _ConnectionBase
 from multiprocessing.process import BaseProcess
-from typing import Optional, Callable
+from typing import Optional, Callable, TYPE_CHECKING
 
 from messageflux.base_service import BaseService
+
+if TYPE_CHECKING:
+    from multiprocessing.connection import _ConnectionBase
 
 
 class ServiceFactory(metaclass=ABCMeta):

@@ -7,7 +7,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "messageflux"
-version = "0.0.2a"
 requires-python = '>=3.7,<3.11'
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -20,6 +19,7 @@ classifiers = [
 ]
 dynamic = [
     "dependencies",
+    "version",
     "optional-dependencies"
 ]
 
@@ -47,11 +47,13 @@ platforms = [
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
+version = { file = "VERSION" }
+
 
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = "requirements-dev.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
-all = {file = "requirements-all.txt"}
+all = { file = "requirements-all.txt" }
 
 
 
