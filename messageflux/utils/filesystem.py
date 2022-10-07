@@ -10,6 +10,9 @@ MAX_LOCKFILE_AGE = 60  # max lockfile age in seconds
 
 
 class AtomicMoveException(KwargsException):
+    """
+    an exception which is raised when atomic move fails
+    """
     pass
 
 
@@ -65,6 +68,11 @@ def atomic_move(src: str, dest: str, lock_filename: str) -> bool:
 
 
 def recursive_chmod(dir_name: str):
+    """
+    chmods to 0o777 the directory and its directory tree
+
+    :param dir_name: the dir to chmod
+    """
     os.chmod(dir_name, 0o777)
     for root, dirs, files in os.walk(dir_name):
         for d in dirs:

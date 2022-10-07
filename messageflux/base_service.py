@@ -48,6 +48,9 @@ class BaseService(metaclass=ABCMeta):
 
     @property
     def name(self) -> str:
+        """
+        the name of the service
+        """
         return self._name
 
     @property

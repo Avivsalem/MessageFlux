@@ -9,6 +9,9 @@ from messageflux.utils import ObservableEvent
 
 
 class LoopMetrics:
+    """
+    a class that holds metrics for a single server loop
+    """
     def __init__(self, loop_duration: float, exception: Optional[Exception] = None):
         """
 
@@ -54,6 +57,9 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
 
     @property
     def loop_ended_event(self) -> ObservableEvent[LoopMetrics]:
+        """
+        an event that is fired when a single server loop has ended
+        """
         return self._loop_ended_event
 
     def _run_service(self, cancellation_token: threading.Event):
