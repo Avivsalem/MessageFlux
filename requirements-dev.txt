@@ -1,0 +1,6 @@
+pytest
+pytest-cov
+mypy
+lxml
+flake8
+tox

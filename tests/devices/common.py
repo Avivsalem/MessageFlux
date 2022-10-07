@@ -1,9 +1,15 @@
-import time
-
 import uuid
 from typing import Optional
 
-from baseservice.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
+import time
+
+from messageflux.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
+
+
+def _assert_messages_equal(org_message: Message, new_message: Message):
+    assert org_message.bytes == new_message.bytes
+    for key, value in org_message.headers.items():
+        assert new_message.headers[key] == value
 
 
 def sanity_test(input_device_manager: InputDeviceManager,
@@ -29,13 +35,15 @@ def sanity_test(input_device_manager: InputDeviceManager,
     input_device_manager.connect()
     try:
         input_device = input_device_manager.get_input_device(device_name)
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_1
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result is not None
+        _assert_messages_equal(org_message=test_message_1, new_message=read_result.message)
+        read_result.commit()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_2
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result is not None
+        _assert_messages_equal(org_message=test_message_2, new_message=read_result.message)
+        read_result.commit()
     finally:
         input_device_manager.disconnect()
 
@@ -63,19 +71,23 @@ def rollback_test(input_device_manager: InputDeviceManager,
     input_device_manager.connect()
     try:
         input_device = input_device_manager.get_input_device(device_name)
-        msg, headers, transaction1 = input_device.read_message()
-        assert msg == test_message_1
-        msg, headers, transaction2 = input_device.read_message()
-        assert msg == test_message_2
-        transaction1.rollback()
-        transaction2.rollback()
+        read_result1 = input_device.read_message()
+        assert read_result1 is not None
+        _assert_messages_equal(org_message=test_message_1, new_message=read_result1.message)
+        read_result2 = input_device.read_message()
+        assert read_result2 is not None
+        _assert_messages_equal(org_message=test_message_2, new_message=read_result2.message)
+        read_result1.rollback()
+        read_result2.rollback()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_1
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result is not None
+        _assert_messages_equal(org_message=test_message_1, new_message=read_result.message)
+        read_result.commit()
 
-        msg, headers, transaction = input_device.read_message()
-        assert msg == test_message_2
-        transaction.commit()
+        read_result = input_device.read_message()
+        assert read_result is not None
+        _assert_messages_equal(org_message=test_message_2, new_message=read_result.message)
+        read_result.commit()
     finally:
         input_device_manager.disconnect()

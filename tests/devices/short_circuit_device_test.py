@@ -1,16 +1,16 @@
-from time import sleep
 from typing import Optional
 
 import pytest
+from time import sleep
 
-from baseservice.iodevices.base import (InputDeviceManager,
+from messageflux.iodevices.base import (InputDeviceManager,
                                         OutputDeviceManager,
                                         OutputDevice,
                                         InputDevice,
                                         Message,
-                                        DeviceHeaders,
-                                        ReadMessageResult, EMPTY_RESULT)
-from baseservice.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
+                                        ReadResult)
+from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.short_circuit_device_wrapper import ShortCircuitInputDeviceManager, ShortCircuitException, \
     ShortCircuitOutputDeviceManager
 
 
@@ -18,28 +18,35 @@ class MyException(Exception):
     pass
 
 
-class ErrorDevice(InputDevice, OutputDevice):
+# noinspection Mypy
+class ErrorInputDevice(InputDevice):
     def __init__(self):
-        InputDevice.__init__(self, None, None)
-        OutputDevice.__init__(self, None, None)
+        # noinspection PyTypeChecker
+        super(ErrorInputDevice, self).__init__(None, '')
 
-    def _read_message(self, timeout: Optional[float] = 0, with_transaction: bool = True) -> ReadMessageResult:
+    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
         if with_transaction:
             raise MyException()
         else:
-            return EMPTY_RESULT
+            return None
 
-    def _send_message(self, message: Message, device_headers: DeviceHeaders):
-        if device_headers.get("fail", True):
+
+class ErrorOutputDevice(OutputDevice):
+    def __init__(self):
+        # noinspection PyTypeChecker
+        super(ErrorOutputDevice, self).__init__(None, '')
+
+    def _send_message(self, message_bundle: MessageBundle):
+        if message_bundle.device_headers.get("fail", True):
             raise MyException()
 
 
 class ErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
     def get_input_device(self, name: str) -> InputDevice:
-        return ErrorDevice()
+        return ErrorInputDevice()
 
     def get_output_device(self, name: str) -> OutputDevice:
-        return ErrorDevice()
+        return ErrorOutputDevice()
 
 
 def test_sanity_input():
@@ -64,7 +71,7 @@ def test_sanity_input():
     with pytest.raises(ShortCircuitException):
         input_device.read_message()
 
-    sleep(1)
+    sleep(1.1)
 
     with pytest.raises(MyException):
         input_device.read_message()
@@ -100,7 +107,7 @@ def test_sanity_output():
     with pytest.raises(ShortCircuitException):
         output_device.send_message(Message(b'bla'))
 
-    sleep(1)
+    sleep(1.1)
 
     with pytest.raises(MyException):
         output_device.send_message(Message(b'bla'))

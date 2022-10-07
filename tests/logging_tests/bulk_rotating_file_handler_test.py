@@ -1,8 +1,9 @@
 import logging
 import os
+
 import time
 
-from baseservice.logging import BulkRotatingFileHandler
+from messageflux.logging import BulkRotatingFileHandler
 
 
 def test_sanity(tmpdir):

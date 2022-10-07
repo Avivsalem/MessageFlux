@@ -1,9 +1,10 @@
 import asyncio
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+
 from time import sleep
 
-from baseservice.utils.context import global_context, thread_local_context, asyncio_context
+from messageflux.utils.context import global_context, thread_local_context, asyncio_context
 
 executor = ThreadPoolExecutor()
 
@@ -55,10 +56,10 @@ def test_asyncio():
             await asyncio.wait([task1, task2])
             org_val, new_val = task1.result()
             assert org_val == 'old_val'
-            assert new_val == f'new_val - 1'
+            assert new_val == 'new_val - 1'
             org_val, new_val = task2.result()
             assert org_val == 'old_val'
-            assert new_val == f'new_val - 2'
+            assert new_val == 'new_val - 2'
 
             assert asyncio_context.get(test_key) == 'old_val'
 

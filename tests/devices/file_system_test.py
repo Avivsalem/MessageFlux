@@ -1,12 +1,12 @@
 import os
 from io import BytesIO
 
-from baseservice.iodevices.base import InputTransactionScope, Message
-from baseservice.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager, \
+from messageflux.iodevices.base import InputTransactionScope, Message
+from messageflux.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager, \
     NoHeadersFileSystemSerializer, DefaultFileSystemSerializer
-from baseservice.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
-from baseservice.iodevices.file_system.file_system_input_device import TransactionLog
-from tests.devices.common import sanity_test
+from messageflux.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
+from messageflux.iodevices.file_system.file_system_input_device import TransactionLog
+from tests.devices.common import sanity_test, rollback_test
 
 QUEUE_NAME = "Test"
 OUTPUT_NAME = "OUTPUT"
@@ -16,7 +16,7 @@ def test_folder_creation(tmpdir):
     tmpdir = str(tmpdir)
     manager = FileSystemInputDeviceManager(tmpdir)
     with manager:
-        device = manager.get_input_device(QUEUE_NAME)
+        _ = manager.get_input_device(QUEUE_NAME)
     assert FileSystemDeviceManagerBase.DEFAULT_QUEUES_SUB_DIR in os.listdir(tmpdir)
     assert QUEUE_NAME in os.listdir(manager.queues_folder)
 
@@ -27,10 +27,10 @@ def test_generic_sanity(tmpdir):
     sanity_test(input_manager, output_manager, sleep_between_sends=1)
 
 
-def rollback_test(tmpdir):
+def test_generic_rollback(tmpdir):
     input_manager = FileSystemInputDeviceManager(tmpdir)
     output_manager = FileSystemOutputDeviceManager(tmpdir)
-    sanity_test(input_manager, output_manager, sleep_between_sends=1)
+    rollback_test(input_manager, output_manager, sleep_between_sends=1)
 
 
 def test_sanity(tmpdir):
@@ -44,15 +44,14 @@ def test_sanity(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        msg: Message
-        msg, _, _ = input_device.read_message(with_transaction=False)
-        assert msg is not None
-        assert msg.stream.read() == b'data'
-        msg.stream.seek(0)
+        read_result = input_device.read_message(with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.stream.read() == b'data'
+        read_result.message.stream.seek(0)
 
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
-        output_device.send_message(msg)
+        output_device.send_message(read_result.message)
 
     assert not os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     assert not os.listdir(input_manager.tmp_folder)
@@ -67,14 +66,15 @@ def test_sanity_unsorted(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        msg, _, _ = input_device.read_message(with_transaction=False)
+        read_result = input_device.read_message(with_transaction=False)
+        assert read_result is not None
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
-        output_device.send_message(msg)
+        output_device.send_message(read_result.message)
 
     assert not os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     assert not os.listdir(input_manager.tmp_folder)
@@ -88,16 +88,16 @@ def test_rollback(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file1.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file2.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
     try:
         with input_manager:
             input_device = input_manager.get_input_device(QUEUE_NAME)
             with InputTransactionScope(input_device) as transaction_scope:
-                msg, _ = transaction_scope.read_message()
-                msg, _ = transaction_scope.read_message()
+                _ = transaction_scope.read_message()
+                _ = transaction_scope.read_message()
                 assert len(os.listdir(input_manager.bookkeeping_folder)) == 1
                 tran_log = TransactionLog._load_file(
                     os.path.join(input_manager.bookkeeping_folder, os.listdir(input_manager.bookkeeping_folder)[0]))
@@ -119,20 +119,20 @@ def test_backout(tmpdir):
 
     os.makedirs(os.path.join(input_manager.queues_folder, QUEUE_NAME))
     with open(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'test_input_file.txt'), 'wb') as f:
-        f.write(serializer.serialize(data=BytesIO(b'data')).read())
+        f.write(serializer.serialize(Message(b'data')).read())
 
     with input_manager:
         for i in range(3):
             queue = input_manager.get_input_device(QUEUE_NAME)
-            product, meta, transaction = queue.read_message()
-            assert product is not None
-            transaction.rollback()
+            read_result = queue.read_message()
+            assert read_result is not None
+            read_result.rollback()
 
         queue = input_manager.get_input_device(QUEUE_NAME)
-        product, meta, _ = queue.read_message()
-        assert product is None
+        read_result = queue.read_message(timeout=1)
+        assert read_result is None
 
-        assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'BACKOUT'))) == 1
+        assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'POISON'))) == 1
 
 
 def test_output_file_system_manager_format(tmpdir):
@@ -146,4 +146,4 @@ def test_output_file_system_manager_format(tmpdir):
 
     assert len(os.listdir(os.path.join(tmpdir, 'test'))) == 1
     with open(os.path.join(tmpdir, 'test', 'abc.txt'), "rb") as f:
-        assert serializer.deserialize(f)[0].read() == b'ABC'
+        assert serializer.deserialize(f).bytes == b'ABC'
