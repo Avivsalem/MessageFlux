@@ -1,0 +1,108 @@
+# This workflow runs the tests and linters
+
+name: tests
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ dev, staging, main ]
+  pull_request:
+    branches: [ dev, staging, main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        platform: [ ubuntu-latest, windows-latest ]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+        # Checkout the latest code from the repo
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        # Setup which version of Python to use
+      - name: Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+        # Display the Python version being used
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        # generate the requirements-all.txt file
+      - name: Generate requirements-all.txt
+        run: python make_all_extra_requirements.py
+        # Install any basic dependencies required to run the tests
+
+      - name: Install dependencies
+        run: |
+          python -m pip install pip -U
+          pip install .[all]
+
+      - name: Run Mypy
+        run: |
+          pip install mypy
+          mypy messageflux
+
+      - name: Run Flake8
+        run: |
+          pip install flake8
+          flake8 messageflux tests -v
+
+      - name: Run Tests
+        env:
+          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+        run: |
+          pip install pytest pytest-cov
+          pytest tests
+
+#        # Run the tests using tox.
+#      - name: Test with tox
+#        env:
+#          PLATFORM: ${{ matrix.platform }}
+#          RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
+#        run: |
+#          pip install tox tox-gh-actions
+#          tox
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: ./reports/test-results.xml
+          detailed_summary: true
+          include_passed: true
+          check_name: ${{ matrix.python-version }}-${{ matrix.platform }} JUnit Test Report
+
+#      - name: Publish Coverage Comment
+#        uses: MishaKav/pytest-coverage-comment@main
+#        with:
+#          pytest-coverage-path: ./reports/test-console-results.txt
+#          junitxml-path: ./reports/test-results.xml
+#          title: ${{ matrix.python-version }}-${{ matrix.platform }} Test Coverage
+
+#      - name: Extract branch name
+#        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+#        id: extract_branch
+#
+#      - name: Update Readme with Coverage Html
+#        run: |
+#          sed -i '/<!-- Pytest Coverage Comment:Begin -->/,/<!-- Pytest Coverage Comment:End -->/c\<!-- Pytest Coverage Comment:Begin -->\n\${{ steps.coverageComment.outputs.coverageHtml }}\n${{ steps.coverageComment.outputs.summaryReport }}\n<!-- Pytest Coverage Comment:End -->' ./README.md
+#      - name: Commit & Push changes to Readme
+#        uses: actions-js/push@master
+#        with:
+#          message: Automatic update coverage on Readme [skip actions]
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          branch: ${{ github.ref }}
+
+      # Upload mypy artifact
+      - name: Upload mypy artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: mypy-report
+          path: reports/mypy.xml
+
