@@ -25,6 +25,11 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Set Git Details
+        run: |
+          git config --global user.name 'Aviv Salem'
+          git config --global user.email 'avivsalem@gmail.com'
+
       - name: Bump Version
         run: |
           pip install bump2version
@@ -54,6 +59,4 @@ jobs:
 
       - name: Push Version Changes
         run: |
-          git config --global user.name 'Aviv Salem'
-          git config --global user.email 'Avivsalem@users.noreply.github.com'
           git push      
