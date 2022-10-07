@@ -12,6 +12,9 @@ from messageflux.server_loop_service import ServerLoopService
 
 
 class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
+    """
+    a service thats reads from input devices and handles the messages
+    """
     def __init__(self, *,
                  input_device_manager: InputDeviceManager,
                  input_device_names: List[str],
@@ -91,6 +94,9 @@ class DeviceReaderService(ServerLoopService, metaclass=ABCMeta):
 
 
 class SingleMessageDeviceReaderService(DeviceReaderService, metaclass=ABCMeta):
+    """
+    a service that reads a SINGLE message from devices and handles it
+    """
     def __init__(self, **kwargs):
         """
         :param kwargs: passed to parent as is

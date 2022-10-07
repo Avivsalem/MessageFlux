@@ -9,11 +9,17 @@ from messageflux.iodevices.base.common import MessageBundle
 
 @dataclass
 class PipelineResult:
+    """
+    a result from pipeline handler
+    """
     output_device_name: str
     message_bundle: MessageBundle
 
 
 class PipelineHandlerBase(metaclass=ABCMeta):
+    """
+    a pipeline handler base class. used to handle a single message that passes through the pipeline
+    """
 
     @abstractmethod
     def handle_message(self,
@@ -43,12 +49,23 @@ class FixedRouterPipelineHandler(PipelineHandlerBase):
     def handle_message(self,
                        input_device: InputDevice,
                        message_bundle: MessageBundle) -> Optional[PipelineResult]:
+        """
+        routes the message to the fixed output
+
+        :param input_device: The input device that sent the message.
+        :param message_bundle: The message that was received.
+
+        :return: a pipeline result that has the input message bundle, and the fixed output device name
+        """
         output_message_bundle = MessageBundle(message=message_bundle.message.copy(), device_headers={})
         return PipelineResult(output_device_name=self._output_device_name,
                               message_bundle=output_message_bundle)
 
 
 class PipelineService(DeviceReaderService):
+    """
+    a service that uses a PipelineHandler object to process messages from input, and send to output
+    """
     def __init__(self, *, output_device_manager: OutputDeviceManager, pipeline_handler: PipelineHandlerBase, **kwargs):
         super().__init__(**kwargs)
         self._output_device_manager = output_device_manager

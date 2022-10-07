@@ -5,8 +5,8 @@ concurrency: production
 on:
   # run this only after the tests workflow completed
   workflow_run:
-    workflows: ["tests"]
-    branches: [main]
+    workflows: [ "tests" ]
+    branches: [ main ]
     types:
       - completed
 
@@ -25,14 +25,14 @@ jobs:
         with:
           python-version: 3.10
 
-        # generate the requirements-all.txt file
-      - name: Generate requirements-all.txt
-        run: python make_all_extra_requirements.py
-
       - name: Bump Version
         run: |
           pip install bump2version
           bump2version patch --allow-dirty
+
+        # generate the requirements-all.txt file
+      - name: Generate requirements-all.txt
+        run: python make_all_extra_requirements.py
 
       - name: Build Project
         run: |
