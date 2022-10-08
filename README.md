@@ -1,5 +1,10 @@
 # MessageFlux
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![license](https://badgen.net/github/license/Avivsalem/MessageFlux/)
+![checks](https://badgen.net/github/checks/Avivsalem/MessageFlux/)
+![pypi version](https://badgen.net/pypi/v/MessageFlux)
+![python compatibility](https://badgen.net/pypi/python/MessageFlux)
+![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)
+![stars](https://badgen.net/github/stars/Avivsalem/MessageFlux)
 
 this package helps create long running services (that may handle items that comes from devices) 
 
