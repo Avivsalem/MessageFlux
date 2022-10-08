@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions-ecosystem/action-push-tag@v1
         with:
-          tag: ${{ steps.compute-new-version.outputs.new_version }}
+          tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
           message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
 
         # generate the requirements-all.txt file
