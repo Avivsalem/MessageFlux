@@ -1,3 +1,5 @@
+# this workflow is for deploy
+
 name: deploy
 
 concurrency: production
@@ -25,15 +27,24 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Set Git Details
-        run: |
-          git config --global user.name 'Aviv Salem'
-          git config --global user.email 'avivsalem@gmail.com'
+      - name: Get Latest Tag
+        uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
 
-      - name: Bump Version
+      - name: Compute New Version
+        id: compute-new-version
         run: |
-          pip install bump2version
-          bump2version patch --allow-dirty
+          echo "Repo Version: ${{ steps.get-latest-tag.outputs.tag }}"
+          echo "File Version: $(<VERSION)"
+          python compute_new_version.py -r ${{ steps.get-latest-tag.outputs.tag }} -m "$(<VERSION)" > VERSION
+          echo "New Version: $(<VERSION)"
+          echo "::set-output name=new_version::$(<VERSION)"
+
+      - name: Push New Version Tag
+        uses: actions-ecosystem/action-push-tag@v1
+        with:
+          tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
+          message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
 
         # generate the requirements-all.txt file
       - name: Generate requirements-all.txt
@@ -57,6 +68,3 @@ jobs:
         run: |
           twine upload -u __token__ -p ${{ secrets.MESSAGEFLUX_PYPI_TOKEN }} dist/*
 
-      - name: Push Version Changes
-        run: |
-          git push      
