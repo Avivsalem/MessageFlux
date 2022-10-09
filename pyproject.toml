@@ -9,7 +9,7 @@ build-backend = "setuptools.build_meta"
 name = "messageflux"
 requires-python = '>=3.7,<3.11'
 readme = "README.md"
-license = { file = "LICENSE" }
+license = { text = "GPL-3.0 license" }
 classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.7',
