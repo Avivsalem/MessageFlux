@@ -179,7 +179,7 @@ class RabbitMQDeviceManagerBase:
 
             except AMQPConnectionError as ex:
                 message = f"RabbitMQ on host {host} is not available"
-                io_device_exception = KwargsException(message)  # TODO: better exception type
+                io_device_exception = KwargsException(message)
                 if len(self._hosts) == 1:
                     self._logger.exception(message)
                     raise io_device_exception from ex
@@ -189,7 +189,7 @@ class RabbitMQDeviceManagerBase:
                     self._logger.warning(message, exc_info=True)
 
         raise KwargsException("Couldn't connect to any of the hosts for RabbitMQ.",
-                              inner_exceptions=exceptions)  # TODO: better exception type
+                              inner_exceptions=exceptions)
 
     @property
     def connection(self) -> 'BlockingConnection':

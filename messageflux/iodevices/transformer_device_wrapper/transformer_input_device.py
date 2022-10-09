@@ -63,6 +63,12 @@ class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
 
         return read_result
 
+    def close(self):
+        """
+        closes the inner device
+        """
+        self._inner_device.close()
+
 
 class TransformerInputDeviceManager(InputDeviceManager[TransformerInputDevice]):
     """

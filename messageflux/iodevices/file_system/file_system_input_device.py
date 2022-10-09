@@ -575,10 +575,13 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
         """
         connects to the device manager
         """
-        self._create_all_directories()
-        self._should_stop.clear()
-        self._transaction_log_thread = threading.Thread(target=self._do_transaction_log_thread, daemon=True)
-        self._transaction_log_thread.start()
+        try:
+            self._create_all_directories()
+            self._should_stop.clear()
+            self._transaction_log_thread = threading.Thread(target=self._do_transaction_log_thread, daemon=True)
+            self._transaction_log_thread.start()
+        except Exception as ex:
+            raise InputDeviceException('Error connection to Device Manager') from ex
 
     def disconnect(self):
         """

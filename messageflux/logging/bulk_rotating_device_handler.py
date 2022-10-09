@@ -56,6 +56,9 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         os.remove(src_file)
 
     def close(self):
+        """
+        closes the handler (disconnects from the output device)
+        """
         try:
             super(BulkRotatingDeviceHandler, self).close()
         finally:
