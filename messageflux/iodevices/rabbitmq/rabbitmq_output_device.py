@@ -19,18 +19,6 @@ class RabbitMQOutputDevice(OutputDevice['RabbitMQOutputDeviceManager']):
     represents an RabbitMQ output devices
     """
 
-    def connect(self):
-        """
-        connects to device
-        """
-        self.manager.connect()
-
-    def close(self):
-        """
-        closes the connection to device
-        """
-        pass
-
     def __init__(self, device_manager: 'RabbitMQOutputDeviceManager', routing_key: str, exchange: str = ''):
         """
         constructs a new output RabbitMQ device
@@ -306,13 +294,16 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
 
         :return: a rabbit mq channel
         """
-        if self._outgoing_channel is None or not self._outgoing_channel.is_open or not self.connection.is_open:
-            self._outgoing_channel = self.connection.channel()
-            assert self._outgoing_channel is not None
-            if self._publish_confirm:
-                self._outgoing_channel.confirm_delivery()
+        try:
+            if self._outgoing_channel is None or not self._outgoing_channel.is_open or not self.connection.is_open:
+                self._outgoing_channel = self.connection.channel()
+                assert self._outgoing_channel is not None
+                if self._publish_confirm:
+                    self._outgoing_channel.confirm_delivery()
 
-        return self._outgoing_channel
+            return self._outgoing_channel
+        except Exception as ex:
+            raise OutputDeviceException('Could not connect to rabbitmq.') from ex
 
     def get_output_device(self, device_name: str, exchange: str = None) -> RabbitMQOutputDevice:
         """
@@ -336,7 +327,10 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         """
         connects to the device manager
         """
-        self._connect()
+        try:
+            self._connect()
+        except Exception as ex:
+            raise OutputDeviceException('Could not connect to rabbitmq.') from ex
 
     def disconnect(self):
         """

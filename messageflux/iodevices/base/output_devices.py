@@ -29,6 +29,12 @@ class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
         self._manager = manager
         self._name = name
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     @property
     def name(self) -> str:
         """
@@ -60,6 +66,12 @@ class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
         sends a message to the device. this should be implemented by child classes
 
         :param message_bundle: the message bundle to send
+        """
+        pass
+
+    def close(self):
+        """
+        and optional method that cleans device resources if necessary
         """
         pass
 

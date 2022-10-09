@@ -60,6 +60,12 @@ class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
         message_bundle = self._transformer.transform_outgoing_message(self, message_bundle)
         self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
 
+    def close(self):
+        """
+        closes the inner device
+        """
+        self._inner_device.close()
+
 
 class TransformerOutputDeviceManager(OutputDeviceManager[TransformerOutputDevice]):
     """

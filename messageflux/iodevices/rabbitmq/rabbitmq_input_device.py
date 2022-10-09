@@ -126,15 +126,18 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         """
         reconnects the RabbitMQ device manager
         """
-        if self._channel is not None and self._channel.is_open:
-            assert self._channel is not None
-            if self._use_consumer:
-                self._channel.cancel()
-            self._channel.close()
-        self._channel = self._device_manager.connection.channel()
+        try:
+            if self._channel is not None and self._channel.is_open:
+                assert self._channel is not None
+                if self._use_consumer:
+                    self._channel.cancel()
+                self._channel.close()
+            self._channel = self._device_manager.connection.channel()
 
-        assert self._channel is not None
-        self._channel.basic_qos(prefetch_count=self._prefetch_count)
+            assert self._channel is not None
+            self._channel.basic_qos(prefetch_count=self._prefetch_count)
+        except Exception as e:
+            raise InputDeviceException('Could not connect to rabbitmq.') from e
 
     def _get_channel(self) -> 'BlockingChannel':
         """
@@ -274,13 +277,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         except Exception as e:
             raise InputDeviceException('Error reading from device') from e
 
-    def connect(self):
-        """
-        connects to device
-        """
-        self._device_manager.connect()
-
-    def close(self):  # TODO: this is never called... we should call this somewhen
+    def close(self):
         """
         closes the connection to device
         """
@@ -388,7 +385,10 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
         """
         connects to the device manager
         """
-        self._connect()
+        try:
+            self._connect()
+        except Exception as e:
+            raise InputDeviceException('Could not connect to rabbitmq.') from e
 
     def disconnect(self):
         """

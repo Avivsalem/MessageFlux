@@ -83,4 +83,4 @@ class FileSystemDeviceManagerBase:
             os.makedirs(self._queues_folder, exist_ok=True)
             os.makedirs(self._bookkeeping_folder, exist_ok=True)
         except Exception as e:
-            raise KwargsException('Error creating directories') from e  # TODO: raise another type of exception
+            raise KwargsException('Error creating directories') from e

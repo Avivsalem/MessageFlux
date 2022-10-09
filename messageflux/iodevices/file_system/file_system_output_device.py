@@ -119,7 +119,10 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
         """
         connects to the device manager
         """
-        self._create_all_directories()
+        try:
+            self._create_all_directories()
+        except Exception as ex:
+            raise OutputDeviceException('Error connection to Device Manager') from ex
 
     def get_output_device(self, name: str) -> FileSystemOutputDevice:
         """

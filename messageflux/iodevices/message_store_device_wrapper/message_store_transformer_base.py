@@ -21,33 +21,21 @@ class _MessageStoreTransformerBase:
                                       ])
 
     def __enter__(self) -> '_MessageStoreTransformerBase':
-        """
-        enters the context for this Device Manager
-
-        :return: self
-        """
         self._message_store.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        exits the context for this Device Manager (calls close())
-
-        :param exc_type:
-        :param exc_val:
-        :param exc_tb:
-        """
         self._message_store.__exit__(exc_type, exc_val, exc_tb)
 
     def connect(self):
         """
-        connects to device manager
+        connects to device message store
         """
         self._message_store.connect()
 
     def disconnect(self):
         """
-        closes the connection to IODeviceManager
+        disconnects from the message store
         """
         self._message_store.disconnect()
 

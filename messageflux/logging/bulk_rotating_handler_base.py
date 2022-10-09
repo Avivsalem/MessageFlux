@@ -45,7 +45,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
                                 f'{live_log_prefix}{socket.gethostname()}-{str(os.getpid())}-{id(self)}.log')
         os.makedirs(self._live_log_path, exist_ok=True)
 
-        BaseRotatingHandler.__init__(self, filename, 'a', None, True)  # TODO: should encoding be utf-8?
+        BaseRotatingHandler.__init__(self, filename, 'a', None, True)
 
         if bkp_log_path is None:
             self._bkp_log_path = self._live_log_path
