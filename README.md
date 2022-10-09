@@ -1,25 +1,35 @@
 # MessageFlux
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-this package helps create long running services (that may handle items that comes from devices) 
+![license](https://badgen.net/github/license/Avivsalem/MessageFlux/)
+![tests](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml/badge.svg)
+![pypi version](https://badgen.net/pypi/v/MessageFlux)
+![python compatibility](https://badgen.net/pypi/python/MessageFlux)
+![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)
+![stars](https://badgen.net/github/stars/Avivsalem/MessageFlux)
+
+This package is used to create long-running services, that read messages from devices, and handles them.
+The devices in this package are meant to be composable - meaning that added functionality can come from wrapping devices
+in other devices.
 
 ## Requirements
 
 Python 3.7+
 
 ## Installation
+
 ```console
 $ pip install messageflux
 ```
 
-### Extra Requirements (Example) 
+### Extra Requirements (Example)
+
 ```console
 $ pip install messageflux[rabbitmq]
 ```
 
 ## Example
 
-### Create it 
+### Create it
 
 * Create a file `main.py` with:
 
@@ -45,6 +55,7 @@ my_example_service.start()  # this blocks indefinitely (until CTRL-C or sigterm)
 ```
 
 ### Run it
+
 ```console
 python main.py 
 ```
@@ -67,8 +78,8 @@ class MyServiceFactory(ServiceFactory):
     def create_service(self) -> MyExampleService:
         # we import the devices in 'create_service' so that all the imports will be in the child process.
         # this is only a precaution, but recommended
-        from messageflux.iodevices.in_memory_device import InMemoryDeviceManager 
-        
+        from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
+
         input_device_manager = InMemoryDeviceManager()
         # write messages to devices here...
 
@@ -84,6 +95,7 @@ service_to_run.start()  # this starts the child processes and blocks indefinitel
 ```
 
 ## Optional Requirements
+
 * messageflux[rabbitmq] - for using the rabbitmq device
 * messageflux[dev] - for running tests and developing for this package
 * messageflux[all] - all extras required for all devices

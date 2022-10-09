@@ -23,6 +23,12 @@ class ShortCircuitOutputDevice(ShortCircuitDeviceBase, OutputDevice['ShortCircui
         with self._failure_count_context():
             self._inner_device.send_message(message_bundle.message, message_bundle.device_headers)
 
+    def close(self):
+        """
+        closes the inner device
+        """
+        self._inner_device.close()
+
 
 class ShortCircuitOutputDeviceManager(OutputDeviceManager[ShortCircuitOutputDevice]):
     """

@@ -24,6 +24,12 @@ class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice['ShortCircuitI
         with self._failure_count_context():
             return self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)
 
+    def close(self):
+        """
+        closes the inner device
+        """
+        self._inner_device.close()
+
 
 class ShortCircuitInputDeviceManager(InputDeviceManager[ShortCircuitInputDevice]):
     """

@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from typing import Optional, List, TypeVar, Generic
 
@@ -31,6 +32,12 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         """
         self._manager = manager
         self._name = name
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     @property
     def name(self) -> str:
@@ -83,6 +90,12 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         """
         pass
 
+    def close(self):
+        """
+        and optional method that cleans device resources if necessary
+        """
+        pass
+
 
 class AggregatedInputDevice(InputDevice[TManagerType]):
     """
@@ -99,6 +112,7 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
         super().__init__(manager=manager, name="AggregateInputDevice")
         self._inner_devices_iterator: StatefulListIterator[InputDevice] = StatefulListIterator(inner_devices)
         self._last_read_device: Optional[InputDevice] = None
+        self._logger = logging.getLogger(__name__)
 
     @property
     def last_read_device(self) -> Optional[InputDevice]:
@@ -143,6 +157,16 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
             else:
                 # if all the devices were empty, wait before performing another iteration.
                 sleep(self._SLEEP_BETWEEN_ITERATIONS)
+
+    def close(self):
+        """
+        tries to close underlying devices
+        """
+        for inner_device in self._inner_devices_iterator:
+            try:
+                inner_device.close()
+            except Exception:
+                self._logger.exception("Error closing underlying device")
 
 
 class InputDeviceManager(Generic[TInputDeviceType], metaclass=ABCMeta):
