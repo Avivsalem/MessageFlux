@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import List
 
-from messageflux.iodevices.base import Message
+from messageflux.iodevices.base.common import MessageBundle
 from messageflux.utils import AggregatedException
 
 
@@ -65,7 +65,7 @@ class MessageStoreBase(metaclass=ABCMeta):
         self.disconnect()
 
     @abstractmethod
-    def read_message(self, key: str) -> Message:
+    def read_message(self, key: str) -> MessageBundle:
         """
         reads a message according to the key given
 
@@ -75,12 +75,12 @@ class MessageStoreBase(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def put_message(self, device_name: str, message: Message) -> str:
+    def put_message(self, device_name: str, message_bundle: MessageBundle) -> str:
         """
         puts a message in the message store
 
         :param device_name: the name of the device putting the item in the store
-        :param message: the Message to write to the store
+        :param message_bundle: the Message bundle to write to the store
         :return: the key to the message in the message store
         """
         pass

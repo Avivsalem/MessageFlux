@@ -85,23 +85,23 @@ class MessageStoreInputTransformer(_MessageStoreTransformerBase, InputTransforme
                 return read_result
 
             key = self.deserialize_key(read_result.message.bytes)
-            store_message = self._message_store.read_message(key)
+            store_message_bundle = self._message_store.read_message(key)
 
             wrapped_transaction = MessageStoreInputTransactionWrapper(input_device,
                                                                       inner_transaction=read_result.transaction,
                                                                       message_store=self._message_store,
                                                                       key=key,
                                                                       delete_on_commit=self._delete_on_commit)
-            # TODO: do we need this?
-            headers = read_result.message.headers.copy()
-            headers.update(store_message.headers)
-            store_message.headers.update(headers)
+
+            store_message_bundle.message.headers.update(read_result.message.headers)
+            store_message_bundle.device_headers.update(read_result.device_headers)
 
         except Exception:
             read_result.rollback()
             raise
 
-        return ReadResult(message=store_message,
+        return ReadResult(message=store_message_bundle.message,
+                          device_headers=store_message_bundle.device_headers,
                           transaction=wrapped_transaction)
 
 
