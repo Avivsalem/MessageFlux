@@ -1,0 +1,73 @@
+# this workflow is for deploy
+
+name: deploy staging
+
+concurrency: production
+
+on:
+  # run this only after the tests workflow completed
+  workflow_run:
+    workflows: [ "tests" ]
+    branches: [ staging ]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} # run only if tests succeeded
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set Up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Find latest merged pull request
+        uses: actions-ecosystem/action-get-merged-pull-request@v1
+        id: get-merged-pull-request
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse release type
+        uses: actions-ecosystem/action-release-label@v1
+        id: release-label
+        if: ${{ steps.get-merged-pull-request.outputs.title != null }}
+        with:
+          labels: ${{ steps.get-merged-pull-request.outputs.labels }}
+
+      - name: Find latest version
+        uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+        with:
+          semver_only: true
+
+      - name: Bump version
+        uses: actions-ecosystem/action-bump-semver@v1
+        id: bump-semver
+        with:
+          current_version: ${{ steps.get-latest-tag.outputs.tag }}
+          level: ${{ steps.release-label.outputs.level }}
+
+      - name: Build Project
+        run: |
+          pip install build
+          python -m build
+
+      - name: Twine Install and Check
+        run: |
+          pip install twine
+          twine check dist/*
+
+      - name: Twine Upload TestPyPi
+        run: |
+          twine upload -r testpypi -u __token__ -p ${{ secrets.MESSAGEFLUX_TESTPYPI_TOKEN }} dist/*
+
+      - name: Push new Tag
+        uses: actions-ecosystem/action-push-tag@v1
+        if: ${{ steps.bump-semver.outputs.new_version != null }}
+        with:
+          tag: ${{ steps.bump-semver.outputs.new_version }}
+          message: "New Version:  ${{ steps.bump-semver.outputs.new_version }}"

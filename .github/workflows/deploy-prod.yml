@@ -1,6 +1,6 @@
 # this workflow is for deploy
 
-name: deploy
+name: deploy prod
 
 concurrency: production
 
@@ -17,34 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }} # run only if tests succeeded
     steps:
-      # Checkout the latest code from the repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
-        # Setup Python
       - name: Set Up Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
-      - name: Get Latest Tag
+      - name: Find latest version
         uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-
-      - name: Compute New Version
-        id: compute-new-version
-        run: |
-          echo "Repo Version: ${{ steps.get-latest-tag.outputs.tag }}"
-          echo "File Version: $(<VERSION)"
-          python compute_new_version.py -r ${{ steps.get-latest-tag.outputs.tag }} -m "$(<VERSION)" > VERSION
-          echo "New Version: $(<VERSION)"
-          echo "::set-output name=new_version::$(<VERSION)"
-
-      - name: Push New Version Tag
-        uses: actions-ecosystem/action-push-tag@v1
         with:
-          tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
-          message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
+          semver_only: true
 
       - name: Build Project
         run: |
@@ -56,11 +41,14 @@ jobs:
           pip install twine
           twine check dist/*
 
-      - name: Twine Upload TestPyPi
-        run: |
-          twine upload -r testpypi -u __token__ -p ${{ secrets.MESSAGEFLUX_TESTPYPI_TOKEN }} dist/*
-
       - name: Twine Upload PyPi
         run: |
           twine upload -u __token__ -p ${{ secrets.MESSAGEFLUX_PYPI_TOKEN }} dist/*
 
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get-latest-tag.outputs.tag }}
+          release_name: ${{ steps.get-latest-tag.outputs.tag }}
