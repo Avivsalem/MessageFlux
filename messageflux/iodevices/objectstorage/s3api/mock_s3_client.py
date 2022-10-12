@@ -167,7 +167,7 @@ class _MockS3Client:
             raise ClientError({'Error': {'Code': 'NoSuchKey'}}, "head_bucket")
 
     def _start_web_server(self, port: int):
-        from flask import make_response, Flask  # type: ignore
+        from flask import make_response, Flask
         flask_app = Flask(__name__)
 
         @flask_app.route("/<bucket_name>/<key>")
