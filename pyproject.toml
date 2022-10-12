@@ -3,7 +3,9 @@ requires = [
     "setuptools",
     "wheel"
 ]
-build-backend = "setuptools.build_meta"
+#build-backend = "setuptools.build_meta"
+build-backend = "backend"
+backend-path = ["_custom_build"]
 
 [project]
 name = "messageflux"
