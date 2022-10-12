@@ -1,14 +1,10 @@
-from time import sleep
-
 import logging
 import os
 import sys
-from io import BytesIO
-from typing import Tuple, Optional, BinaryIO, Dict, Any
+from typing import Optional
 
-from messageflux import InputDevice
-from messageflux.iodevices.base import OutputDevice, InputDeviceManager, OutputDeviceManager, InputTransactionScope, \
-    InputDeviceException
+from messageflux import InputDevice, ReadResult
+from messageflux.iodevices.base import OutputDevice, InputDeviceManager, OutputDeviceManager, InputTransactionScope
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.iodevices.file_system import FileSystemInputDeviceManager, NoHeadersFileSystemSerializer, \
     FileSystemOutputDeviceManager
@@ -36,6 +32,7 @@ class ErrorIODeviceManager(InputDeviceManager, OutputDeviceManager):
 
     def get_output_device(self, device_name):
         return ErrorIODevice(None, device_name)
+
 
 def test_sanity(tmpdir):
     logger = logging.getLogger()
@@ -179,7 +176,7 @@ def test_all_error():
     with rri_manager as manager:
         input_device = manager.get_input_device('MyTest')
         try:
-            res = input_device.read_message(timeout=0, with_transaction=False)
+            _ = input_device.read_message(timeout=0, with_transaction=False)
         except Exception as ex:
             assert isinstance(ex, AggregatedException)
             assert len(ex.inner_exceptions) == 2
