@@ -26,7 +26,7 @@ class _QueueMessage:
 
     def __init__(self, message: Message, timestamp: Optional[float] = None):
         self.message = message.copy()
-        self.timestamp = timestamp or time.time()
+        self.timestamp = timestamp or time.perf_counter()
 
     def __eq__(self, other):
         return self.timestamp == other.timestamp
