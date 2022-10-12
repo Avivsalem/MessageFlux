@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import time
 from typing import Optional
 
 from messageflux import InputDevice, ReadResult
@@ -46,10 +47,11 @@ def test_sanity(tmpdir):
     rri_manager = RoundRobinInputDeviceManager([input_fs_manager, manager2])
     rro_manager = RoundRobinOutputDeviceManager([output_fs_manager, manager2])
     os.makedirs(os.path.join(input_fs_manager.queues_folder, 'MyTest'))
-    with open(os.path.join(input_fs_manager.queues_folder, 'MyTest', 'test_input_file1.txt'), 'wb') as f:
-        f.write(b'data1')
-    with open(os.path.join(input_fs_manager.queues_folder, 'MyTest', 'test_input_file2.txt'), 'wb') as f:
-        f.write(b'data2')
+    output_fs_manager.connect()
+    od = output_fs_manager.get_output_device('MyTest')
+    od.send_message(Message(b'data1'))
+    time.sleep(0.1)
+    od.send_message(Message(b'data2'))
 
     with rri_manager as manager:
         input_device = manager.get_input_device('MyTest')
