@@ -55,6 +55,7 @@ version = { file = "VERSION" }
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = "requirements-dev.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
+objectstorage = { file = "requirements-objectstorage.txt" }
 all = { file = "requirements-all.txt" }
 
 
