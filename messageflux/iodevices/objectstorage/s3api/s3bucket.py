@@ -5,7 +5,10 @@ from io import BytesIO
 from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING
 from urllib.parse import urljoin
 
-from boto3.s3.inject import ClientError
+try:
+    from boto3.s3.inject import ClientError
+except ImportError as ex:
+    raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
 
 from messageflux.iodevices.objectstorage.s3api.s3client import S3Client
 

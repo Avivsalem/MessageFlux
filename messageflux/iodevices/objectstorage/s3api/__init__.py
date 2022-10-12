@@ -1,7 +1,7 @@
 import logging
 
 try:
-    import urllib3  # type: ignore
+    import urllib3
 
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 except ImportError:

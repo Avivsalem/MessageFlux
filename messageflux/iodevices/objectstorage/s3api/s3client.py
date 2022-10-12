@@ -1,4 +1,7 @@
-from boto3.session import Config, Session  # type: ignore
+try:
+    from boto3.session import Config, Session  # type: ignore
+except ImportError as ex:
+    raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
 
 _S3_DEFAULT_TIMEOUT = 1
 _S3_DEFAULT_RETRIES = 2

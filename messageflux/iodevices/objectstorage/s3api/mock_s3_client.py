@@ -5,7 +5,11 @@ from io import BytesIO
 from typing import Optional, BinaryIO, Dict, Any
 
 import time
-from botocore.exceptions import ClientError
+
+try:
+    from boto3.s3.inject import ClientError
+except ImportError as ex:
+    raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
 
 from messageflux.iodevices.objectstorage.s3api.s3client import S3Client
 
