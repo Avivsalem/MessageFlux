@@ -46,10 +46,6 @@ jobs:
           tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
           message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
 
-        # generate the requirements-all.txt file
-      - name: Generate requirements-all.txt
-        run: python make_all_extra_requirements.py
-
       - name: Build Project
         run: |
           pip install build

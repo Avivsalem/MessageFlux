@@ -1,11 +1,12 @@
 # MessageFlux
 
+![stars](https://badgen.net/github/stars/Avivsalem/MessageFlux)
 ![license](https://badgen.net/github/license/Avivsalem/MessageFlux/)
+![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)
 ![tests](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml/badge.svg)
 ![pypi version](https://badgen.net/pypi/v/MessageFlux)
 ![python compatibility](https://badgen.net/pypi/python/MessageFlux)
-![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)
-![stars](https://badgen.net/github/stars/Avivsalem/MessageFlux)
+![downloads](https://img.shields.io/pypi/dm/messageflux)
 
 This package is used to create long-running services, that read messages from devices, and handles them.
 The devices in this package are meant to be composable - meaning that added functionality can come from wrapping devices

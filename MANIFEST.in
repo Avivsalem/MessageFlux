@@ -3,6 +3,7 @@ include requirements*.txt
 include README.md
 include VERSION
 
+include _custom_build/*
 include .flake8
 include mypy.ini
 include pytest.ini
