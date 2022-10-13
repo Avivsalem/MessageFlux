@@ -5,6 +5,14 @@ from typing import Optional
 
 from messageflux.base_service import ServiceState
 from messageflux.server_loop_service import ServerLoopService, LoopMetrics
+from messageflux.utils import KwargsException
+
+
+class LoopHealthAddonException(KwargsException):
+    """
+    an exception that is raised on LoopHealthAddon errors
+    """
+    pass
 
 
 class LoopHealthAddon:
@@ -46,7 +54,16 @@ class LoopHealthAddon:
         attached the addon to a service, and returns the addon
         :param service: the service to attach to
         """
+        if self._service is not None:
+            raise LoopHealthAddonException('Cannot attach an already attached addon')
+
+        self._consecutive_failures = 0
+        self._last_loop_time = 0.0
+
         if self._max_inactivity_timeout is not None:
+            if service.service_state in [ServiceState.STARTED, ServiceState.STARTING]:
+                raise LoopHealthAddonException('Cannot monitor inactivity on an already started service')
+
             service.state_changed_event.subscribe(self._on_service_state_change)
 
         service.loop_ended_event.subscribe(self._on_loop_ended)
