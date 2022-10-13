@@ -148,5 +148,7 @@ class BaseService(metaclass=ABCMeta):
         """
         stops the service (sets the cancellation token, so the service will stop gracefully)
         """
+        if self._cancellation_token.is_set():
+            return
         self._set_service_state(ServiceState.STOPPING)
         self._cancellation_token.set()
