@@ -40,6 +40,11 @@ email = "avivsalem@gmail.com"
 name = "Nir Schulman"
 email = "narsssx@gmail.com"
 
+[[project.maintainers]]
+name = "Rafael Zilberman"
+email = "Zilberman.rafi@gmail.com"
+
+
 [tool.setuptools]
 packages = ["messageflux"]
 platforms = [
