@@ -1,2 +1,5 @@
 from messageflux.iodevices.base import InputDevice, ReadResult
-from .device_reader_service import DeviceReaderService, SingleMessageDeviceReaderService
+from .message_handling_service import (BatchMessageHandlingService,
+                                       MessageHandlerBase,
+                                       MessageHandlingService,
+                                       BatchMessageHandlerBase)

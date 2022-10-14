@@ -170,7 +170,8 @@ class InputTransactionScope(InputTransaction):
         commits all the transactions in scope
         """
         for transaction in self._transactions:
-            transaction.commit()
+            if not transaction.finished:  # allows someone to rollback individual transactions within committed scope
+                transaction.commit()
         self._transactions.clear()
 
     def _rollback(self):
@@ -178,7 +179,8 @@ class InputTransactionScope(InputTransaction):
         rolls back all the transaction in scope
         """
         for transaction in self._transactions:
-            transaction.rollback()
+            if not transaction.finished:  # allows someone to commit individual transactions within rolled back scope
+                transaction.rollback()
         self._transactions.clear()
 
 

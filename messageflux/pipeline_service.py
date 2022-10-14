@@ -2,9 +2,9 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-from messageflux.device_reader_service import DeviceReaderService
 from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
 from messageflux.iodevices.base.common import MessageBundle
+from messageflux.message_handling_service import MessageHandlingServiceBase
 
 
 @dataclass
@@ -62,16 +62,20 @@ class FixedRouterPipelineHandler(PipelineHandlerBase):
                               message_bundle=output_message_bundle)
 
 
-class PipelineService(DeviceReaderService):
+class PipelineService(MessageHandlingServiceBase):
     """
     a service that uses a PipelineHandler object to process messages from input, and send to output
     """
-    def __init__(self, *, output_device_manager: OutputDeviceManager, pipeline_handler: PipelineHandlerBase, **kwargs):
+
+    def __init__(self, *,
+                 output_device_manager: OutputDeviceManager,
+                 pipeline_handler: PipelineHandlerBase,
+                 **kwargs):
         super().__init__(**kwargs)
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler
 
-    def _handle_messages(self, batch: List[Tuple[InputDevice, ReadResult]]):
+    def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
             pipeline_result = self._pipeline_handler.handle_message(input_device, read_result)
             if pipeline_result is not None:
