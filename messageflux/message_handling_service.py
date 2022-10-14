@@ -153,19 +153,24 @@ class BatchMessageHandlingService(MessageHandlingServiceBase):
         self._message_handler.handle_message_batch(batch)
 
 
-class MessageHandlerBase(BatchMessageHandlerBase, metaclass=ABCMeta):
+class MessageHandlerBase(metaclass=ABCMeta):
     """
     a message handler base class. used to handle a single message
     """
 
-    def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
+    def connect(self):
         """
-        handles a batch of messages that was read from input devices
-        :param batch: a list of tuples of input device and the ReadResult object that was read from it
+        called when the service starts.
+        can be overrided by child class to perform some initialization logic
         """
-        input_device, read_result = batch[0]
-        self.handle_message(input_device=input_device,
-                            read_result=read_result)
+        pass
+
+    def disconnect(self):
+        """
+        called when the service stops.
+        can be overrided by child class to perform some cleanup logic
+        """
+        pass
 
     @abstractmethod
     def handle_message(self, input_device: InputDevice, read_result: ReadResult):
@@ -183,8 +188,35 @@ class MessageHandlingService(BatchMessageHandlingService):
     a service that reads a SINGLE message from devices and handles it
     """
 
+    class _BatchMessageHandlerAdapter(BatchMessageHandlerBase):
+        def __init__(self, massage_handler: MessageHandlerBase):
+            self._message_handler = massage_handler
+
+        def connect(self):
+            """
+            called when the service starts.
+            can be overrided by child class to perform some initialization logic
+            """
+            self._message_handler.connect()
+
+        def disconnect(self):
+            """
+            called when the service stops.
+            can be overrided by child class to perform some cleanup logic
+            """
+            self._message_handler.disconnect()
+
+        def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
+            """
+            handles a batch of messages that was read from input devices
+            :param batch: a list of tuples of input device and the ReadResult object that was read from it
+            """
+            for input_device, read_result in batch:
+                self._message_handler.handle_message(input_device=input_device,
+                                                     read_result=read_result)
+
     def __init__(self, *, message_handler: MessageHandlerBase, **kwargs):
         """
         :param kwargs: passed to parent as is
         """
-        super().__init__(batch_handler=message_handler, max_batch_read_count=1, wait_for_batch_count=False, **kwargs)
+        super().__init__(batch_handler=self._BatchMessageHandlerAdapter(message_handler), **kwargs)
