@@ -2,7 +2,7 @@ import threading
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
-from time import time,perf_counter
+from time import perf_counter
 
 from messageflux.base_service import BaseService
 from messageflux.utils import ObservableEvent
@@ -12,6 +12,7 @@ class LoopMetrics:
     """
     a class that holds metrics for a single server loop
     """
+
     def __init__(self, loop_duration: float, exception: Optional[Exception] = None):
         """
 
