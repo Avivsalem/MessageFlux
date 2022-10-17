@@ -104,7 +104,7 @@ class BaseService(metaclass=ABCMeta):
             self._cancellation_token.wait()
         except Exception as ex:
             self._logger.exception(f'Service raised an exception: {str(ex)}')
-            self._cancellation_token.wait()
+            self._cancellation_token.set()
             server_exception = ex
 
         self._set_service_state(ServiceState.STOPPING)
@@ -148,6 +148,7 @@ class BaseService(metaclass=ABCMeta):
         """
         stops the service (sets the cancellation token, so the service will stop gracefully)
         """
+        self._logger.info(f"Stopping {self._name}")
         if self._cancellation_token.is_set():
             return
         self._set_service_state(ServiceState.STOPPING)

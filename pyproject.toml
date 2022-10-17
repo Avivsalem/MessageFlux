@@ -3,7 +3,6 @@ requires = [
     "setuptools",
     "wheel"
 ]
-#build-backend = "setuptools.build_meta"
 build-backend = "backend"
 backend-path = ["_custom_build"]
 
@@ -46,11 +45,13 @@ email = "Zilberman.rafi@gmail.com"
 
 
 [tool.setuptools]
-packages = ["messageflux"]
 platforms = [
     "win32",
     "linux"
 ]
+
+[tool.setuptools.packages.find]
+include = ['messageflux', 'messageflux.*']
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }

@@ -93,10 +93,11 @@ class MyServiceFactory(ServiceFactory):
         return my_example_service
 
 
-service_to_run = get_service_runner(MyServiceFactory(),
-                                    instance_count=5)  # this will run 5 child processes
+if __name__ == '__main__':  # you must do this in multiprocess running
+    service_to_run = get_service_runner(service_factory=MyServiceFactory(),
+                                        instance_count=5)  # this will run 5 child processes
 
-service_to_run.start()  # this starts the child processes and blocks indefinitely (until CTRL-C or sigterm)
+    service_to_run.start()  # this starts the child processes and blocks indefinitely (until CTRL-C or sigterm)
 ```
 
 ## Optional Requirements
