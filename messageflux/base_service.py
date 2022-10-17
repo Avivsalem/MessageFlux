@@ -101,7 +101,11 @@ class BaseService(metaclass=ABCMeta):
             self._prepare_service()
             self._set_service_state(ServiceState.STARTED)
             self._run_service(cancellation_token=self._cancellation_token)
-            self._cancellation_token.wait()
+
+            # this loop is because wait() prevents signal handling on some systems.
+            # otherwise, we'd just use wait() without the loop (and no timeout)
+            while not self._cancellation_token.is_set():
+                self._cancellation_token.wait(0.5)
         except Exception as ex:
             self._logger.exception(f'Service raised an exception: {str(ex)}')
             self._cancellation_token.set()
