@@ -114,8 +114,8 @@ class BaseService(metaclass=ABCMeta):
     def _register_signals(self):
         if threading.current_thread() is threading.main_thread():
             self._logger.info("Registering Terminate Signals...")
-            signal.signal(signal.SIGINT, lambda s, f: self.stop())
-            signal.signal(signal.SIGTERM, lambda s, f: self.stop())
+            for signame in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(signame, lambda s, f: self.stop())
         else:
             self._logger.warning("Service doesn't run on main thread - can't register signals")
 
