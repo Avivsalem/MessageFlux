@@ -70,6 +70,8 @@ class InputTransaction(metaclass=ABCMeta):
         return self._finished.is_set()
 
     def __enter__(self):
+        if self.finished:
+            raise WrongTransactionStateException('Cannot enter an already finished transaction')
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
