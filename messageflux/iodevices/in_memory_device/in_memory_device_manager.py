@@ -1,9 +1,8 @@
 import heapq
+import time
 from functools import total_ordering
 from threading import Condition
 from typing import Optional, Dict, List, Tuple
-
-import time
 
 from messageflux.iodevices.base import (Message,
                                         InputDeviceManager,
@@ -27,12 +26,16 @@ class _QueueMessage:
     def __init__(self, message: Message, timestamp: Optional[float] = None):
         self.message = message.copy()
         self.timestamp = timestamp or time.time()
+        self._monotonic_time = time.perf_counter_ns()
 
     def __eq__(self, other):
-        return self.timestamp == other.timestamp
+        if not isinstance(other, _QueueMessage):
+            return False
+        return self._monotonic_time == other._monotonic_time
 
     def __lt__(self, other):
-        return self.timestamp < other.timestamp
+        assert isinstance(other, _QueueMessage)
+        return self._monotonic_time < other._monotonic_time
 
 
 class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):

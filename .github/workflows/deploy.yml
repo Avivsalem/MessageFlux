@@ -19,11 +19,11 @@ jobs:
     steps:
       # Checkout the latest code from the repo
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
         # Setup Python
       - name: Set Up Python 3.10
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
@@ -45,10 +45,6 @@ jobs:
         with:
           tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
           message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
-
-        # generate the requirements-all.txt file
-      - name: Generate requirements-all.txt
-        run: python make_all_extra_requirements.py
 
       - name: Build Project
         run: |

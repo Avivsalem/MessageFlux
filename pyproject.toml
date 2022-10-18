@@ -3,13 +3,14 @@ requires = [
     "setuptools",
     "wheel"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "backend"
+backend-path = ["_custom_build"]
 
 [project]
 name = "messageflux"
 requires-python = '>=3.7,<3.11'
 readme = "README.md"
-license = { file = "LICENSE" }
+license = { text = "GNU General Public License v3 (GPLv3)" }
 classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.7',
@@ -38,12 +39,19 @@ email = "avivsalem@gmail.com"
 name = "Nir Schulman"
 email = "narsssx@gmail.com"
 
+[[project.maintainers]]
+name = "Rafael Zilberman"
+email = "Zilberman.rafi@gmail.com"
+
+
 [tool.setuptools]
-packages = ["messageflux"]
 platforms = [
     "win32",
     "linux"
 ]
+
+[tool.setuptools.packages.find]
+include = ['messageflux', 'messageflux.*']
 
 [tool.setuptools.dynamic]
 dependencies = { file = "requirements.txt" }
@@ -53,6 +61,7 @@ version = { file = "VERSION" }
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = "requirements-dev.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
+objectstorage = { file = "requirements-objectstorage.txt" }
 all = { file = "requirements-all.txt" }
 
 

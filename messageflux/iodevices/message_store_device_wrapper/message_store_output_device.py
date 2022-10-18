@@ -44,7 +44,7 @@ class MessageStoreOutputTransformer(_MessageStoreTransformerBase, OutputTransfor
 
         if stream_size > self._size_threshold:
             # send using massage store
-            result_message = self._store_in_message_store(output_device, message_bundle.message)
+            result_message = self._store_in_message_store(output_device, message_bundle)
             result_message.headers[self.ORIGINAL_MESSAGE_SIZE_HEADER] = stream_size
             return MessageBundle(result_message, message_bundle.device_headers)
         else:
@@ -53,24 +53,24 @@ class MessageStoreOutputTransformer(_MessageStoreTransformerBase, OutputTransfor
 
     def _store_in_message_store(self,
                                 output_device: TransformerOutputDevice,
-                                message: Message) -> Message:
+                                message_bundle: MessageBundle) -> Message:
         """
         stores the message in the message store
 
         :param output_device: the output device that the transformer runs on
-        :param message: the message to store
+        :param message_bundle: the message bundle to store
 
         :return: the message containing the key to the message store
         """
         try:
             # save to object storage and get the key
-            key = self._message_store.put_message(output_device.name, message)
+            key = self._message_store.put_message(output_device.name, message_bundle)
         except Exception as ex:
             raise OutputDeviceException('Error putting item into message store') from ex
         try:
             # send the key instead of the buffer over the inner device
             data = self.serialize_key(key)
-            return Message(data, message.headers)
+            return Message(data, message_bundle.message.headers)
         except Exception:
             try:
                 # delete from the object storage

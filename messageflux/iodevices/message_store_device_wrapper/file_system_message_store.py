@@ -4,8 +4,10 @@ import posixpath
 import random
 from datetime import datetime
 
-from messageflux.iodevices.base import Message
+from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.file_system import DefaultFileSystemSerializer
 from messageflux.iodevices.message_store_device_wrapper.message_store_base import MessageStoreBase
+from messageflux.metadata_headers import MetadataHeaders
 from messageflux.utils import get_random_id
 
 
@@ -26,6 +28,7 @@ class FileSystemMessageStore(MessageStoreBase):
         self._root_folder = root_folder
         self._logger = logging.getLogger(__name__)
         self._num_of_subdirs = num_of_subdirs
+        self._serializer = DefaultFileSystemSerializer()
 
     def connect(self):
         """
@@ -47,7 +50,7 @@ class FileSystemMessageStore(MessageStoreBase):
         """
         return b"__FS_MSGSTORE__"
 
-    def read_message(self, key: str) -> Message:
+    def read_message(self, key: str) -> MessageBundle:
         """
         reads a message according to the key given
 
@@ -56,9 +59,9 @@ class FileSystemMessageStore(MessageStoreBase):
         """
         file_path = self.get_absolute_path(key)
         with open(file_path, 'rb') as f:
-            data = f.read()
+            message = self._serializer.deserialize(f)
 
-        return Message(data)
+        return MessageBundle(message, {MetadataHeaders.FILENAME: file_path})
 
     def generate_relative_path(self) -> str:
         """
@@ -82,12 +85,12 @@ class FileSystemMessageStore(MessageStoreBase):
         """
         return os.path.join(self._root_folder, os.path.normpath(relative_path))
 
-    def put_message(self, device_name: str, message: Message) -> str:
+    def put_message(self, device_name: str, message_bundle: MessageBundle) -> str:
         """
         puts a message in the message store
 
         :param str device_name: the name of the device putting the item in the store
-        :param message: the Message to write to the store
+        :param message_bundle: the Message bundle to write to the store
         :return: the key to the message in the message store
         """
         # TODO: maybe add the device name to path? need to sanitize it so it's legal dir name
@@ -97,7 +100,7 @@ class FileSystemMessageStore(MessageStoreBase):
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
         with open(file_path, 'wb') as f:
-            f.write(message.bytes)
+            f.write(self._serializer.serialize(message_bundle.message).read())
 
         os.chmod(file_path, 0o777)
         return relative_path
