@@ -51,8 +51,8 @@ input_device_manager = InMemoryDeviceManager()
 my_example_service = MessageHandlingService(message_handler=MyMessageHandler(),
                                             input_device_manager=input_device_manager,
                                             input_device_names=['MY_QUEUE'])
-
-my_example_service.start()  # this blocks indefinitely (until CTRL-C or sigterm)
+if __name__ == '__main__':
+    my_example_service.start()  # this blocks indefinitely (until CTRL-C or sigterm)
 
 ```
 
