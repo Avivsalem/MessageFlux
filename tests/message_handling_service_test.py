@@ -4,7 +4,12 @@ import time
 from threading import Thread
 from typing import List, Optional, Tuple
 
-from messageflux import InputDevice, ReadResult, SingleMessageDeviceReaderService, DeviceReaderService
+from messageflux import (InputDevice,
+                         ReadResult,
+                         MessageHandlingService,
+                         MessageHandlerBase,
+                         BatchMessageHandlerBase,
+                         BatchMessageHandlingService)
 from messageflux.iodevices.base import Message, InputDeviceManager
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
@@ -32,14 +37,13 @@ class MockInputDeviceManager(InputDeviceManager[MockInputDevice]):
         return MockInputDevice(self, device_name, self.input_list)
 
 
-class IncreaserService(SingleMessageDeviceReaderService):
+class IncreaserMessageHandler(MessageHandlerBase):
     STOPPED = "STOPPED"
 
-    def __init__(self, output_list, **kwargs):
-        super(IncreaserService, self).__init__(**kwargs)
+    def __init__(self, output_list):
         self.output_list = output_list
 
-    def _handle_single_message(self, input_device: InputDevice, read_result: ReadResult):
+    def handle_message(self, input_device: InputDevice, read_result: ReadResult):
         self.output_list.append(int(read_result.message.bytes) + 1)
 
 
@@ -50,9 +54,10 @@ def test_sanity():
     input_queue = ["3", "2", "1"]
     input_device_manager = MockInputDeviceManager(input_queue)
     output_queue: List[int] = []
-    service = IncreaserService(output_list=output_queue,
-                               input_device_manager=input_device_manager,
-                               input_device_names=['bla'])
+    message_handler = IncreaserMessageHandler(output_list=output_queue)
+    service = MessageHandlingService(message_handler=message_handler,
+                                     input_device_manager=input_device_manager,
+                                     input_device_names=['bla'])
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -66,12 +71,11 @@ def test_sanity():
         logging.getLogger().removeHandler(stream_handler)
 
 
-class BatchService(DeviceReaderService):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class TestBatchHandler(BatchMessageHandlerBase):
+    def __init__(self):
         self.batches = []
 
-    def _handle_messages(self, batch: List[Tuple[InputDevice, ReadResult]]):
+    def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         self.batches.append(batch)
 
 
@@ -84,9 +88,11 @@ def test_batch_count():
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
     output_device.send_message(Message(b'3'))
-    service = BatchService(input_device_manager=input_device_manager,
-                           input_device_names=['bla'],
-                           max_batch_read_count=2)
+    batch_handler = TestBatchHandler()
+    service = BatchMessageHandlingService(batch_handler=batch_handler,
+                                          input_device_manager=input_device_manager,
+                                          input_device_names=['bla'],
+                                          max_batch_read_count=2)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -94,9 +100,9 @@ def test_batch_count():
     try:
         time.sleep(1)
 
-        assert len(service.batches) == 2
-        assert len(service.batches[0]) == 2
-        assert len(service.batches[1]) == 1
+        assert len(batch_handler.batches) == 2
+        assert len(batch_handler.batches[0]) == 2
+        assert len(batch_handler.batches[1]) == 1
 
     finally:
         service.stop()
@@ -111,11 +117,13 @@ def test_dont_wait_for_batch():
     output_device = input_device_manager.get_output_device('bla')
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
-    service = BatchService(input_device_manager=input_device_manager,
-                           input_device_names=['bla'],
-                           read_timeout=5,
-                           wait_for_batch_count=False,
-                           max_batch_read_count=3)
+    batch_handler = TestBatchHandler()
+    service = BatchMessageHandlingService(batch_handler=batch_handler,
+                                          input_device_manager=input_device_manager,
+                                          input_device_names=['bla'],
+                                          read_timeout=5,
+                                          wait_for_batch_count=False,
+                                          max_batch_read_count=3)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -125,9 +133,9 @@ def test_dont_wait_for_batch():
         output_device.send_message(Message(b'3'))
         time.sleep(1)
 
-        assert len(service.batches) == 2
-        assert len(service.batches[0]) == 2
-        assert len(service.batches[1]) == 1
+        assert len(batch_handler.batches) == 2
+        assert len(batch_handler.batches[0]) == 2
+        assert len(batch_handler.batches[1]) == 1
 
     finally:
         service.stop()
@@ -142,11 +150,13 @@ def test_wait_for_batch():
     output_device = input_device_manager.get_output_device('bla')
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
-    service = BatchService(input_device_manager=input_device_manager,
-                           input_device_names=['bla'],
-                           read_timeout=5,
-                           wait_for_batch_count=True,
-                           max_batch_read_count=3)
+    batch_handler = TestBatchHandler()
+    service = BatchMessageHandlingService(batch_handler=batch_handler,
+                                          input_device_manager=input_device_manager,
+                                          input_device_names=['bla'],
+                                          read_timeout=5,
+                                          wait_for_batch_count=True,
+                                          max_batch_read_count=3)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -156,21 +166,20 @@ def test_wait_for_batch():
         output_device.send_message(Message(b'3'))
         time.sleep(3)
 
-        assert len(service.batches) == 1
-        assert len(service.batches[0]) == 3
+        assert len(batch_handler.batches) == 1
+        assert len(batch_handler.batches[0]) == 3
 
     finally:
         service.stop()
         logging.getLogger().removeHandler(stream_handler)
 
 
-class ErrorService(SingleMessageDeviceReaderService):
-    def __init__(self, error_after_count: int, **kwargs):
-        super(ErrorService, self).__init__(**kwargs)
+class ErrorMessageHandler(MessageHandlerBase):
+    def __init__(self, error_after_count: int):
         self._error_after_count = error_after_count
         self._count = 0
 
-    def _handle_single_message(self, input_device: InputDevice, read_result: ReadResult):
+    def handle_message(self, input_device: InputDevice, read_result: ReadResult):
         self._count += 1
         if self._count >= self._error_after_count:
             raise Exception()
@@ -182,9 +191,10 @@ def test_fatal():
 
     input_queue = ["3", "2", "1"]
     input_device_manager = MockInputDeviceManager(input_queue)
-    service = ErrorService(error_after_count=1,
-                           input_device_manager=input_device_manager,
-                           input_device_names=['bla'])
+    error_handler = ErrorMessageHandler(error_after_count=1)
+    service = MessageHandlingService(message_handler=error_handler,
+                                     input_device_manager=input_device_manager,
+                                     input_device_names=['bla'])
 
     addon = LoopHealthAddon(max_consecutive_failures=1).attach(service)
 
@@ -206,9 +216,10 @@ def test_not_fatal():
 
     input_queue = ["3", "2", "1"]
     input_device_manager = MockInputDeviceManager(input_queue)
-    service = ErrorService(error_after_count=2,
-                           input_device_manager=input_device_manager,
-                           input_device_names=['bla'])
+    error_handler = ErrorMessageHandler(error_after_count=2)
+    service = MessageHandlingService(message_handler=error_handler,
+                                     input_device_manager=input_device_manager,
+                                     input_device_names=['bla'])
     addon = LoopHealthAddon(max_consecutive_failures=3).attach(service)
 
     service_thread = Thread(target=service.start, daemon=True)

@@ -2,9 +2,9 @@ import logging
 import os
 import threading
 from multiprocessing.process import BaseProcess
-from typing import List, Optional
 
 import time
+from typing import List, Optional
 
 from messageflux.base_service import BaseService
 from messageflux.multiprocessing.singleprocesshandler import ServiceFactory, SingleProcessHandler
@@ -17,13 +17,14 @@ class MultiProcessRunner(BaseService):
     a class that runs multiple services in processes. it handles the child process, and check liveness
     """
 
-    def __init__(self,
+    def __init__(self, *,
                  service_factory: ServiceFactory,
                  instance_count: int,
                  shutdown_timeout: int = 5,
                  live_check_interval: int = 60,
                  live_check_timeout: int = 10,
-                 restart_on_failure: bool = True):
+                 restart_on_failure: bool = True,
+                 **kwargs):
         """
             :param service_factory: a factory class that creates the service to run in a different process
             :param instance_count: the number of processes to run
@@ -33,7 +34,7 @@ class MultiProcessRunner(BaseService):
             :param restart_on_failure: should we restart a process if it fails?
         """
 
-        super().__init__()
+        super().__init__(**kwargs)
         self._service_factory = service_factory
         self._instance_count = instance_count
         self._shutdown_timeout = shutdown_timeout
@@ -112,12 +113,14 @@ class MultiProcessRunner(BaseService):
                     pass
 
 
-def get_service_runner(service_factory: ServiceFactory,
+def get_service_runner(*,
+                       service_factory: ServiceFactory,
                        instance_count: int,
                        shutdown_timeout: int = 5,
                        live_check_interval: int = 60,
                        live_check_timeout: int = 10,
-                       restart_on_failure: bool = True) -> BaseService:
+                       restart_on_failure: bool = True,
+                       **kwargs) -> BaseService:
     """
     a helper method, that the creates the MultiProcessRunner if instance_count is greater then 1.
     otherwise, it just returns the service itself.
@@ -137,4 +140,5 @@ def get_service_runner(service_factory: ServiceFactory,
                                   shutdown_timeout=shutdown_timeout,
                                   live_check_interval=live_check_interval,
                                   live_check_timeout=live_check_timeout,
-                                  restart_on_failure=restart_on_failure)
+                                  restart_on_failure=restart_on_failure,
+                                  **kwargs)

@@ -101,10 +101,14 @@ class BaseService(metaclass=ABCMeta):
             self._prepare_service()
             self._set_service_state(ServiceState.STARTED)
             self._run_service(cancellation_token=self._cancellation_token)
-            self._cancellation_token.wait()
+
+            # this loop is because wait() prevents signal handling on some systems.
+            # otherwise, we'd just use wait() without the loop (and no timeout)
+            while not self._cancellation_token.is_set():
+                self._cancellation_token.wait(0.5)
         except Exception as ex:
             self._logger.exception(f'Service raised an exception: {str(ex)}')
-            self._cancellation_token.wait()
+            self._cancellation_token.set()
             server_exception = ex
 
         self._set_service_state(ServiceState.STOPPING)
@@ -114,8 +118,8 @@ class BaseService(metaclass=ABCMeta):
     def _register_signals(self):
         if threading.current_thread() is threading.main_thread():
             self._logger.info("Registering Terminate Signals...")
-            signal.signal(signal.SIGINT, lambda s, f: self.stop())
-            signal.signal(signal.SIGTERM, lambda s, f: self.stop())
+            for signame in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(signame, lambda s, f: self.stop())
         else:
             self._logger.warning("Service doesn't run on main thread - can't register signals")
 
@@ -148,6 +152,7 @@ class BaseService(metaclass=ABCMeta):
         """
         stops the service (sets the cancellation token, so the service will stop gracefully)
         """
+        self._logger.info(f"Stopping {self._name}")
         if self._cancellation_token.is_set():
             return
         self._set_service_state(ServiceState.STOPPING)

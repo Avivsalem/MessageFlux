@@ -2,7 +2,7 @@ import threading
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
-from time import time
+from time import perf_counter
 
 from messageflux.base_service import BaseService
 from messageflux.utils import ObservableEvent
@@ -12,6 +12,7 @@ class LoopMetrics:
     """
     a class that holds metrics for a single server loop
     """
+
     def __init__(self, loop_duration: float, exception: Optional[Exception] = None):
         """
 
@@ -70,14 +71,14 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
         """
         while not cancellation_token.is_set():
             loop_exception = None
-            start_time = time()
+            start_time = perf_counter()
             try:
                 self._server_loop(cancellation_token)
             except Exception as ex:
                 self._logger.exception('Server loop raised an exception')
                 loop_exception = ex
 
-            loop_duration = time() - start_time
+            loop_duration = perf_counter() - start_time
             self._loop_ended_event.fire(LoopMetrics(loop_duration=loop_duration, exception=loop_exception))
 
             wait_duration = self._duration_after_loop_success

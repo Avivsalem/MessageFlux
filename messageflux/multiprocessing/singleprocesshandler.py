@@ -39,8 +39,8 @@ def _start_service_and_listen_queue(service_factory: ServiceFactory,
                                     child_pipe: '_ConnectionBase',
                                     instance_index: int):
     try:
-        service = service_factory.create_service()
         os.environ[INSTANCE_INDEX_ENV_VAR] = str(instance_index)
+        service = service_factory.create_service()
 
         def _listen_to_pipe(inner_service: BaseService, pipe: '_ConnectionBase'):
             try:
