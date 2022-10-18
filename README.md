@@ -3,7 +3,7 @@
 [![stars](https://badgen.net/github/stars/Avivsalem/MessageFlux)](https://github.com/Avivsalem/MessageFlux/stargazers)
 [![license](https://badgen.net/github/license/Avivsalem/MessageFlux/)](https://github.com/Avivsalem/MessageFlux/blob/main/LICENSE)
 [![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)](https://github.com/Avivsalem/MessageFlux/commit/main)
-[![tests](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml/badge.svg)](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml)
+[![tests](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml/badge.svg)](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml?query=branch%3Amain)
 [![pypi version](https://badgen.net/pypi/v/MessageFlux)](https://pypi.org/project/messageflux/)
 [![python compatibility](https://badgen.net/pypi/python/MessageFlux)](https://pypi.org/project/messageflux/)
 [![downloads](https://img.shields.io/pypi/dm/messageflux)](https://pypi.org/project/messageflux/)
