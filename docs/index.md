@@ -1,1 +1,1 @@
-# Welcome to Message Flux! by Noam Israeli (and help from aviv)
+# Welcome to Message Flux!
