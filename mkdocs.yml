@@ -1,6 +1,12 @@
 site_name: Message Flux
+repo_url: https://github.com/Avivsalem/MessageFlux
+
 theme:
   name: readthedocs
+
+nav:
+  - Home: index.md
+  - API References: api.md
 
 plugins:
   - search
