@@ -1,7 +1,6 @@
 site_name: Message Flux
 theme:
   name: readthedocs
-  highlightjs: true
 
 plugins:
   - search
@@ -11,6 +10,8 @@ plugins:
         python:
           options:
             docstring_style: sphinx
+            show_root_heading: true
+            show_source: false
 markdown_extensions:
   - markdown_include.include:
       base_path: .
