@@ -277,11 +277,12 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
         ctor
 
         :param manager: the device manager which created this input device
+        :param name: the name of the queue to read from
         :param tmp_folder: the folder to create temporary files in
         :param queues_folder: the base folder for all queues
-        :param device_name: the name of the queue to read from
         :param fifo: should we read the files sorted by time (Notice! when fifo=false, you might get file starvation)
         :param min_file_age: the minimum time in seconds since last modification to file, before we to try to read it...
+        :param serializer: the serializer to use for reading messages from files
         """
         super(FileSystemInputDevice, self).__init__(manager, name)
         self.min_file_age = min_file_age

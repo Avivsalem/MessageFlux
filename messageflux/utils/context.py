@@ -30,7 +30,7 @@ class Context(metaclass=ABCMeta):
         """
         starts the context manager
 
-        :param kwargs: kwargs to push to the context
+        :param **kwargs: kwargs to push to the context
         """
         pass
 
