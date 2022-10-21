@@ -1,11 +1,12 @@
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
 site_name: Message Flux
+repo_name: Avivsalem/MessageFlux
 repo_url: https://github.com/Avivsalem/MessageFlux
+edit_uri: edit/main/docs/
 
 theme:
   name: material
-  
 
 nav:
   - Home: index.md
@@ -14,7 +15,7 @@ nav:
 
 plugins:
   - search
-  # mkdocstrings missing schema.json integrated with material schema
+  # mkdocstrings is missing schema.json refers to the material schema
   - mkdocstrings: 
       handlers:
         python:
