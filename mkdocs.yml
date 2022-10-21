@@ -1,24 +1,27 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
 site_name: Message Flux
 repo_url: https://github.com/Avivsalem/MessageFlux
 
 theme:
-  name: readthedocs
+  name: material
+  
 
 nav:
   - Home: index.md
   - API References: api.md
+  - Contributing To MessageFlux: contribute.md
 
 plugins:
   - search
-  - mkdocstrings:
+  # mkdocstrings missing schema.json integrated with material schema
+  - mkdocstrings: 
       handlers:
-        # See: https://mkdocstrings.github.io/python/usage/
         python:
           options:
-            docstring_style: sphinx
             show_root_heading: true
             show_source: false
+
+
 markdown_extensions:
-  - markdown_include.include:
-      base_path: .
-  - admonition
+  - markdown.extensions.admonition
