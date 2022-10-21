@@ -1,4 +1,4 @@
-# Docs
+# Documentation
 
 To start documenting locally, you'll need to have a Python 3.7 version or higher installed.
 
