@@ -14,11 +14,20 @@ class ServiceState(Enum):
     the states of the service:
     INITIALIZING->(start)->STARTING->(prepare_service)->STARTED->(run_service)->STOPPING->(finalize_service)->STOPPED
     """
-    INITIALIZED = "INITIALIZED"
+    INITIALIZED = 'INITIALIZED'
+    """The service has been created, but has not been started yet"""
+
     STARTING = 'STARTING'
+    """The service is starting, but is not running yet"""
+
     STARTED = 'STARTED'
+    """The service is running."""
+
     STOPPING = 'STOPPING'
+    """The service is in the process of stopping"""
+
     STOPPED = 'STOPPED'
+    """The service is not running anymore"""
 
 
 class BaseService(metaclass=ABCMeta):
@@ -28,7 +37,7 @@ class BaseService(metaclass=ABCMeta):
 
     def __init__(self, *,
                  name: str = None,
-                 should_stop_on_signal=True):
+                 should_stop_on_signal: bool = True):
         """
 
         :param name: the name of this service. if None, the name of the type will be used
