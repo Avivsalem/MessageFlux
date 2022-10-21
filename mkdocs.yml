@@ -22,6 +22,7 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
+            docstring_style: sphinx
 
 
 markdown_extensions:
