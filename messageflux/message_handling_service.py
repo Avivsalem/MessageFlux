@@ -127,7 +127,7 @@ class BatchMessageHandlerBase(metaclass=ABCMeta):
 
 class BatchMessageHandlingService(MessageHandlingServiceBase):
     """
-    a service thats reads from input devices and handles the messages
+    a service that reads from input devices and handles the messages
     """
 
     def __init__(self, *,

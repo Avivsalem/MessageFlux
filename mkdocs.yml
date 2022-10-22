@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
 
-site_name: Message Flux
+site_name: MessageFlux
 repo_name: Avivsalem/MessageFlux
 repo_url: https://github.com/Avivsalem/MessageFlux
 edit_uri: edit/main/docs/
@@ -25,11 +25,6 @@ theme:
 
 extra_css: [css/extra.css]
 
-nav:
-  - Home: index.md
-  - Code Reference: reference/
-  - Contribute: contribute/
-
 plugins:
   - search
   - gen-files:
@@ -44,7 +39,8 @@ plugins:
       handlers:
         python:
           options:
-            show_root_heading: true
+            show_root_heading: false
+            show_root_toc_entry: false
             show_source: false
             docstring_style: sphinx
             merge_init_into_class: true
