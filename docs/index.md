@@ -29,6 +29,3 @@ $ pip install messageflux
 ```console
 $ pip install messageflux[rabbitmq]
 ```
-
-!!! tip "Tip"
-This is a tip

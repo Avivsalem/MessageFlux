@@ -11,8 +11,10 @@
 
 messageflux is a framework for creating long-running services, that read messages from devices, and handles them.
 
-The devices in this package are meant to be composable - meaning that added functionality can come from wrapping devices
+Devices are composable components - meaning that added functionality can come from wrapping devices
 in other devices.
+
+You can find the full documentation [here](https://messageflux.readthedocs.io/)
 
 ## Requirements
 
