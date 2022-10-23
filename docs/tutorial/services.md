@@ -1,4 +1,4 @@
-# MessageFlux Services
+# Services
 
 There are several types of services messageflux offer.
 
