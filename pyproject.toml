@@ -25,7 +25,8 @@ dynamic = [
 ]
 
 [project.urls]
-github-repo = "https://github.com/Avivsalem/BaseService"
+Homepage = "https://github.com/Avivsalem/MessageFlux/"
+Documentation  = "https://messageflux.readthedocs.io/"
 
 [[project.authors]]
 name = "Aviv Salem"

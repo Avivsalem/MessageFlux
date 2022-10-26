@@ -49,7 +49,7 @@ class ServerLoopService(BaseService, metaclass=ABCMeta):
 
         :param duration_after_loop_success: the duration (in seconds) to wait after successful run of the loop.
         :param duration_after_loop_failure: the duration (in seconds) to wait after failed run of the loop.
-        :param kwargs: the init args for base classes
+        :param **kwargs: the init args for base classes
         """
         super().__init__(**kwargs)
         self._duration_after_loop_success = duration_after_loop_success

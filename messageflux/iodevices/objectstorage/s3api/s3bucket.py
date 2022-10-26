@@ -358,13 +358,15 @@ class S3Bucket:
     def find_objects(self,
                      prefix: str = None,
                      delimiter: str = None,
-                     max_keys: int = 1000, **kwargs) -> Iterator[S3Object]:
+                     max_keys: int = 1000,
+                     **kwargs) -> Iterator[S3Object]:
         """
-        find objects ih the bucket
+        find objects ih the bucket.
+
         :param delimiter: A Delimiter is a character you use to group keys
         :param prefix: Limits the response to keys that begin with the specified prefix
         :param max_keys: Sets the maximum number of keys returned in the response
-        :param kwargs: Filters to be used
+        :param **kwargs: additional filters to s3
         :return: dict from object key to last modified
         """
         try:

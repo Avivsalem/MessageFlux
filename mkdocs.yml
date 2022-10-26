@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://squidfunk.github.io/mkdocs-material/schema.json
+
+site_name: MessageFlux
+repo_name: Avivsalem/MessageFlux
+repo_url: https://github.com/Avivsalem/MessageFlux
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for dark mode
+    - scheme: slate
+      media: "(prefers-color-scheme: dark)"
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - scheme: default
+      media: "(prefers-color-scheme: light)"
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+
+extra_css: [css/extra.css]
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+      - docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
+
+  # mkdocstrings is missing schema.json refers to the material schema
+  - mkdocstrings: 
+      handlers:
+        python:
+          options:
+            show_root_heading: false
+            show_root_toc_entry: false
+            show_source: false
+            docstring_style: sphinx
+            merge_init_into_class: true
+            separate_signature: true
+
+markdown_extensions:
+  - markdown.extensions.admonition
+  - pymdownx.highlight
