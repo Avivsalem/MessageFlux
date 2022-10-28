@@ -1,6 +1,7 @@
 pytest
 pytest-cov
 mock
+moto
 mypy
 lxml
 flake8
