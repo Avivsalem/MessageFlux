@@ -2,7 +2,8 @@ import json
 import re
 from datetime import datetime
 from io import BytesIO
-from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING, Literal, Union, IO
+from typing_extensions import Literal
+from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING, Union, IO
 from urllib.parse import urljoin
 
 try:
