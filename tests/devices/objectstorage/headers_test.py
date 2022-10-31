@@ -1,54 +1,20 @@
-import datetime
 from io import BytesIO
 
-from mock import patch
+import boto3
+from moto import mock_s3
 
 from messageflux.iodevices.base.common import MessageBundle, Message
-from messageflux.iodevices.objectstorage import S3MessageStore
-
-mocked_objects = {}
+from messageflux.iodevices.objectstorage import S3MessageStore, BucketNameFormatterBase
 
 
-class MockS3Object:
-    def __init__(self, key, body, metadata, last_modified):
-        self.key = key
-        self.last_modified = last_modified
-        self.body = body
-        self.metadata = metadata
-
-
-class MockedS3Bucket:
-    def __init__(self, *args, **kwargs):
-        self.name = "SomeBucketName"
-
-    def put_object(self, key, buf, metadata):
-        headers = {header.lower(): value for header, value in metadata.items()}
-        s3obj = MockS3Object(key=key, body=buf, metadata=headers, last_modified=datetime.datetime.now())
-        mocked_objects[key] = s3obj
-        return s3obj
-
-    def get_object(self, key):
-        return mocked_objects.pop(key)
-
-    def compute_url(self, key) -> str:
-        """
-        computes the item url, by key
-
-        :param key: the key to item
-        :return: the url to item
-        """
-        return ""
-
-
-class MockedS3Client:
-    def __init__(self, *args, **kwargs):
-        pass
-
-
-@patch("messageflux.iodevices.objectstorage.s3_message_store.S3Bucket", MockedS3Bucket)
-@patch("messageflux.iodevices.objectstorage.s3_message_store.S3Client", MockedS3Client)
+@mock_s3
 def test_headers():
-    message_store = S3MessageStore("", "", "")
+    from messageflux.iodevices.objectstorage.s3api.s3bucket import S3Bucket
+    s3_resource = boto3.Session().resource('s3')
+    S3Bucket.create_bucket(s3_resource,
+                           BucketNameFormatterBase().format_name('SomeFlow', None))
+
+    message_store = S3MessageStore(s3_resource)
     message_store.connect()
 
     key = message_store.put_message("SomeFlow",

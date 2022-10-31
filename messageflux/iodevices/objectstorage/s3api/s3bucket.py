@@ -2,20 +2,21 @@ import json
 import re
 from datetime import datetime
 from io import BytesIO
-from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING
+from typing_extensions import Literal
+from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING, Union, IO
 from urllib.parse import urljoin
 
 try:
+    from mypy_boto3_s3 import S3ServiceResource
+    from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef
     from boto3.s3.inject import ClientError
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
 
-from messageflux.iodevices.objectstorage.s3api.s3client import S3Client
-
 BUCKET_NAME_VALIDATOR = re.compile(r'^[a-z0-9][a-z0-9.\-]{1,61}[a-z0-9]$')
 
 if TYPE_CHECKING:
-    from _typeshed import SupportsRead, SupportsWrite
+    from _typeshed import SupportsRead
 
 
 class S3BucketException(Exception):
@@ -113,20 +114,20 @@ class S3Bucket:
     """
 
     @staticmethod
-    def create_bucket(s3_client: S3Client,
+    def create_bucket(s3_resource: S3ServiceResource,
                       bucket_name: str,
                       lifetime_in_days: Optional[int] = None,
                       allow_public_access=False) -> 'S3Bucket':
         """
         creates and returns a bucket
 
-        :param s3_client: the s3 client to use
+        :param s3_resource: the s3 resource to use
         :param bucket_name: the bucket name to create and get
         :param lifetime_in_days: the lifetime of objects in the bucket to set (None for no change)
         :param allow_public_access: should we make the bucket publicly accessible from web
         :return: the bucket
         """
-        bucket = S3Bucket(bucket_name=bucket_name, s3_client=s3_client, auto_create=True)
+        bucket = S3Bucket(bucket_name=bucket_name, s3_resource=s3_resource, auto_create=True)
         if lifetime_in_days is not None:
             bucket.set_lifetime_in_days(lifetime_in_days)
 
@@ -136,31 +137,31 @@ class S3Bucket:
         return bucket
 
     @staticmethod
-    def list_buckets(s3_client: S3Client) -> Iterator['S3Bucket']:
+    def list_buckets(s3_resource: S3ServiceResource) -> Iterator['S3Bucket']:
         """
         returns a list of all the buckets in this client
 
-        :param s3_client: the s3 client to use
-        :return:
+        :param s3_resource: the s3 resource to use
+        :return: iterator of bucket objects
         """
-        for bucket in s3_client.s3_resource.buckets.all():
-            yield S3Bucket(bucket_name=bucket.name, s3_client=s3_client)
+        for bucket in s3_resource.buckets.all():
+            yield S3Bucket(bucket_name=bucket.name, s3_resource=s3_resource)
 
-    def __init__(self, bucket_name: str, s3_client: S3Client, auto_create: bool = False):
+    def __init__(self, bucket_name: str, s3_resource: S3ServiceResource, auto_create: bool = False):
         """
         this class represents a single S3 Bucket
 
         :param bucket_name: the name of the bucket to work with
-        :param s3_client: the s3 client to use
+        :param s3_resource: the s3 resource to use
         :param auto_create: should we create the bucket if it doesn't exist?
         """
         if not BUCKET_NAME_VALIDATOR.match(bucket_name):
             raise S3BucketException(f'Invalid Bucket Name:{bucket_name}. check bucket naming rules.')
         try:
             self._bucket_name = bucket_name
-            self._s3client = s3_client
-            self._s3bucket = s3_client.s3_resource.Bucket(bucket_name)
-            s3_client.s3_resource.meta.client.head_bucket(Bucket=bucket_name)
+            self._s3_resource = s3_resource
+            self._s3bucket = s3_resource.Bucket(bucket_name)
+            s3_resource.meta.client.head_bucket(Bucket=bucket_name)
         except ClientError as ex:
             code = ''
             if 'Error' in ex.response:
@@ -185,11 +186,11 @@ class S3Bucket:
         self._s3bucket.delete()
 
     @property
-    def s3_client(self) -> S3Client:
+    def s3_resource(self) -> S3ServiceResource:
         """
         the client for this bucket
         """
-        return self._s3client
+        return self._s3_resource
 
     @property
     def name(self) -> str:
@@ -206,7 +207,7 @@ class S3Bucket:
         :param key: the key to item
         :return: the url to item
         """
-        return urljoin(self.s3_client.endpoint, f'{self.name}/{key}')
+        return urljoin(self.s3_resource.meta.client.meta.endpoint_url, f'{self.name}/{key}')
 
     def allow_public_access(self):
         """
@@ -237,12 +238,13 @@ class S3Bucket:
         :param days: the number of days for an item to live
         """
         try:
+            status: Literal['Disabled', 'Enabled']
             if days <= 0:
                 status = 'Disabled'
                 days = 1
             else:
                 status = 'Enabled'
-            lc = {
+            lc: LifecycleConfigurationTypeDef = {
                 'Rules': [{
                     'Status': status,
                     'Prefix': '',
@@ -260,7 +262,7 @@ class S3Bucket:
             raise S3BucketException(
                 f'Error While setting bucket lifecycle: {code}') from ex
 
-    def put_object(self, key: str, buf: 'SupportsRead[bytes]', metadata: Dict[str, str], **kwargs) -> S3Object:
+    def put_object(self, key: str, buf: Union[str, bytes, IO[Any]], metadata: Dict[str, str], **kwargs) -> S3Object:
         """
         puts a binary object in the bucket
 
@@ -279,17 +281,17 @@ class S3Bucket:
             raise S3BucketException(
                 f'Error While putting object to key "{key}": {code}') from ex
 
-    def upload_object(self, key: str, stream: 'SupportsRead[bytes]', **kwargs) -> S3Object:
+    def upload_object(self, key: str, stream: IO[Any], **kwargs) -> S3Object:
         """
         uploads a binary stream to the bucket
 
         :param key: the key of the object to put
         :param stream: the stream to put in the bucket
         """
-        self._s3client.s3_resource.meta.client.upload_fileobj(stream, self.name, key, **kwargs)
+        self._s3_resource.meta.client.upload_fileobj(stream, self.name, key, **kwargs)
         return S3Object(self._s3bucket.Object(key))
 
-    def download_object(self, key: str, writable_stream: 'SupportsWrite[bytes]', **kwargs):
+    def download_object(self, key: str, writable_stream: IO[Any], **kwargs):
         """
         downloads an object from the bucket into a writable stream
 
@@ -297,7 +299,7 @@ class S3Bucket:
         :param writable_stream: the writable stream to write into
         :return:
         """
-        self._s3client.s3_resource.meta.client.download_fileobj(self.name, key, writable_stream, **kwargs)
+        self.s3_resource.meta.client.download_fileobj(self.name, key, writable_stream, **kwargs)
 
     def get_object(self, key: str) -> S3Object:
         """

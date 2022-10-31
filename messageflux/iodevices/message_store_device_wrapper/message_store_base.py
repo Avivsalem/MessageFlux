@@ -25,7 +25,6 @@ class MessageStoreBase(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
     def connect(self):
         """
         connects to Message Store
@@ -38,7 +37,6 @@ class MessageStoreBase(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
     def disconnect(self):
         """
         closes the connection to Message Store
