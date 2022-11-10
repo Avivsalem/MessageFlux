@@ -223,8 +223,8 @@ class S3Bucket:
                         "s3:ListBucket"
                     ],
                     "Resource": [
-                        f"urn:sgws:s3:::{self.name}",
-                        f"urn:sgws:s3:::{self.name}/*"
+                        f"arn:aws:s3:::{self.name}",
+                        f"arn:aws:s3:::{self.name}/*"
                     ]
                 }
             ]
