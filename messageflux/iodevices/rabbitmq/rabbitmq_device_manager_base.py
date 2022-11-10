@@ -43,7 +43,7 @@ class RabbitMQDeviceManagerBase:
                  user: str,
                  password: str,
                  port: Optional[int] = None,
-                 ssl_context: ssl.SSLContext = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
                  virtual_host: Optional[str] = None,
                  client_args: Optional[Dict[str, str]] = None,
                  connection_type: str = "None",
@@ -299,7 +299,7 @@ class RabbitMQDeviceManagerBase:
     def unbind_queue(self,
                      queue_name: str,
                      exchange: str,
-                     routing_key: str = None,
+                     routing_key: Optional[str] = None,
                      arguments: Optional[Dict[str, Any]] = None) -> 'PikaMethod':
         """
         Unbind the queue from the specified exchange

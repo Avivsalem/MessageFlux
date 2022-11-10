@@ -36,7 +36,7 @@ class BaseService(metaclass=ABCMeta):
     """
 
     def __init__(self, *,
-                 name: str = None,
+                 name: Optional[str] = None,
                  should_stop_on_signal: bool = True):
         """
 

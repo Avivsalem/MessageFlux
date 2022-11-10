@@ -2,6 +2,7 @@ import logging
 
 from messageflux.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle
+from typing import Optional
 
 
 class FailoverOutputDevice(OutputDevice['FailoverOutputDeviceManager']):
@@ -13,7 +14,7 @@ class FailoverOutputDevice(OutputDevice['FailoverOutputDeviceManager']):
                  device_manager: 'FailoverOutputDeviceManager',
                  inner_device: OutputDevice,
                  failover_device: OutputDevice,
-                 device_name: str = None):
+                 device_name: Optional[str] = None):
         """
         this device tries to send to primary output device - if the primary fails, it sends to secondary
 

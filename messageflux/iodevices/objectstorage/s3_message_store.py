@@ -93,8 +93,6 @@ class S3MessageStore(MessageStoreBase):
         bucket = self._bucket_cache.get(bucket_name, None)
         if bucket is None:
             bucket = S3Bucket(bucket_name, self._s3_resource, auto_create=auto_create)
-            if auto_create:
-                bucket.allow_public_access()
             self._bucket_cache[bucket_name] = bucket
 
         return bucket
