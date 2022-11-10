@@ -187,7 +187,7 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
                  poison_counter: PoisonCounterBase,
                  max_poison_count: int = 3,
                  port: Optional[int] = None,
-                 ssl_context: ssl.SSLContext = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
                  virtual_host: Optional[str] = None,
                  client_args: Optional[Dict[str, str]] = None,
                  heartbeat: int = 300,

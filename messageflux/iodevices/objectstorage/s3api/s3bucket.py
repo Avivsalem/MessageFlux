@@ -358,8 +358,8 @@ class S3Bucket:
                 f'Error While listing objects in bucket "{self._bucket_name}": {code}') from ex
 
     def find_objects(self,
-                     prefix: str = None,
-                     delimiter: str = None,
+                     prefix: Optional[str] = None,
+                     delimiter: Optional[str] = None,
                      max_keys: int = 1000,
                      **kwargs) -> Iterator[S3Object]:
         """

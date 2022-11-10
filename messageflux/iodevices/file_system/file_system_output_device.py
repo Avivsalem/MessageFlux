@@ -22,7 +22,7 @@ class FileSystemOutputDevice(OutputDevice['FileSystemOutputDeviceManager']):
                  name: str,
                  tmp_folder: str,
                  queues_folder: str,
-                 format_filename: str = None,
+                 format_filename: Optional[str] = None,
                  serializer: Optional[FileSystemSerializerBase] = None):
         """
         :param manager: the output device manager that created this device
@@ -99,7 +99,7 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
                  tmp_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_TMPDIR_SUB_DIR,
                  bookkeeping_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_BOOKKEEPING_SUB_DIR,
                  serializer: Optional[FileSystemSerializerBase] = None,
-                 output_filename_format: str = None):
+                 output_filename_format: Optional[str] = None):
         """
         :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
