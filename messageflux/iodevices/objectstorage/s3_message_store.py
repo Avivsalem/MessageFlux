@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from abc import abstractmethod, ABCMeta
 from hashlib import md5
 from typing import Optional, BinaryIO, Dict, Any, Tuple
 
@@ -56,7 +57,7 @@ class BucketNameFormatterBase:
         return self._sanitize_bucket_name(formatted_name)
 
 
-class S3MessageStore(MessageStoreBase):
+class _S3MessageStoreBase(MessageStoreBase, metaclass=ABCMeta):
     """
     a message store that uses S3 as it's base
     """
@@ -64,10 +65,9 @@ class S3MessageStore(MessageStoreBase):
 
     def __init__(self,
                  s3_resource: S3ServiceResource,
-                 magic: bytes = b"__S3_MSGSTORE__",
+                 magic: bytes,
                  auto_create_bucket: bool = False,
-                 bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
-                 put_object_extra_args: Optional[Dict[str, Any]] = None):
+                 bucket_name_formatter: Optional[BucketNameFormatterBase] = None):
         """
         An S3 based message store
 
@@ -76,7 +76,6 @@ class S3MessageStore(MessageStoreBase):
                                    when a message is being put in a nonexistent one.
         :param bucket_name_formatter: a formatter to use to manipulate the bucket name.
                                       if none is given the device name will be used
-        :param put_object_extra_args: extra args to give to bucket.put_object(). i.e 'StorageClass'
         """
         self.bucket_name_formatter = bucket_name_formatter or BucketNameFormatterBase()
         self._magic = magic
@@ -84,7 +83,6 @@ class S3MessageStore(MessageStoreBase):
         self._s3_resource = s3_resource
         self._auto_create_bucket = auto_create_bucket
         self._bucket_cache: Dict[str, S3Bucket] = {}
-        self._put_object_extra_args = put_object_extra_args or {}
 
     def _get_bucket(self, bucket_name: str, auto_create=False) -> S3Bucket:
         """
@@ -133,14 +131,16 @@ class S3MessageStore(MessageStoreBase):
     def _deserialize_headers(self, headers: Dict[str, str]) -> Dict[str, Any]:
         return json.loads(headers.get(self._ORIGINAL_HEADERS_KEY, '{}'))
 
-    def _read_message_from_bucket(self, bucket_name, key) -> Tuple[BinaryIO, Dict[str, Any]]:
+    @abstractmethod
+    def _read_message_from_bucket(self, bucket: S3Bucket, key: str) -> Tuple[BinaryIO, Dict[str, Any]]:
         """
         reads the message from the current s3 api
         """
-        bucket = self._get_bucket(bucket_name)
-        s3obj = bucket.get_object(key=key)
-        headers = s3obj.metadata
-        return s3obj.body, headers
+        pass
+
+    @abstractmethod
+    def _put_message_to_bucket(self, bucket: S3Bucket, key: str, message: BinaryIO, metadata: Dict[str, str]):
+        pass
 
     def read_message(self, key: str) -> MessageBundle:
         """
@@ -148,7 +148,8 @@ class S3MessageStore(MessageStoreBase):
         :return: a tuple of the bytes of the message to read, and its metadata
         """
         bucket_name, s3_key = self.deserialize_key(key)
-        body, headers = self._read_message_from_bucket(bucket_name, s3_key)
+        bucket = self._get_bucket(bucket_name)
+        body, headers = self._read_message_from_bucket(bucket, s3_key)
 
         message_headers = self._deserialize_headers(headers)
         device_headers = {KEY_HEADER_CONST: s3_key}
@@ -173,10 +174,10 @@ class S3MessageStore(MessageStoreBase):
 
         key = key + '.' + data_hash
         serialized_headers = self._serialize_headers(message_bundle.message.headers)
-        bucket.put_object(key=key,
-                          buf=message_bundle.message.stream,
-                          metadata=serialized_headers,
-                          **self._put_object_extra_args)
+        self._put_message_to_bucket(bucket=bucket,
+                                    key=key,
+                                    message=message_bundle.message.stream,
+                                    metadata=serialized_headers)
         return self._serialize_key(bucket, key)
 
     def delete_message(self, key: str):
@@ -187,3 +188,81 @@ class S3MessageStore(MessageStoreBase):
         bucket_name, s3_key = self.deserialize_key(key)
         bucket = self._get_bucket(bucket_name=bucket_name)
         bucket.delete_object(s3_key)
+
+
+class S3MessageStore(_S3MessageStoreBase):
+    """
+    a message store that uses S3 as it's base
+    """
+
+    def __init__(self,
+                 s3_resource: S3ServiceResource,
+                 magic: bytes = b"__S3_MSGSTORE__",
+                 auto_create_bucket: bool = False,
+                 bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
+                 put_object_extra_args: Optional[Dict[str, Any]] = None):
+        """
+        An S3 based message store
+
+        :param s3_resource: the s3 resource from boto
+        :param auto_create_bucket: Whether or not a bucket will be created
+                                   when a message is being put in a nonexistent one.
+        :param bucket_name_formatter: a formatter to use to manipulate the bucket name.
+                                      if none is given the device name will be used
+        :param put_object_extra_args: extra args to give to bucket.put_object(). i.e 'StorageClass'
+        """
+        super().__init__(s3_resource=s3_resource,
+                         magic=magic,
+                         auto_create_bucket=auto_create_bucket,
+                         bucket_name_formatter=bucket_name_formatter)
+        self._put_object_extra_args = put_object_extra_args or {}
+
+    def _read_message_from_bucket(self, bucket: S3Bucket, key: str) -> Tuple[BinaryIO, Dict[str, Any]]:
+        s3obj = bucket.get_object(key=key)
+        headers = s3obj.metadata
+        return s3obj.body, headers
+
+    def _put_message_to_bucket(self, bucket: S3Bucket, key: str, message: BinaryIO, metadata: Dict[str, str]):
+        bucket.put_object(key=key,
+                          buf=message,
+                          metadata=metadata,
+                          **self._put_object_extra_args)
+
+
+class S3UploadMessageStore(_S3MessageStoreBase):
+    """
+    a message store that uses S3 as it's base (using upload_file method)
+    """
+
+    def __init__(self,
+                 s3_resource: S3ServiceResource,
+                 magic: bytes = b"__S3_UPLOAD_MSGSTORE__",
+                 auto_create_bucket: bool = False,
+                 bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
+                 upload_extra_args: Optional[Dict[str, Any]] = None):
+        """
+        An S3 based message store
+
+        :param s3_resource: the s3 resource from boto
+        :param auto_create_bucket: Whether or not a bucket will be created
+                                   when a message is being put in a nonexistent one.
+        :param bucket_name_formatter: a formatter to use to manipulate the bucket name.
+                                      if none is given the device name will be used
+        :param upload_extra_args: extra args to give to client.upload_fileobj(). i.e 'StorageClass'
+        """
+        super().__init__(s3_resource=s3_resource,
+                         magic=magic,
+                         auto_create_bucket=auto_create_bucket,
+                         bucket_name_formatter=bucket_name_formatter)
+        self._upload_extra_args = upload_extra_args or {}
+
+    def _read_message_from_bucket(self, bucket: S3Bucket, key: str) -> Tuple[BinaryIO, Dict[str, Any]]:
+        s3obj = bucket.get_object(key=key)
+        headers = s3obj.metadata
+        return s3obj.body, headers
+
+    def _put_message_to_bucket(self, bucket: S3Bucket, key: str, message: BinaryIO, metadata: Dict[str, str]):
+        bucket.upload_object(key=key,
+                             stream=message,
+                             metadata=metadata,
+                             **self._upload_extra_args)

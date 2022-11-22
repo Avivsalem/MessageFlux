@@ -2,8 +2,8 @@ import json
 import re
 from datetime import datetime
 from io import BytesIO
-from typing_extensions import Literal
 from typing import Optional, Dict, Any, Iterator, TYPE_CHECKING, Union, IO
+from typing_extensions import Literal
 from urllib.parse import urljoin
 
 try:
@@ -281,15 +281,29 @@ class S3Bucket:
             raise S3BucketException(
                 f'Error While putting object to key "{key}": {code}') from ex
 
-    def upload_object(self, key: str, stream: IO[Any], **kwargs) -> S3Object:
+    def upload_object(self, key: str, stream: IO[Any], metadata: Dict[str, str], **kwargs) -> S3Object:
         """
         uploads a binary stream to the bucket
 
         :param key: the key of the object to put
         :param stream: the stream to put in the bucket
+        :param metadata: extra metadata
         """
-        self._s3_resource.meta.client.upload_fileobj(stream, self.name, key, **kwargs)
-        return S3Object(self._s3bucket.Object(key))
+        try:
+            extra_args = kwargs.pop('ExtraArgs', {})
+            extra_args['Metadata'] = metadata
+            self._s3_resource.meta.client.upload_fileobj(Fileobj=stream,
+                                                         Bucket=self.name,
+                                                         Key=key,
+                                                         ExtraArgs=extra_args,
+                                                         **kwargs)
+            return S3Object(self._s3bucket.Object(key))
+        except ClientError as ex:
+            code = ''
+            if 'Error' in ex.response:
+                code = ex.response['Error'].get('Code', '')
+            raise S3BucketException(
+                f'Error While uploading object to key "{key}": {code}') from ex
 
     def download_object(self, key: str, writable_stream: IO[Any], **kwargs):
         """
