@@ -22,20 +22,22 @@ theme:
         icon: material/brightness-7
         name: Switch to dark mode
 
+  features:
+    - content.code.annotate
 
-extra_css: [css/extra.css]
+extra_css: [ css/extra.css ]
 
 plugins:
   - search
   - gen-files:
       scripts:
-      - docs/gen_ref_pages.py
+        - docs/gen_ref_pages.py
   - literate-nav:
       nav_file: SUMMARY.md
   - section-index
 
   # mkdocstrings is missing schema.json refers to the material schema
-  - mkdocstrings: 
+  - mkdocstrings:
       handlers:
         python:
           options:
@@ -48,4 +50,8 @@ plugins:
 
 markdown_extensions:
   - markdown.extensions.admonition
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
