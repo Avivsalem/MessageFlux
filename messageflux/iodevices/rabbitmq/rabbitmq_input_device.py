@@ -298,7 +298,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
     """
 
     def __init__(self,
-                 hosts: List[str],
+                 hosts: Union[List[str], str],
                  user: str,
                  password: str,
                  port: Optional[int] = None,
@@ -315,7 +315,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
         """
         This manager used to create RabbitMQ devices (direct queues)
 
-        :param hosts: the list of hostnames of the manager
+        :param hosts: the hostname or a list of hostnames of the manager
         :param user: the username for the rabbitMQ manager
         :param password: the password for the rabbitMQ manager
         :param port: the port to connect the hosts to

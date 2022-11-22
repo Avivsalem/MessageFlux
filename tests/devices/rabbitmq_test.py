@@ -51,13 +51,13 @@ def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceMan
 
 
 def test_sanity():
-    in_mgr = RabbitMQInputDeviceManager(hosts=[RABBIT_HOST],
+    in_mgr = RabbitMQInputDeviceManager(hosts=RABBIT_HOST,
                                         user=RABBIT_USERNAME,
                                         password=RABBIT_PASSWORD,
                                         ssl_context=ssl.create_default_context(),
                                         virtual_host=RABBIT_VHOST)
 
-    out_mgr = RabbitMQOutputDeviceManager(hosts=[RABBIT_HOST],
+    out_mgr = RabbitMQOutputDeviceManager(hosts=RABBIT_HOST,
                                           user=RABBIT_USERNAME,
                                           password=RABBIT_PASSWORD,
                                           ssl_context=ssl.create_default_context(),
