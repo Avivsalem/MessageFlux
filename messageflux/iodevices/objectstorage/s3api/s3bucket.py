@@ -8,7 +8,8 @@ from urllib.parse import urljoin
 
 try:
     from mypy_boto3_s3 import S3ServiceResource
-    from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef
+    from mypy_boto3_s3.service_resource import ObjectSummary, Object
+    from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef, GetObjectOutputTypeDef
     from boto3.s3.inject import ClientError
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
@@ -45,14 +46,14 @@ class S3Object:
     represents an s3 object with lazy content get
     """
 
-    def __init__(self, object_summery):
+    def __init__(self, object_summery: ObjectSummary, object_cache: Optional[GetObjectOutputTypeDef] = None):
         self._object_summery = object_summery
-        self._object_cache = None
-        self._body = None
-        self._metadata = None
+        self._object_cache = object_cache
+        self._body: Optional[BytesIO] = None
+        self._metadata: Optional[Dict[str, str]] = None
 
     @property
-    def _object_dict(self) -> Dict[str, Any]:
+    def _object_dict(self) -> GetObjectOutputTypeDef:
         if self._object_cache is None:
             self._object_cache = self._object_summery.get()
         return self._object_cache
@@ -71,7 +72,8 @@ class S3Object:
         """
         if self._body is None:
             return self._object_dict['Body']
-        return self._body
+        else:
+            return self._body
 
     @property
     def body(self) -> BytesIO:
@@ -96,14 +98,14 @@ class S3Object:
     @property
     def last_modified(self) -> datetime:
         """
-        the object's last modified time
+        the object's last modified time (might incur a request to the server)
         """
         return self._object_summery.last_modified
 
     @property
     def size(self) -> int:
         """
-        the object's size
+        the object's size (might incur a request to the server)
         """
         return self._object_summery.size
 
@@ -271,8 +273,8 @@ class S3Bucket:
         :param metadata: extra metadata
         """
         try:
-            obj_summary = self._s3bucket.put_object(Key=key, Metadata=metadata, Body=buf, **kwargs)
-            result = S3Object(object_summery=obj_summary)
+            self._s3bucket.put_object(Key=key, Metadata=metadata, Body=buf, **kwargs)
+            result = S3Object(object_summery=self.s3_resource.ObjectSummary(bucket_name=self._bucket_name, key=key))
             return result
         except ClientError as ex:
             code = ''
@@ -297,7 +299,7 @@ class S3Bucket:
                                                          Key=key,
                                                          ExtraArgs=extra_args,
                                                          **kwargs)
-            return S3Object(self._s3bucket.Object(key))
+            return S3Object(self.s3_resource.ObjectSummary(bucket_name=self._bucket_name, key=key))
         except ClientError as ex:
             code = ''
             if 'Error' in ex.response:
@@ -323,9 +325,8 @@ class S3Bucket:
         :return: the buffer of the object, and the metadata dict
         """
         try:
-            obj_summary = self._s3bucket.Object(key)
-            obj_summary.load()  # checks that this item exists
-            return S3Object(obj_summary)
+            obj_summary = self.s3_resource.ObjectSummary(bucket_name=self._bucket_name, key=key)
+            return S3Object(obj_summary, obj_summary.get())
         except ClientError as ex:
             code = ''
             if 'Error' in ex.response:
