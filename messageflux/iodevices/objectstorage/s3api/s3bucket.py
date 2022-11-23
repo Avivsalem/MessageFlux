@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 
 try:
     from mypy_boto3_s3 import S3ServiceResource
-    from mypy_boto3_s3.service_resource import ObjectSummary, Object
+    from mypy_boto3_s3.service_resource import ObjectSummary
     from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef, GetObjectOutputTypeDef
     from boto3.s3.inject import ClientError
 except ImportError as ex:
