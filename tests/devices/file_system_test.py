@@ -1,11 +1,13 @@
 import os
 from io import BytesIO
+from uuid import uuid4
 
 from messageflux.iodevices.base import InputTransactionScope, Message
 from messageflux.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager, \
     NoHeadersFileSystemSerializer, DefaultFileSystemSerializer
 from messageflux.iodevices.file_system.file_system_device_manager_base import FileSystemDeviceManagerBase
 from messageflux.iodevices.file_system.file_system_input_device import TransactionLog
+from messageflux.iodevices.file_system.file_system_serializer import ZIPFileSystemSerializer, ConcatFileSystemSerializer
 from tests.devices.common import sanity_test, rollback_test
 
 QUEUE_NAME = "Test"
@@ -147,3 +149,21 @@ def test_output_file_system_manager_format(tmpdir):
     assert len(os.listdir(os.path.join(tmpdir, 'test'))) == 1
     with open(os.path.join(tmpdir, 'test', 'abc.txt'), "rb") as f:
         assert serializer.deserialize(f).bytes == b'ABC'
+
+
+def test_zip_serializer():
+    serializer = ZIPFileSystemSerializer()
+    input_message = Message(uuid4().bytes * 1024, headers={'test': 'foo'})
+    stream = serializer.serialize(input_message)
+    output_message = serializer.deserialize(stream)
+
+    assert input_message == output_message
+
+
+def test_concat_serializer():
+    serializer = ConcatFileSystemSerializer()
+    input_message = Message(uuid4().bytes * 1024, headers={'test': 'foo'})
+    stream = serializer.serialize(input_message)
+    output_message = serializer.deserialize(stream)
+
+    assert input_message == output_message

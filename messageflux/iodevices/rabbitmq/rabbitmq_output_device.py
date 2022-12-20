@@ -69,11 +69,11 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                              Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
 
     def __init__(self,
-                 hosts: List[str],
+                 hosts: Union[List[str], str],
                  user: str,
                  password: str,
                  port: Optional[int] = None,
-                 ssl_context: ssl.SSLContext = None,
+                 ssl_context: Optional[ssl.SSLContext] = None,
                  virtual_host: Optional[str] = None,
                  default_output_exchange: str = '',
                  publish_confirm: bool = True,
@@ -89,7 +89,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         """
         This manager used to create RabbitMQ devices (direct queues)
 
-        :param hosts: the list of hostnames of the manager
+        :param hosts: the hostname or a list of hostnames of the manager
         :param user: the username for the rabbitMQ manager
         :param password: the password for the rabbitMQ manager
         :param port: the port to connect the hosts to
@@ -160,9 +160,9 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                         routing_key: str,
                         data: BinaryIO,
                         exchange: str = "",
-                        headers: Dict[str, Any] = None,
-                        app_id: str = None,
-                        message_id: str = None,
+                        headers: Optional[Dict[str, Any]] = None,
+                        app_id: Optional[str] = None,
+                        message_id: Optional[str] = None,
                         persistent: bool = True,
                         mandatory: bool = False,
                         priority: Optional[int] = None,
@@ -238,9 +238,9 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                        routing_key: str,
                        data: BinaryIO,
                        exchange: str = "",
-                       headers: Dict[str, Any] = None,
-                       app_id: str = None,
-                       message_id: str = None,
+                       headers: Optional[Dict[str, Any]] = None,
+                       app_id: Optional[str] = None,
+                       message_id: Optional[str] = None,
                        persistent: bool = True,
                        mandatory: bool = False,
                        priority: Optional[int] = None,
@@ -305,7 +305,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         except Exception as ex:
             raise OutputDeviceException('Could not connect to rabbitmq.') from ex
 
-    def get_output_device(self, device_name: str, exchange: str = None) -> RabbitMQOutputDevice:
+    def get_output_device(self, device_name: str, exchange: Optional[str] = None) -> RabbitMQOutputDevice:
         """
         Returns and outgoing device by name
 

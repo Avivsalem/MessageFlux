@@ -33,7 +33,7 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
         :param wait_for_batch_count: should the service wait the whole read_timeout for batch_count messages to be read.
         'False' means that it will read *up-to* batch_count messages, and process them immediately.
         'True' means that it will wait until read_timeout is passed, or batch_count messages has reached.
-        :param kwargs: passed to parent as is
+        :param **kwargs: passed to parent as is
         """
         super().__init__(**kwargs)
         self._input_device_manager = input_device_manager
@@ -127,7 +127,7 @@ class BatchMessageHandlerBase(metaclass=ABCMeta):
 
 class BatchMessageHandlingService(MessageHandlingServiceBase):
     """
-    a service thats reads from input devices and handles the messages
+    a service that reads from input devices and handles the messages
     """
 
     def __init__(self, *,
@@ -136,7 +136,7 @@ class BatchMessageHandlingService(MessageHandlingServiceBase):
         """
 
         :param batch_handler: the message handler to use.
-        :param kwargs: passed to parent as is
+        :param **kwargs: passed to parent as is
         """
         super().__init__(**kwargs)
         self._message_handler = batch_handler
@@ -217,6 +217,6 @@ class MessageHandlingService(BatchMessageHandlingService):
 
     def __init__(self, *, message_handler: MessageHandlerBase, **kwargs):
         """
-        :param kwargs: passed to parent as is
+        :param **kwargs: passed to parent as is
         """
         super().__init__(batch_handler=self._BatchMessageHandlerAdapter(message_handler), **kwargs)
