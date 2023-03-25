@@ -38,7 +38,7 @@ jobs:
           echo "File Version: $(<VERSION)"
           python compute_new_version.py -r ${{ steps.get-latest-tag.outputs.tag }} -m "$(<VERSION)" > VERSION
           echo "New Version: $(<VERSION)"
-          echo "::set-output name=new_version::$(<VERSION)"
+          echo "new_version=$(<VERSION)" >> $GITHUB_OUTPUT
 
       - name: Push New Version Tag
         uses: actions-ecosystem/action-push-tag@v1
