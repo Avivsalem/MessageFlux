@@ -28,7 +28,7 @@ jobs:
           python-version: "3.10"
 
       - name: Get Latest Tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
+        uses: WyriHaximus/github-action-get-previous-tag@v1
         id: get-latest-tag
 
       - name: Compute New Version
