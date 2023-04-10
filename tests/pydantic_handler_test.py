@@ -21,7 +21,7 @@ class TestOutputModel(BaseModel):
     b: str
 
 
-class TestPydanticHandler(PydanticPipelineHandler):
+class TestPydanticHandler(PydanticPipelineHandler[TestInputModel]):
     def handle_model(self, input_device: InputDevice, model: TestInputModel) -> Optional[PydanticPipelineResult]:
         return PydanticPipelineResult(output_device_name='test_device', model=TestOutputModel(a=model.x, b=model.y))
 
@@ -35,7 +35,7 @@ def test_sanity():
     input_device.send_message(Message(input_bytes))
     output_device_manager = InMemoryDeviceManager()
     service = PipelineService(input_device_manager=input_device_manager,
-                              input_device_names=[input_device_name],
+                              input_device_names=input_device_name,
                               max_batch_read_count=3,
                               output_device_manager=output_device_manager,
                               pipeline_handler=TestPydanticHandler())

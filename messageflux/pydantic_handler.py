@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Generic
 
 try:
     from pydantic import BaseModel
@@ -24,7 +24,7 @@ class PydanticPipelineResult:
 T = TypeVar('T', bound=BaseModel)
 
 
-class PydanticPipelineHandler(PipelineHandlerBase, metaclass=ABCMeta):
+class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta):
     def __init__(self):
         self._model_annotation = self.handle_model.__annotations__.get('model', None)
         if (
