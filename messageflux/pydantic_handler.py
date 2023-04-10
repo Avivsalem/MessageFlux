@@ -37,8 +37,8 @@ class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta
         result = self.handle_model(input_device=input_device, model=model)
         if result is None:
             return result
-
-        output_data = json.dumps(result.model, default=BaseModel.__json_encoder__).encode()
+        json_encoder = getattr(result.model, '__json_encoder__', BaseModel.__json_encoder__)
+        output_data = json.dumps(result.model, default=json_encoder).encode()
         return PipelineResult(output_device_name=result.output_device_name,
                               message_bundle=MessageBundle(message=Message(data=output_data)))
 
