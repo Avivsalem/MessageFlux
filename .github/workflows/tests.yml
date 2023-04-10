@@ -18,26 +18,26 @@ jobs:
     strategy:
       matrix:
         platform: [ ubuntu-latest, windows-latest ]
-        python-version: ['3.7', '3.8', '3.9', '3.10','3.11']
+        python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
 
     runs-on: ${{ matrix.platform }}
 
     steps:
-        # Checkout the latest code from the repo
+      # Checkout the latest code from the repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
-        # Setup which version of Python to use
+      # Setup which version of Python to use
       - name: Set Up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
-        # Display the Python version being used
+      # Display the Python version being used
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
 
-        # Install any basic dependencies required to run the tests
+      # Install any basic dependencies required to run the tests
       - name: Install dependencies
         run: |
           python -m pip install pip -U
