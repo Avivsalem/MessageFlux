@@ -1,4 +1,5 @@
 import logging
+from typing import Dict
 
 from messageflux.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle
@@ -53,7 +54,7 @@ class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
         self._logger = logging.getLogger(__name__)
 
         self._sqs_resource = sqs_resource
-        self._queue_cache = {}
+        self._queue_cache: Dict[str, Queue] = {}
 
     def get_output_device(self, queue_name: str) -> SQSOutputDevice:
         """
