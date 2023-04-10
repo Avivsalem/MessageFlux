@@ -20,8 +20,8 @@ class TestOutputModel(BaseModel):
 
 
 class TestPydanticHandler(PydanticPipelineHandler[TestInputModel]):
-    def handle_model(self, input_device: InputDevice, model: TestInputModel) -> Optional[PydanticPipelineResult]:
-        return PydanticPipelineResult(output_device_name='test_device', model=TestOutputModel(a=model.x, b=model.y))
+    def handle_object(self, input_device: InputDevice, pydantic_object: TestInputModel) -> Optional[PydanticPipelineResult]:
+        return PydanticPipelineResult(output_device_name='test_device', pydantic_object=TestOutputModel(a=pydantic_object.x, b=pydantic_object.y))
 
 
 def test_sanity():
@@ -36,11 +36,11 @@ def test_sanity():
 
 
 class TestListPydanticHandler(PydanticPipelineHandler[List[TestInputModel]]):
-    def handle_model(self, input_device: InputDevice, model: List[TestInputModel]) -> Optional[PydanticPipelineResult]:
+    def handle_object(self, input_device: InputDevice, pydantic_object: List[TestInputModel]) -> Optional[PydanticPipelineResult]:
         results = []
-        for input_model in model:
+        for input_model in pydantic_object:
             results.append(TestOutputModel(a=input_model.x, b=input_model.y))
-        return PydanticPipelineResult(output_device_name='test_device', model=results)
+        return PydanticPipelineResult(output_device_name='test_device', pydantic_object=results)
 
 
 def test_complex_type():
