@@ -1,9 +1,10 @@
+import json
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Any
 
 try:
-    from pydantic import BaseModel
+    from pydantic import BaseModel, parse_raw_as
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[pydantic]') from ex
 
@@ -18,32 +19,28 @@ class PydanticPipelineResult:
     a result from pipeline handler
     """
     output_device_name: str
-    model: BaseModel
+    model: Any
 
 
-T = TypeVar('T', bound=BaseModel)
+T = TypeVar('T')
 
 
 class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta):
     def __init__(self):
         self._model_annotation = self.handle_model.__annotations__.get('model', None)
-        if (
-                not self._model_annotation or
-                not isinstance(self._model_annotation, type) or
-                not issubclass(self._model_annotation, BaseModel)
-        ):
+        if self._model_annotation is None:
             # TODO: better exception type
-            raise ValueError(
-                f"'model' is annotated as {self._model_annotation} which is not a pydantic BaseModel")
+            raise ValueError(f"'model' is not annotated")
 
     def handle_message(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
-        model = self._model_annotation.parse_raw(message_bundle.message.bytes)
+        model = parse_raw_as(self._model_annotation, message_bundle.message.bytes)
         result = self.handle_model(input_device=input_device, model=model)
         if result is None:
             return result
 
+        output_data = json.dumps(result.model, default=BaseModel.__json_encoder__).encode()
         return PipelineResult(output_device_name=result.output_device_name,
-                              message_bundle=MessageBundle(message=Message(data=result.model.json().encode())))
+                              message_bundle=MessageBundle(message=Message(data=output_data)))
 
     @abstractmethod
     def handle_model(self, input_device: InputDevice, model: T) -> Optional[PydanticPipelineResult]:
