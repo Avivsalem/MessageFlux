@@ -30,7 +30,7 @@ class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta
         self._model_annotation = self.handle_object.__annotations__.get('pydantic_object', None)
         if self._model_annotation is None:
             # TODO: better exception type
-            raise ValueError(f"'model' is not annotated")
+            raise ValueError("'pydantic_object' param is not annotated")
 
     def handle_message(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
         model = parse_raw_as(self._model_annotation, message_bundle.message.bytes)

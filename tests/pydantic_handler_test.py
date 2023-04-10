@@ -20,8 +20,11 @@ class TestOutputModel(BaseModel):
 
 
 class TestPydanticHandler(PydanticPipelineHandler[TestInputModel]):
-    def handle_object(self, input_device: InputDevice, pydantic_object: TestInputModel) -> Optional[PydanticPipelineResult]:
-        return PydanticPipelineResult(output_device_name='test_device', pydantic_object=TestOutputModel(a=pydantic_object.x, b=pydantic_object.y))
+    def handle_object(self,
+                      input_device: InputDevice,
+                      pydantic_object: TestInputModel) -> Optional[PydanticPipelineResult]:
+        return PydanticPipelineResult(output_device_name='test_device',
+                                      pydantic_object=TestOutputModel(a=pydantic_object.x, b=pydantic_object.y))
 
 
 def test_sanity():
@@ -36,7 +39,9 @@ def test_sanity():
 
 
 class TestListPydanticHandler(PydanticPipelineHandler[List[TestInputModel]]):
-    def handle_object(self, input_device: InputDevice, pydantic_object: List[TestInputModel]) -> Optional[PydanticPipelineResult]:
+    def handle_object(self,
+                      input_device: InputDevice,
+                      pydantic_object: List[TestInputModel]) -> Optional[PydanticPipelineResult]:
         results = []
         for input_model in pydantic_object:
             results.append(TestOutputModel(a=input_model.x, b=input_model.y))
