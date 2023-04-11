@@ -16,7 +16,7 @@ from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
 
 def get_annotations(obj: Any) -> Dict:
     try:
-        from inspect import get_annotations
+        from inspect import get_annotations  # type: ignore
         return get_annotations(obj)
     except ImportError:
         return obj.__annotations__
