@@ -59,3 +59,19 @@ def test_complex_type():
     for i in range(len(output_models)):
         assert output_models[i].a == input_models[i].x
         assert output_models[i].b == input_models[i].y
+
+
+class TestMessagePydanticHandler(PydanticPipelineHandler[Message]):
+    def handle_object(self,
+                      input_device: InputDevice,
+                      pydantic_object: Message) -> Optional[PydanticPipelineResult]:
+        return PydanticPipelineResult(output_device_name='test_device',
+                                      pydantic_object=Message(data=pydantic_object.bytes))
+
+
+def test_message_type():
+    input_bytes = b'1234'
+    handler = TestMessagePydanticHandler()
+    result = handler.handle_message(None, MessageBundle(Message(input_bytes)))
+    assert result is not None
+    assert result.message_bundle.message.bytes == input_bytes

@@ -1,7 +1,8 @@
+import inspect
 import json
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
-from typing import Optional, TypeVar, Generic, Any
+from typing import Optional, TypeVar, Generic, Any, Dict
 
 try:
     from pydantic import BaseModel, parse_raw_as
@@ -11,6 +12,14 @@ except ImportError as ex:
 from messageflux import InputDevice
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
+
+
+def get_annotations(obj: Any) -> Dict:
+    try:
+        from inspect import get_annotations
+        return get_annotations(obj)
+    except ImportError:
+        return obj.__annotations__
 
 
 @dataclass
@@ -27,20 +36,35 @@ T = TypeVar('T')
 
 class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta):
     def __init__(self):
-        self._model_annotation = self.handle_object.__annotations__.get('pydantic_object', None)
+        self._model_annotation = get_annotations(self.handle_object).get('pydantic_object', None)
         if self._model_annotation is None:
             # TODO: better exception type
             raise ValueError("'pydantic_object' param is not annotated")
 
     def handle_message(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
-        model = parse_raw_as(self._model_annotation, message_bundle.message.bytes)
+        model: Any
+        if inspect.isclass(self._model_annotation) and issubclass(self._model_annotation, MessageBundle):
+            model = message_bundle
+        elif inspect.isclass(self._model_annotation) and issubclass(self._model_annotation, Message):
+            model = message_bundle.message
+        else:
+            model = parse_raw_as(self._model_annotation, message_bundle.message.bytes)
+
         result = self.handle_object(input_device=input_device, pydantic_object=model)
         if result is None:
             return result
         json_encoder = getattr(result.pydantic_object, '__json_encoder__', BaseModel.__json_encoder__)
-        output_data = json.dumps(result.pydantic_object, default=json_encoder).encode()
+
+        if isinstance(result.pydantic_object, MessageBundle):
+            output_bundle = result.pydantic_object
+        elif isinstance(result.pydantic_object, Message):
+            output_bundle = MessageBundle(message=result.pydantic_object)
+        else:
+            output_data = json.dumps(result.pydantic_object, default=json_encoder).encode()
+            output_bundle = MessageBundle(message=Message(data=output_data))
+
         return PipelineResult(output_device_name=result.output_device_name,
-                              message_bundle=MessageBundle(message=Message(data=output_data)))
+                              message_bundle=output_bundle)
 
     @abstractmethod
     def handle_object(self, input_device: InputDevice, pydantic_object: T) -> Optional[PydanticPipelineResult]:
