@@ -1,6 +1,7 @@
 import json
 from typing import Optional, List
 
+import pytest
 from pydantic import BaseModel, parse_raw_as
 
 from messageflux import InputDevice
@@ -75,3 +76,14 @@ def test_message_type():
     result = handler.handle_message(None, MessageBundle(Message(input_bytes)))
     assert result is not None
     assert result.message_bundle.message.bytes == input_bytes
+
+
+class TestErrorPaydanticHandler(PydanticPipelineHandler):
+
+    def handle_object(self, input_device: InputDevice, pydantic_object) -> Optional[PydanticPipelineResult]:
+        pass
+
+
+def test_error():
+    with pytest.raises(ValueError):
+        TestErrorPaydanticHandler()

@@ -2,7 +2,7 @@ import inspect
 import json
 from abc import abstractmethod, ABCMeta
 from dataclasses import dataclass
-from typing import Optional, TypeVar, Generic, Any, Dict
+from typing import Optional, TypeVar, Generic, Any
 
 try:
     from pydantic import BaseModel, parse_raw_as
@@ -12,14 +12,6 @@ except ImportError as ex:
 from messageflux import InputDevice
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
-
-
-def get_annotations(obj: Any) -> Dict:
-    try:
-        from inspect import get_annotations  # type: ignore
-        return get_annotations(obj)
-    except ImportError:
-        return obj.__annotations__
 
 
 @dataclass
@@ -36,10 +28,15 @@ T = TypeVar('T')
 
 class PydanticPipelineHandler(PipelineHandlerBase, Generic[T], metaclass=ABCMeta):
     def __init__(self):
-        self._model_annotation = get_annotations(self.handle_object).get('pydantic_object', None)
-        if self._model_annotation is None:
+        param = inspect.signature(self.handle_object).parameters.get('pydantic_object', None)
+        if param is None:
             # TODO: better exception type
-            raise ValueError("'pydantic_object' param is not annotated")
+            raise ValueError("'pydantic_object' param is missing")
+
+        self._model_annotation = param.annotation
+        if self._model_annotation is inspect.Parameter.empty:
+            # TODO: better exception type
+            raise ValueError("'pydantic_object' param is not type annotated")
 
     def handle_message(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
         model: Any
