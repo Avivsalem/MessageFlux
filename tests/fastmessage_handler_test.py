@@ -92,7 +92,7 @@ def test_special_args():
 
     @fm.map(input_device='input1')
     def do_something1(m: Message, b: MessageBundle, d: InputDeviceName, y: int):
-        return SomeOtherModel(y=f'b.test={b.device_headers["test"]}, m.test={m.headers["test"]}, y={y}')
+        return SomeOtherModel(y=f'd={d}, b.test={b.device_headers["test"]}, m.test={m.headers["test"]}, y={y}')
 
     result = fm.handle_message(FakeInputDevice('input1'),
                                MessageBundle(message=Message(data=b'{"y": 10}',
@@ -101,6 +101,6 @@ def test_special_args():
     assert result is not None
     assert result.output_device_name == default_output_device
     json_result = json.loads(result.message_bundle.message.bytes.decode())
-    assert json_result['y'] == 'b.test=btest, m.test=mtest, y=10'
+    assert json_result['y'] == 'd=input1, b.test=btest, m.test=mtest, y=10'
 
 # add tests for no output devices, etc...
