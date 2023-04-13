@@ -71,8 +71,8 @@ def test_missing_callback():
         return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
 
     with pytest.raises(MissingCallbackException):
-        result = fm.handle_message(FakeInputDevice('input2'),
-                                   MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "z":[1,2]}')))
+        _ = fm.handle_message(FakeInputDevice('input2'),
+                              MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "z":[1,2]}')))
 
 
 def test_validation_error():
@@ -83,7 +83,7 @@ def test_validation_error():
         return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
 
     with pytest.raises(ValidationError):
-        result = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"y": "a", "z":[1,2]}')))
+        _ = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"y": "a", "z":[1,2]}')))
 
 
 def test_special_args():
