@@ -27,7 +27,7 @@ dynamic = [
 
 [project.urls]
 Homepage = "https://github.com/Avivsalem/MessageFlux/"
-Documentation  = "https://messageflux.readthedocs.io/"
+Documentation = "https://messageflux.readthedocs.io/"
 
 [[project.authors]]
 name = "Aviv Salem"
@@ -64,6 +64,7 @@ version = { file = "VERSION" }
 dev = { file = "requirements-dev.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
 objectstorage = { file = "requirements-objectstorage.txt" }
+fastmessage = { file = "requirements-fastmessage.txt" }
 all = { file = "requirements-all.txt" }
 
 
