@@ -3,7 +3,7 @@ import json
 import logging
 from dataclasses import dataclass
 from inspect import Parameter
-from typing import Optional, Callable, Dict, List, Any
+from typing import Optional, Callable, Dict, List, Any, TypeVar
 
 from messageflux import InputDevice
 from messageflux.iodevices.base.common import MessageBundle, Message
@@ -47,6 +47,7 @@ class _DefaultClass(str):
 
 
 _DEFAULT = _DefaultClass()
+_CALLABLE_TYPE = TypeVar('_CALLABLE_TYPE', bound=Callable[..., Any])
 
 
 @dataclass
@@ -190,7 +191,9 @@ class FastMessage(PipelineHandlerBase):
                                                         input_device=input_device,
                                                         output_device=output_device)
 
-    def map(self, input_device: str, output_device: Optional[str] = _DEFAULT):
+    def map(self,
+            input_device: str,
+            output_device: Optional[str] = _DEFAULT) -> Callable[[_CALLABLE_TYPE], _CALLABLE_TYPE]:
         """
         this is the decorator method
 
@@ -200,7 +203,7 @@ class FastMessage(PipelineHandlerBase):
         if callback returns None, no routing will be made even if 'output_device' is not None
         """
 
-        def _register_callback_decorator(callback: Callable):
+        def _register_callback_decorator(callback: _CALLABLE_TYPE) -> _CALLABLE_TYPE:
             self.register_callback(callback=callback, input_device=input_device, output_device=output_device)
             return callback
 

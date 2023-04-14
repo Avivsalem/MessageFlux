@@ -7,9 +7,10 @@ from pydantic import BaseModel, ValidationError
 
 from messageflux import ReadResult
 from messageflux.fastmessage_handler import FastMessage, MissingCallbackException, DuplicateCallbackException, \
-    InputDeviceName
+    InputDeviceName, NonAnnotatedParamException, SpecialDefaultValueException
 from messageflux.iodevices.base import InputDevice
 from messageflux.iodevices.base.common import MessageBundle, Message
+from messageflux.pipeline_service import PipelineResult
 
 
 class FakeInputDevice(InputDevice):
@@ -50,6 +51,19 @@ def test_sanity():
     assert json_result['y'] == 'x=1, y=a, z=[1, 2]'
 
 
+def test_root_model():
+    fm: FastMessage = FastMessage()
+
+    @fm.map(input_device='input1', output_device='output')
+    def do_something1(__root__: SomeModel):
+        return SomeOtherModel(y=f'x={__root__.x}')
+
+    result = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"x": 1}')))
+    assert result is not None
+    json_result = json.loads(result.message_bundle.message.bytes.decode())
+    assert json_result['y'] == 'x=1'
+
+
 def test_duplicate_register():
     fm: FastMessage = FastMessage()
 
@@ -84,6 +98,44 @@ def test_validation_error():
 
     with pytest.raises(ValidationError):
         _ = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"y": "a", "z":[1,2]}')))
+
+
+def test_handled_validation_error():
+    fm: FastMessage = FastMessage()
+
+    @fm.map(input_device='input1', output_device='output')
+    def do_something1(x: SomeModel, y: str, z: List[int] = None):
+        return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
+
+    def handle_error(i: InputDevice, m: MessageBundle, e: ValidationError) -> PipelineResult:
+        return PipelineResult('ERROR', m)
+
+    fm.register_validation_error_handler(handle_error)
+
+    input_bundle = MessageBundle(Message(b'{"y": "a", "z":[1,2]}'))
+    result = fm.handle_message(FakeInputDevice('input1'), input_bundle)
+
+    assert result is not None
+    assert result.output_device_name == "ERROR"
+    assert result.message_bundle == input_bundle
+
+
+def test_non_annotated():
+    fm: FastMessage = FastMessage()
+
+    with pytest.raises(NonAnnotatedParamException):
+        @fm.map(input_device='input1')
+        def do_something1(x: SomeModel, y, z: List[int] = None):
+            return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
+
+
+def test_default_value_on_special_param():
+    fm: FastMessage = FastMessage()
+
+    with pytest.raises(SpecialDefaultValueException):
+        @fm.map(input_device='input1')
+        def do_something1(x: Message = None):
+            pass
 
 
 def test_special_args():
