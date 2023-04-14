@@ -10,7 +10,7 @@ from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
 
 try:
-    from pydantic import BaseModel, parse_raw_as, create_model
+    from pydantic import BaseModel, parse_raw_as, create_model, ValidationError
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[fastmessage]') from ex
 
@@ -59,7 +59,9 @@ _logger = logging.getLogger(__name__)
 
 
 class _CallbackWrapper:
-    def __init__(self, callback: Callable, input_device: str, output_device: Optional[str] = None):
+    def __init__(self, callback: Callable,
+                 input_device: str,
+                 output_device: Optional[str] = None):
         self._callback = callback
         self._input_device = input_device
         self._output_device = output_device
@@ -136,8 +138,18 @@ class _CallbackWrapper:
 
 
 class FastMessage(PipelineHandlerBase):
-    def __init__(self, default_output_device: Optional[str] = None):
+    def __init__(self, default_output_device: Optional[str] = None,
+                 validation_error_handler: Optional[
+                     Callable[[InputDevice, MessageBundle, ValidationError], Optional[PipelineResult]]] = None):
+        """
+
+        :param default_output_device: an optional default output device to send callaback results to,
+        unless mapped otherwise
+        :param validation_error_handler: an optional handler that will be called on validation errors,
+        in order to give the user a chance to handle them gracefully
+        """
         self._default_output_device = default_output_device
+        self._validation_error_handler = validation_error_handler
         self._wrappers: Dict[str, _CallbackWrapper] = {}
 
     @property
@@ -146,6 +158,16 @@ class FastMessage(PipelineHandlerBase):
         returns all the input device names that has callbacks
         """
         return list(self._wrappers.keys())
+
+    def register_validation_error_handler(self,
+                                          handler: Callable[
+                                              [InputDevice, MessageBundle, ValidationError], Optional[PipelineResult]]):
+        """
+        registers optional handler that will be called on validation errors,
+        in order to give the user a chance to handle them gracefully
+        :param handler: the handler to register
+        """
+        self._validation_error_handler = handler
 
     def register_callback(self, callback: Callable, input_device: str,
                           output_device: Optional[str] = _DEFAULT):
@@ -188,5 +210,10 @@ class FastMessage(PipelineHandlerBase):
         callback_wrapper = self._wrappers.get(input_device.name)
         if callback_wrapper is None:
             raise MissingCallbackException(f"No callback registered for device '{input_device.name}'")
+        try:
+            return callback_wrapper(input_device=input_device, message_bundle=message_bundle)
+        except ValidationError as ve:
+            if self._validation_error_handler is None:
+                raise
 
-        return callback_wrapper(input_device=input_device, message_bundle=message_bundle)
+            return self._validation_error_handler(input_device, message_bundle, ve)
