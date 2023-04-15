@@ -2,44 +2,13 @@
 
 There are several types of services messageflux offer.
 
-## MessageHandlingService
+The most useful is ```PipelineService``` which can be used to handle messages and send output to other services
 
-This service is used to handle an incoming message from input device.
+A Service is the most basic running unit of messageflux. you create a service and then you start it. 
+this will start running the service, and block, until the process receives a termination signal (SIGTERM) 
+or until 'stop' was called from another thread.
 
-TBD
+See reference for customization options for services.
 
-### Example
-
-```python
-# some code here
-```
-
-## BatchMessageHandlingService
-
-This Service handles a batch of messages that was read from the input device.
-
-TBD
-
-### Example
-
-```python
-# some code here
-```
-
-## PipelineService
-
-This Service is used to Process incoming messages, and transfer the results to an output device
-
-TBD
-
-### Examples
-
-```python
-# some code here
-```
-
-```python
-# example for fixed route pipeline
-```
 
 

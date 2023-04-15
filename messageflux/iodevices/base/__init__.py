@@ -1,5 +1,6 @@
 from .common import (Message,
                      MessageHeaders,
+                     MessageBundle,
                      DeviceHeaders)
 
 from .input_devices import (InputDevice,

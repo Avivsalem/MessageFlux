@@ -1,19 +1,27 @@
+import logging
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
-from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.message_handling_service import MessageHandlingServiceBase
 
+_logger = logging.getLogger(__name__)
 
-@dataclass
+
 class PipelineResult:
     """
     a result from pipeline handler
     """
-    output_device_name: str
-    message_bundle: MessageBundle
+
+    def __init__(self,
+                 output_device_name: str,
+                 message_bundle: Union[MessageBundle, Message]):
+        self.output_device_name = output_device_name
+        if isinstance(message_bundle, Message):
+            message_bundle = MessageBundle(message=message_bundle)
+
+        self.message_bundle = message_bundle
 
 
 class PipelineHandlerBase(metaclass=ABCMeta):
@@ -68,8 +76,8 @@ class PipelineService(MessageHandlingServiceBase):
     """
 
     def __init__(self, *,
-                 output_device_manager: OutputDeviceManager,
                  pipeline_handler: PipelineHandlerBase,
+                 output_device_manager: Optional[OutputDeviceManager] = None,
                  **kwargs):
         super().__init__(**kwargs)
         self._output_device_manager = output_device_manager
@@ -79,6 +87,11 @@ class PipelineService(MessageHandlingServiceBase):
         for input_device, read_result in batch:
             pipeline_result = self._pipeline_handler.handle_message(input_device, read_result)
             if pipeline_result is not None:
+                if self._output_device_manager is None:
+                    _logger.warning("pipeline handler returned a result to output to device: "
+                                    f"'{pipeline_result.output_device_name}', but no output_device_manager was given")
+                    return
+
                 output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
                 output_device.send_message(message=pipeline_result.message_bundle.message,
                                            device_headers=pipeline_result.message_bundle.device_headers)
