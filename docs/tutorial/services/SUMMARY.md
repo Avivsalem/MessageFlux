@@ -1,2 +1,2 @@
-* index.md
+* [index](index.md)
 * [FastMessage](fastmessage.md)
