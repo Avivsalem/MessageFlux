@@ -1,6 +1,5 @@
 * [IO Devices](devices.md)
-* [Services](services/index.md)
-    * [FastMessage](services/fastmessage.md)
+* [Services](services/)
 * [MultiProcessing](multiprocessing.md)
 * [Logging](logging.md)
 * [Add-Ons](addons.md)
