@@ -1,7 +1,7 @@
 import threading
 from abc import abstractmethod, ABCMeta
 from time import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from messageflux.iodevices.base import (InputTransactionScope,
                                         InputDeviceManager,
@@ -17,7 +17,7 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
 
     def __init__(self, *,
                  input_device_manager: InputDeviceManager,
-                 input_device_names: List[str],
+                 input_device_names: Union[List[str], str],
                  use_transactions: bool = True,
                  read_timeout: float = 5,
                  max_batch_read_count: int = 1,
@@ -37,6 +37,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
         """
         super().__init__(**kwargs)
         self._input_device_manager = input_device_manager
+        if isinstance(input_device_names, str):
+            input_device_names = [input_device_names]
         self._input_device_names = input_device_names
         self._use_transactions = use_transactions
         self._read_timeout = max(read_timeout, 0)
