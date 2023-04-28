@@ -106,6 +106,7 @@ if __name__ == '__main__':  # you must do this in multiprocess running
 
 ## Optional Requirements
 
+* ```messageflux[fastmessage]``` - for using the FastMessage pipeline handler 
 * ```messageflux[rabbitmq]``` - for using the rabbitmq device
 * ```messageflux[objectstorage]``` - for using the s3 device wrappers
 * ```messageflux[dev]``` - for running tests and developing for this package
