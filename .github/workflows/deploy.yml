@@ -20,6 +20,8 @@ jobs:
       # Checkout the latest code from the repo
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Required due to the way Git works, without it this action won't be able to find any or the correct tags
 
         # Setup Python
       - name: Set Up Python 3.11
