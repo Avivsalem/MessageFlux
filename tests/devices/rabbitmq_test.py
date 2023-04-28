@@ -1,4 +1,5 @@
 import os
+import ssl
 
 import pytest
 
@@ -9,14 +10,14 @@ from messageflux.iodevices.rabbitmq.rabbitmq_output_device import RabbitMQOutput
 from messageflux.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase, \
     RabbitMQPoisonCountingInputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
-import ssl
 
-NULL_PASSWORD = "NULL_PASSWORD"
 RABBIT_HOST = "rattlesnake.rmq.cloudamqp.com"
 RABBIT_USERNAME = "uiwayyvm"
 RABBIT_VHOST = RABBIT_USERNAME
-RABBIT_PASSWORD = os.environ.get("RABBITMQ_PASSWORD", NULL_PASSWORD)
-assert RABBIT_PASSWORD != NULL_PASSWORD
+try:
+    RABBIT_PASSWORD = os.environ["RABBITMQ_PASSWORD"]
+except KeyError:
+    raise EnvironmentError("RABBITMQ_PASSWORD environment variable is required in order to test rabbitmq devices")
 
 
 # TODO: use fixtures for the device managers
