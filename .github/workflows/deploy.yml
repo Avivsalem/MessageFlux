@@ -26,9 +26,6 @@ jobs:
         with:
           fetch-depth: 0 # Required due to the way Git works, without it this action won't be able to find any or the correct tags
 
-      - name: Fix Git Safe Dir
-        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
-
         # Setup Python
       - name: Set Up Python 3.11
         uses: actions/setup-python@v4
@@ -49,7 +46,7 @@ jobs:
           echo "new_version=$(<VERSION)" >> $GITHUB_OUTPUT
 
       - name: Push New Version Tag
-        uses: actions-ecosystem/action-push-tag@v1
+        uses: rickstaa/action-create-tag@v1
         with:
           tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
           message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
