@@ -18,13 +18,16 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }} # run only if tests succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'}} # run only if tests succeeded or run manually
     steps:
       # Checkout the latest code from the repo
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Required due to the way Git works, without it this action won't be able to find any or the correct tags
+
+      - name: Fix Git Safe Dir
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
 
         # Setup Python
       - name: Set Up Python 3.11
