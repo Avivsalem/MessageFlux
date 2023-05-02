@@ -305,11 +305,11 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         except Exception as ex:
             raise OutputDeviceException('Could not connect to rabbitmq.') from ex
 
-    def get_output_device(self, device_name: str, exchange: Optional[str] = None) -> RabbitMQOutputDevice:
+    def get_output_device(self, name: str, exchange: Optional[str] = None) -> RabbitMQOutputDevice:
         """
         Returns and outgoing device by name
 
-        :param device_name: the name of the device to write to
+        :param name: the name of the device to write to
         :param exchange: the exchange name in RabbitMQ for this output device
         :return: an output device for 'device_name'
         """
@@ -317,9 +317,9 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
             if exchange is None:
                 exchange = self._default_output_exchange
 
-            return RabbitMQOutputDevice(self, device_name, exchange)
+            return RabbitMQOutputDevice(self, name, exchange)
         except Exception as e:
-            message = f"Couldn't create output device '{device_name}'"
+            message = f"Couldn't create output device '{name}'"
             self._logger.exception(message)
             raise OutputDeviceException(message) from e
 

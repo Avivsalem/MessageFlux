@@ -362,22 +362,22 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                                    prefetch_count=self._prefetch_count,
                                    use_consumer=self._use_consumer)
 
-    def get_input_device(self, device_name: str) -> RabbitMQInputDevice:
+    def get_input_device(self, name: str) -> RabbitMQInputDevice:
         """
         Returns an incoming device by name
 
-        :param device_name: the name of the device to read from
+        :param name: the name of the device to read from
         :return: an input device for 'device_name'
         """
         try:
-            self.create_queue(queue_name=device_name,
+            self.create_queue(queue_name=name,
                               passive=True,
                               direct_bind_to_exchange=self._default_direct_exchange)
 
-            return self._device_factory(device_name)
+            return self._device_factory(name)
 
         except Exception as e:
-            message = f"Couldn't create input device '{device_name}'"
+            message = f"Couldn't create input device '{name}'"
             self._logger.exception(message)
             raise InputDeviceException(message) from e
 

@@ -129,25 +129,25 @@ class CollectionInputDeviceManager(InputDeviceManager[CollectionInputDevice]):
                 self._logger.warning(
                     f'Error closing underlying manager {type(manager).__name__}', exc_info=True)
 
-    def get_input_device(self, device_name: str) -> CollectionInputDevice:
+    def get_input_device(self, name: str) -> CollectionInputDevice:
         """
         Returns an input device by name
 
-        :param device_name: the name of the device to read from
+        :param name: the name of the device to read from
         :return: an input device for 'device_name'
         """
         devices: List[InputDevice] = []
         failures = []
         for manager in self._inner_managers:
             try:
-                device = manager.get_input_device(device_name)
+                device = manager.get_input_device(name)
                 devices.append(device)
             except Exception as ex:
                 failures.append(ex)
                 self._logger.warning(
-                    f"Error creating input device {device_name} from {type(manager).__name__} manager", exc_info=True)
+                    f"Error creating input device {name} from {type(manager).__name__} manager", exc_info=True)
         if not devices:
             self._logger.error("Couldn't create any input device")
-            raise InputDeviceException(f"Couldn't create input device '{device_name}'", inner_exceptions=failures)
+            raise InputDeviceException(f"Couldn't create input device '{name}'", inner_exceptions=failures)
 
-        return CollectionInputDevice(self, device_name, self._collection_maker(devices))
+        return CollectionInputDevice(self, name, self._collection_maker(devices))

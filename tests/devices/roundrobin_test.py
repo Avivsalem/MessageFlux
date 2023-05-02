@@ -28,11 +28,11 @@ class ErrorIODevice(OutputDevice, InputDevice):
 
 class ErrorIODeviceManager(InputDeviceManager, OutputDeviceManager):
 
-    def get_input_device(self, device_name):
-        return ErrorIODevice(None, device_name)
+    def get_input_device(self, name):
+        return ErrorIODevice(None, name)
 
-    def get_output_device(self, device_name):
-        return ErrorIODevice(None, device_name)
+    def get_output_device(self, name):
+        return ErrorIODevice(None, name)
 
 
 def test_sanity(tmpdir):
