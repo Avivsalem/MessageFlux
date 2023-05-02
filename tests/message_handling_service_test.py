@@ -33,8 +33,8 @@ class MockInputDeviceManager(InputDeviceManager[MockInputDevice]):
     def __init__(self, input_list):
         self.input_list = input_list
 
-    def get_input_device(self, device_name):
-        return MockInputDevice(self, device_name, self.input_list)
+    def get_input_device(self, name):
+        return MockInputDevice(self, name, self.input_list)
 
 
 class IncreaserMessageHandler(MessageHandlerBase):

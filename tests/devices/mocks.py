@@ -38,8 +38,8 @@ class MockErrorOutputDevice(OutputDevice):
 
 
 class MockErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
-    def get_input_device(self, device_name):
-        return MockErrorInputDevice(device_name)
+    def get_input_device(self, name):
+        return MockErrorInputDevice(name)
 
-    def get_output_device(self, device_name):
-        return MockErrorOutputDevice(device_name)
+    def get_output_device(self, name):
+        return MockErrorOutputDevice(name)

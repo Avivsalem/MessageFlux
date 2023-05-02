@@ -100,25 +100,25 @@ class CollectionOutputDeviceManager(OutputDeviceManager[CollectionOutputDevice])
                 self._logger.warning(
                     f'Error closing underlying manager {type(manager).__name__}', exc_info=True)
 
-    def get_output_device(self, device_name: str) -> CollectionOutputDevice:
+    def get_output_device(self, name: str) -> CollectionOutputDevice:
         """
         Returns an output device by name
 
-        :param device_name: the name of the device to write to
+        :param name: the name of the device to write to
         :return: an output device for 'device_name'
         """
         devices: List[OutputDevice] = []
         failures = []
         for manager in self._inner_managers:
             try:
-                device = manager.get_output_device(device_name)
+                device = manager.get_output_device(name)
                 devices.append(device)
             except Exception as ex:
                 failures.append(ex)
                 self._logger.warning(
-                    f"Error creating output device {device_name} from {type(manager).__name__} manager.", exc_info=True)
+                    f"Error creating output device {name} from {type(manager).__name__} manager.", exc_info=True)
         if not devices:
-            self._logger.error(f"Couldn't create output device '{device_name}'")
-            raise OutputDeviceException(f"Couldn't create output device '{device_name}'", inner_exceptions=failures)
+            self._logger.error(f"Couldn't create output device '{name}'")
+            raise OutputDeviceException(f"Couldn't create output device '{name}'", inner_exceptions=failures)
 
-        return CollectionOutputDevice(self, device_name, self._collection_maker(devices))
+        return CollectionOutputDevice(self, name, self._collection_maker(devices))
