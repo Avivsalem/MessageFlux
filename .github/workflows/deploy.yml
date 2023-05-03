@@ -46,7 +46,7 @@ jobs:
           echo "new_version=$(<VERSION)" >> $GITHUB_OUTPUT
 
       - name: Push New Version Tag
-        uses: rickstaa/action-create-tag@v1
+        uses: the-code-forge/action-push-tag@v1
         with:
           tag: 'v${{ steps.compute-new-version.outputs.new_version }}'
           message: 'New Version: ${{ steps.compute-new-version.outputs.new_version  }}'
