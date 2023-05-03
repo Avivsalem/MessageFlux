@@ -33,7 +33,7 @@ jobs:
           python-version: "3.11"
 
       - name: Get Latest Tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
+        uses: the-code-forge/action-get-latest-tag@v1
         id: get-latest-tag
 
       - name: Compute New Version
