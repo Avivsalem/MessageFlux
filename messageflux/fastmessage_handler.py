@@ -70,12 +70,14 @@ class _CallbackWrapper:
         self._special_params: Dict[str, _ParamInfo] = dict()
         self._params: Dict[str, _ParamInfo] = dict()
         type_hints = get_all_type_hints(self._callback)
+        extra = Extra.ignore
         for param_name, param in inspect.signature(self._callback).parameters.items():
             if param.kind in (param.POSITIONAL_ONLY, param.VAR_POSITIONAL):
                 raise NotAllowedParamKindException(
                     f"param '{param_name}' is of '{param.kind}' kind. this is now allowed")
 
-            if param.kind == param.VAR_KEYWORD:
+            if param.kind == param.VAR_KEYWORD: # there's **kwargs param
+                extra = Extra.allow
                 continue
 
             annotation = Any if param.annotation is param.empty else type_hints[param_name]
@@ -101,7 +103,7 @@ class _CallbackWrapper:
             for param_name, param_info in self._params.items():
                 model_params[param_name] = (param_info.annotation, param_info.default)
 
-            self._model = create_model(model_name, __config__=get_config(dict(extra=Extra.allow)),
+            self._model = create_model(model_name, __config__=get_config(dict(extra=extra)),
                                        **model_params)  # type: ignore
 
     def _get_model_name(self) -> str:

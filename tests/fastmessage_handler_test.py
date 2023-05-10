@@ -37,7 +37,7 @@ def test_sanity():
     def do_something1(x: SomeModel, y: str, z: List[int] = None):
         return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
 
-    result = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"x": {"x":1}, "y": "a"}')))
+    result = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "F":3}')))
     assert result is not None
     assert result.output_device_name == default_output_device
     json_result = json.loads(result.message_bundle.message.bytes.decode())
