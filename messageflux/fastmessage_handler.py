@@ -2,7 +2,6 @@ import inspect
 import json
 import logging
 from dataclasses import dataclass
-from inspect import Parameter
 from typing import Optional, Callable, Dict, List, Any, TypeVar
 
 from messageflux import InputDevice
@@ -10,7 +9,9 @@ from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
 
 try:
-    from pydantic import BaseModel, parse_raw_as, create_model, ValidationError
+    from pydantic.typing import get_all_type_hints
+    from pydantic import BaseModel, parse_raw_as, create_model, ValidationError, Extra
+    from pydantic.config import get_config
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[fastmessage]') from ex
 
@@ -23,11 +24,11 @@ class DuplicateCallbackException(FastMessageException):
     pass
 
 
-class MissingCallbackException(FastMessageException):
+class NotAllowedParamKindException(FastMessageException):
     pass
 
 
-class NonAnnotatedParamException(FastMessageException):
+class MissingCallbackException(FastMessageException):
     pass
 
 
@@ -68,17 +69,23 @@ class _CallbackWrapper:
         self._output_device = output_device
         self._special_params: Dict[str, _ParamInfo] = dict()
         self._params: Dict[str, _ParamInfo] = dict()
+        type_hints = get_all_type_hints(self._callback)
         for param_name, param in inspect.signature(self._callback).parameters.items():
-            param_info = _ParamInfo(annotation=param.annotation, default=param.default)
-            if param_info.annotation is Parameter.empty:
-                if param_info.default is not Parameter.empty:
-                    param_info.annotation = type(param_info.default)
-                else:
-                    raise NonAnnotatedParamException(
-                        f"method param '{param_name}' is not type annotated and has no default")
+            if param.kind in (param.POSITIONAL_ONLY, param.VAR_POSITIONAL):
+                raise NotAllowedParamKindException(
+                    f"param '{param_name}' is of '{param.kind}' kind. this is now allowed")
 
-            if param_info.annotation in (MessageBundle, Message, InputDeviceName):
-                if param_info.default is not Parameter.empty:
+            if param.kind == param.VAR_KEYWORD:
+                continue
+
+            annotation = Any if param.annotation is param.empty else type_hints[param_name]
+            default = ... if param.default is param.empty else param.default
+
+            param_info = _ParamInfo(annotation=annotation, default=default)
+
+            if param_info.annotation in (MessageBundle, Message, InputDeviceName,
+                                         Optional[MessageBundle], Optional[Message], Optional[InputDeviceName]):
+                if param_info.default is not ...:
                     raise SpecialDefaultValueException(
                         f"param '{param_name}' is of special type '{param_info.annotation.__name__}' "
                         f"but has a default value")
@@ -92,11 +99,10 @@ class _CallbackWrapper:
             model_name = self._get_model_name()
             model_params = {}
             for param_name, param_info in self._params.items():
-                default_value = param_info.default
-                if default_value is Parameter.empty:
-                    default_value = ...
-                model_params[param_name] = (param_info.annotation, default_value)
-            self._model = create_model(model_name, **model_params)  # type: ignore
+                model_params[param_name] = (param_info.annotation, param_info.default)
+
+            self._model = create_model(model_name, __config__=get_config(dict(extra=Extra.allow)),
+                                       **model_params)  # type: ignore
 
     def _get_model_name(self) -> str:
         return f"model_{self._callback.__name__}_{self._input_device}"
