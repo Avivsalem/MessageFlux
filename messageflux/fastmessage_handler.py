@@ -76,7 +76,7 @@ class _CallbackWrapper:
                 raise NotAllowedParamKindException(
                     f"param '{param_name}' is of '{param.kind}' kind. this is now allowed")
 
-            if param.kind == param.VAR_KEYWORD: # there's **kwargs param
+            if param.kind == param.VAR_KEYWORD:  # there's **kwargs param
                 extra = Extra.allow
                 continue
 
