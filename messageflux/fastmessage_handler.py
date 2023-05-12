@@ -103,8 +103,9 @@ class _CallbackWrapper:
             for param_name, param_info in self._params.items():
                 model_params[param_name] = (param_info.annotation, param_info.default)
 
-            self._model = create_model(model_name, __config__=get_config(dict(extra=extra)),
-                                       **model_params)  # type: ignore
+            self._model = create_model(model_name,  # type: ignore
+                                       __config__=get_config(dict(extra=extra)),
+                                       **model_params)
 
     def _get_model_name(self) -> str:
         return f"model_{self._callback.__name__}_{self._input_device}"

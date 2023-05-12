@@ -1,4 +1,5 @@
 import json
+import sys
 import uuid
 from typing import Optional, List
 
@@ -145,11 +146,11 @@ def test_default_value_on_special_param():
 
 def test_positional_and_var_args():
     fm: FastMessage = FastMessage()
-
-    with pytest.raises(NotAllowedParamKindException):
-        @fm.map(input_device='input1')
-        def do_something(x: int, /, z: int):
-            pass
+    if sys.version_info.minor >= 8:
+        with pytest.raises(NotAllowedParamKindException):
+            @fm.map(input_device='input1')
+            def do_something(x: int, /, z: int):
+                pass
 
     with pytest.raises(NotAllowedParamKindException):
         @fm.map(input_device='input1')
