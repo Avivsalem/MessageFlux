@@ -153,7 +153,7 @@ def test_positional_and_var_args():
 
     with pytest.raises(NotAllowedParamKindException):
         @fm.map(input_device='input1')
-        def do_something(x: int, *args):
+        def do_something1(x: int, *args):
             pass
 
 
