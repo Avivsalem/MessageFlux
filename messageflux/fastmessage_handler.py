@@ -89,7 +89,7 @@ class _CallbackWrapper:
                                          Optional[MessageBundle], Optional[Message], Optional[InputDeviceName]):
                 if param_info.default is not ...:
                     raise SpecialDefaultValueException(
-                        f"param '{param_name}' is of special type '{param_info.annotation.__name__}' "
+                        f"param '{param_name}' is of special type '{param.annotation.__name__}' "
                         f"but has a default value")
                 self._special_params[param_name] = param_info
 
