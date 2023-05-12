@@ -149,7 +149,7 @@ def test_positional_and_var_args():
     if sys.version_info.minor >= 8:
         with pytest.raises(NotAllowedParamKindException):
             @fm.map(input_device='input1')
-            def do_something(x: int, /, z: int):
+            def do_something(x: int, /, z: int):  # noqa: E999
                 pass
 
     with pytest.raises(NotAllowedParamKindException):

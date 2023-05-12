@@ -99,11 +99,10 @@ class _CallbackWrapper:
         self._model = None
         if self._params:
             model_name = self._get_model_name()
-            model_params = {}
+            model_params: Dict[str, Any] = {}
             for param_name, param_info in self._params.items():
                 model_params[param_name] = (param_info.annotation, param_info.default)
-
-            self._model = create_model(model_name,  # type: ignore
+            self._model = create_model(model_name,
                                        __config__=get_config(dict(extra=extra)),
                                        **model_params)
 
