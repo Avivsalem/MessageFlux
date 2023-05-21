@@ -9,6 +9,8 @@ meaning the service will expect a single type (schema) of messages for each inpu
 
 Multiple callbacks can send messages to the same output device.
 
+Also - Positional Only Arguments, are not allowed on the callbacks
+
 ## Examples
 
 ### Creating a FastMessage
