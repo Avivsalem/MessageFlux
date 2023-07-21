@@ -189,6 +189,7 @@ def test_list_single_result():
     assert len(result) == 1
     assert result[0].message_bundle.message.bytes == b'[1, 2, 3]'
 
+
 def test_list_multiple_result():
     default_output_device = str(uuid.uuid4()).replace('-', '')
     fm: FastMessage = FastMessage(default_output_device=default_output_device)

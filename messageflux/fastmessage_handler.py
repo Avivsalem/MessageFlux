@@ -142,15 +142,15 @@ class _CallbackWrapper:
             return None
         results = []
         if isinstance(callback_return, MultipleReturnValues):
-            return_list = callback_return
+            return_list: List[Any] = callback_return
         else:
             return_list = [callback_return]
         for return_value in return_list:
-            results.append(self._get_single_pipeline_result(return_value))
+            results.append(self._get_single_pipeline_result(return_value, self._output_device))
 
         return results
 
-    def _get_single_pipeline_result(self, value):
+    def _get_single_pipeline_result(self, value: Any, output_device: str):
         if isinstance(value, MessageBundle):
             output_bundle = value
         elif isinstance(value, Message):
@@ -160,7 +160,7 @@ class _CallbackWrapper:
             output_data = json.dumps(value, default=json_encoder).encode()
             output_bundle = MessageBundle(message=Message(data=output_data))
 
-        return PipelineResult(output_device_name=self._output_device, message_bundle=output_bundle)
+        return PipelineResult(output_device_name=output_device, message_bundle=output_bundle)
 
 
 class FastMessage(PipelineHandlerBase):
