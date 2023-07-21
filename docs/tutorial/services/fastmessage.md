@@ -120,3 +120,23 @@ def do_something(i: InputDeviceName, m: Message, mb:MessageBundle, x:int):
     pass  # do something
 ```
 
+## Returning Multiple Results
+
+You can make the function, return multiple results, where each one is serialized as its own message to the output queue.
+All you have to do, is return a ```MultipleReturnValues``` (which is a ```List```), and each item will be serialized as its own output message
+
+### Example
+
+```python
+
+
+from messageflux.fastmessage_handler import FastMessage, MultipleReturnValues
+
+fm = FastMessage()
+
+
+@fm.map(input_device='some_queue')
+def do_something(x: int):
+    return MultipleReturnValues([1, 'b', 3])  # will create 3 output messages, one for each item
+```
+

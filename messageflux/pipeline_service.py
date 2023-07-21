@@ -32,7 +32,7 @@ class PipelineHandlerBase(metaclass=ABCMeta):
     @abstractmethod
     def handle_message(self,
                        input_device: InputDevice,
-                       message_bundle: MessageBundle) -> Optional[PipelineResult]:
+                       message_bundle: MessageBundle) -> Optional[Union[PipelineResult, List[PipelineResult]]]:
         """
         Handles a message from an input device. and returns a tuple of the output device name, message and headers to
         send to.
@@ -85,13 +85,17 @@ class PipelineService(MessageHandlingServiceBase):
 
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
-            pipeline_result = self._pipeline_handler.handle_message(input_device, read_result)
-            if pipeline_result is not None:
-                if self._output_device_manager is None:
-                    _logger.warning("pipeline handler returned a result to output to device: "
-                                    f"'{pipeline_result.output_device_name}', but no output_device_manager was given")
-                    return
+            pipeline_handler_result = self._pipeline_handler.handle_message(input_device, read_result)
+            if pipeline_handler_result is not None:
+                if not isinstance(pipeline_handler_result, List):
+                    pipeline_handler_result = [pipeline_handler_result]
+                for pipeline_result in pipeline_handler_result:
+                    if self._output_device_manager is None:
+                        _logger.warning("pipeline handler returned a result to output to device: "
+                                        f"'{pipeline_result.output_device_name}', "
+                                        f"but no output_device_manager was given")
+                        continue
 
-                output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
-                output_device.send_message(message=pipeline_result.message_bundle.message,
-                                           device_headers=pipeline_result.message_bundle.device_headers)
+                    output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
+                    output_device.send_message(message=pipeline_result.message_bundle.message,
+                                               device_headers=pipeline_result.message_bundle.device_headers)
