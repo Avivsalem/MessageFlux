@@ -9,6 +9,8 @@ meaning the service will expect a single type (schema) of messages for each inpu
 
 Multiple callbacks can send messages to the same output device.
 
+Also - Positional Only Arguments are not allowed on the callbacks
+
 ## Examples
 
 ### Creating a FastMessage
@@ -116,5 +118,26 @@ def do_something(i: InputDeviceName, m: Message, mb:MessageBundle, x:int):
     # mb will be the MessageBundle that arrived
     # x will be the serialized value of the message
     pass  # do something
+```
+
+## Returning Multiple Results
+
+You can make the function return multiple results, where each one is serialized as its own message to the output queue.
+
+All you have to do, is return a ```MultipleReturnValues``` (which is a ```List```), and each item will be serialized as its own output message
+
+### Example
+
+```python
+
+
+from messageflux.fastmessage_handler import FastMessage, MultipleReturnValues
+
+fm = FastMessage()
+
+
+@fm.map(input_device='some_queue')
+def do_something(x: int):
+    return MultipleReturnValues([1, 'b', 3])  # will create 3 output messages, one for each item
 ```
 

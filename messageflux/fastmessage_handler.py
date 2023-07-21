@@ -2,15 +2,16 @@ import inspect
 import json
 import logging
 from dataclasses import dataclass
-from inspect import Parameter
-from typing import Optional, Callable, Dict, List, Any, TypeVar
+from typing import Optional, Callable, Dict, List, Any, TypeVar, Union
 
 from messageflux import InputDevice
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
 
 try:
-    from pydantic import BaseModel, parse_raw_as, create_model, ValidationError
+    from pydantic.typing import get_all_type_hints
+    from pydantic import BaseModel, parse_raw_as, create_model, ValidationError, Extra
+    from pydantic.config import get_config
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[fastmessage]') from ex
 
@@ -23,11 +24,11 @@ class DuplicateCallbackException(FastMessageException):
     pass
 
 
-class MissingCallbackException(FastMessageException):
+class NotAllowedParamKindException(FastMessageException):
     pass
 
 
-class NonAnnotatedParamException(FastMessageException):
+class MissingCallbackException(FastMessageException):
     pass
 
 
@@ -38,6 +39,13 @@ class SpecialDefaultValueException(FastMessageException):
 class InputDeviceName(str):
     """
     a place holder class for input_device name
+    """
+    pass
+
+
+class MultipleReturnValues(list):
+    """
+    a value that indicates that multiple output values should be returned
     """
     pass
 
@@ -68,19 +76,27 @@ class _CallbackWrapper:
         self._output_device = output_device
         self._special_params: Dict[str, _ParamInfo] = dict()
         self._params: Dict[str, _ParamInfo] = dict()
+        type_hints = get_all_type_hints(self._callback)
+        extra = Extra.ignore
         for param_name, param in inspect.signature(self._callback).parameters.items():
-            param_info = _ParamInfo(annotation=param.annotation, default=param.default)
-            if param_info.annotation is Parameter.empty:
-                if param_info.default is not Parameter.empty:
-                    param_info.annotation = type(param_info.default)
-                else:
-                    raise NonAnnotatedParamException(
-                        f"method param '{param_name}' is not type annotated and has no default")
+            if param.kind in (param.POSITIONAL_ONLY, param.VAR_POSITIONAL):
+                raise NotAllowedParamKindException(
+                    f"param '{param_name}' is of '{param.kind}' kind. this is now allowed")
 
-            if param_info.annotation in (MessageBundle, Message, InputDeviceName):
-                if param_info.default is not Parameter.empty:
+            if param.kind == param.VAR_KEYWORD:  # there's **kwargs param
+                extra = Extra.allow
+                continue
+
+            annotation = Any if param.annotation is param.empty else type_hints[param_name]
+            default = ... if param.default is param.empty else param.default
+
+            param_info = _ParamInfo(annotation=annotation, default=default)
+
+            if param_info.annotation in (MessageBundle, Message, InputDeviceName,
+                                         Optional[MessageBundle], Optional[Message], Optional[InputDeviceName]):
+                if param_info.default is not ...:
                     raise SpecialDefaultValueException(
-                        f"param '{param_name}' is of special type '{param_info.annotation.__name__}' "
+                        f"param '{param_name}' is of special type '{param.annotation.__name__}' "
                         f"but has a default value")
                 self._special_params[param_name] = param_info
 
@@ -90,18 +106,19 @@ class _CallbackWrapper:
         self._model = None
         if self._params:
             model_name = self._get_model_name()
-            model_params = {}
+            model_params: Dict[str, Any] = {}
             for param_name, param_info in self._params.items():
-                default_value = param_info.default
-                if default_value is Parameter.empty:
-                    default_value = ...
-                model_params[param_name] = (param_info.annotation, default_value)
-            self._model = create_model(model_name, **model_params)  # type: ignore
+                model_params[param_name] = (param_info.annotation, param_info.default)
+            self._model = create_model(model_name,
+                                       __config__=get_config(dict(extra=extra)),
+                                       **model_params)
 
     def _get_model_name(self) -> str:
         return f"model_{self._callback.__name__}_{self._input_device}"
 
-    def __call__(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
+    def __call__(self,
+                 input_device: InputDevice,
+                 message_bundle: MessageBundle) -> Optional[Union[PipelineResult, List[PipelineResult]]]:
         kwargs: Dict[str, Any] = {}
         for param_name, param_info in self._special_params.items():
             if param_info.annotation is InputDeviceName:
@@ -115,33 +132,42 @@ class _CallbackWrapper:
             model = parse_raw_as(self._model, message_bundle.message.bytes)
             kwargs.update(dict(model))
 
-        return_value = self._callback(**kwargs)
-        if return_value is None:
+        callback_return = self._callback(**kwargs)
+        if callback_return is None:
             return None
 
         if self._output_device is None:
             _logger.warning(f"callback for input device '{input_device.name}' returned value, "
                             f"but is not mapped to output device")
             return None
-
-        json_encoder = getattr(return_value, '__json_encoder__', BaseModel.__json_encoder__)
-
-        if isinstance(return_value, MessageBundle):
-            output_bundle = return_value
-        elif isinstance(return_value, Message):
-            output_bundle = MessageBundle(message=return_value)
+        results = []
+        if isinstance(callback_return, MultipleReturnValues):
+            return_list: List[Any] = callback_return
         else:
-            output_data = json.dumps(return_value, default=json_encoder).encode()
+            return_list = [callback_return]
+        for return_value in return_list:
+            results.append(self._get_single_pipeline_result(return_value, self._output_device))
+
+        return results
+
+    def _get_single_pipeline_result(self, value: Any, output_device: str):
+        if isinstance(value, MessageBundle):
+            output_bundle = value
+        elif isinstance(value, Message):
+            output_bundle = MessageBundle(message=value)
+        else:
+            json_encoder = getattr(value, '__json_encoder__', BaseModel.__json_encoder__)
+            output_data = json.dumps(value, default=json_encoder).encode()
             output_bundle = MessageBundle(message=Message(data=output_data))
 
-        return PipelineResult(output_device_name=self._output_device,
-                              message_bundle=output_bundle)
+        return PipelineResult(output_device_name=output_device, message_bundle=output_bundle)
 
 
 class FastMessage(PipelineHandlerBase):
     def __init__(self, default_output_device: Optional[str] = None,
-                 validation_error_handler: Optional[
-                     Callable[[InputDevice, MessageBundle, ValidationError], Optional[PipelineResult]]] = None):
+                 validation_error_handler: Optional[Callable[
+                     [InputDevice, MessageBundle, ValidationError],
+                     Optional[PipelineResult]]] = None):
         """
 
         :param default_output_device: an optional default output device to send callaback results to,
@@ -162,7 +188,8 @@ class FastMessage(PipelineHandlerBase):
 
     def register_validation_error_handler(self,
                                           handler: Callable[
-                                              [InputDevice, MessageBundle, ValidationError], Optional[PipelineResult]]):
+                                              [InputDevice, MessageBundle, ValidationError],
+                                              Optional[PipelineResult]]):
         """
         registers optional handler that will be called on validation errors,
         in order to give the user a chance to handle them gracefully
@@ -170,7 +197,9 @@ class FastMessage(PipelineHandlerBase):
         """
         self._validation_error_handler = handler
 
-    def register_callback(self, callback: Callable, input_device: str,
+    def register_callback(self,
+                          callback: Callable,
+                          input_device: str,
                           output_device: Optional[str] = _DEFAULT):
         """
         registers a callback to a device
@@ -199,17 +228,21 @@ class FastMessage(PipelineHandlerBase):
 
         :param input_device: the input device to register the decorated method on
         :param output_device: optional output device to route the return value of the callback to.
-        None means no output routing
         if callback returns None, no routing will be made even if 'output_device' is not None
+        None means no output routing
         """
 
         def _register_callback_decorator(callback: _CALLABLE_TYPE) -> _CALLABLE_TYPE:
-            self.register_callback(callback=callback, input_device=input_device, output_device=output_device)
+            self.register_callback(callback=callback,
+                                   input_device=input_device,
+                                   output_device=output_device)
             return callback
 
         return _register_callback_decorator
 
-    def handle_message(self, input_device: InputDevice, message_bundle: MessageBundle) -> Optional[PipelineResult]:
+    def handle_message(self,
+                       input_device: InputDevice,
+                       message_bundle: MessageBundle) -> Optional[Union[PipelineResult, List[PipelineResult]]]:
         callback_wrapper = self._wrappers.get(input_device.name)
         if callback_wrapper is None:
             raise MissingCallbackException(f"No callback registered for device '{input_device.name}'")

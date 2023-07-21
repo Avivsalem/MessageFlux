@@ -88,3 +88,48 @@ def test_filter():
 
     finally:
         service.stop()
+
+
+def test_multiple():
+    input_device_name = 'test_input_device'
+    input_device_manager = InMemoryDeviceManager()
+
+    class TestMultipleHandler(PipelineHandlerBase):
+        def handle_message(self,
+                           input_device: InputDevice,
+                           message_bundle: MessageBundle) -> Optional[PipelineResult]:
+            return [PipelineResult("test1", message_bundle),
+                    PipelineResult("test2", message_bundle),
+                    PipelineResult("test3", message_bundle)]
+
+    input_device = input_device_manager.get_output_device(input_device_name)
+    input_device.send_message(Message(b'123'))
+    output_device_manager = InMemoryDeviceManager()
+    service = PipelineService(input_device_manager=input_device_manager,
+                              input_device_names=[input_device_name],
+                              max_batch_read_count=3,
+                              output_device_manager=output_device_manager,
+                              pipeline_handler=TestMultipleHandler())
+    loop_ended = Event()
+    service.loop_ended_event.subscribe(lambda x: loop_ended.set())
+    try:
+        Thread(target=service.start, daemon=True).start()
+        loop_ended.wait(3)
+
+        read_result = output_device_manager.get_input_device("test1").read_message(timeout=3,
+                                                                                   with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'123'
+
+        read_result = output_device_manager.get_input_device("test2").read_message(timeout=3,
+                                                                                   with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'123'
+
+        read_result = output_device_manager.get_input_device("test3").read_message(timeout=3,
+                                                                                   with_transaction=False)
+        assert read_result is not None
+        assert read_result.message.bytes == b'123'
+
+    finally:
+        service.stop()
