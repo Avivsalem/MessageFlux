@@ -1,4 +1,5 @@
 import heapq
+import threading
 import time
 from functools import total_ordering
 from threading import Condition
@@ -70,7 +71,11 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
         self._queue = queue
         self._queue_not_empty = queue_not_empty_condition
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
+
         with self._queue_not_empty:
             if self._queue_not_empty.wait_for(lambda: any(self._queue), timeout):
                 queue_message = heapq.heappop(self._queue)

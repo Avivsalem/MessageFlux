@@ -57,7 +57,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
             batch: List[Tuple[InputDevice, ReadResult]] = []
 
             # read first message with _read_timeout anyway
-            read_result = transaction_scope.read_message(timeout=self._read_timeout)
+            read_result = transaction_scope.read_message(cancellation_token=cancellation_token,
+                                                         timeout=self._read_timeout)
             if read_result is not None:
                 last_read_device = self._aggregate_input_device.last_read_device
                 assert last_read_device is not None
@@ -75,7 +76,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
                 else:
                     timeout = 0  # if not wait_for_batch, try to read another message without waiting at all
 
-                read_result = transaction_scope.read_message(timeout=timeout)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token,
+                                                             timeout=timeout)
                 if read_result is None:
                     break  # no more messages to read
                 last_read_device = self._aggregate_input_device.last_read_device

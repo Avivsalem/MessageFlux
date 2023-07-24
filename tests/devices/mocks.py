@@ -1,3 +1,4 @@
+import threading
 from typing import Optional
 
 from messageflux import InputDevice, ReadResult
@@ -16,7 +17,10 @@ class MockErrorInputDevice(InputDevice):
 
         self.should_fail = True
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         if self.should_fail:
             raise MockException()
         else:

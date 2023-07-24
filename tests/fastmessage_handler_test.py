@@ -1,4 +1,5 @@
 import json
+import threading
 import uuid
 from typing import Optional, List
 
@@ -14,7 +15,10 @@ from messageflux.pipeline_service import PipelineResult
 
 
 class FakeInputDevice(InputDevice):
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         return None
 
     def __init__(self, name: str):
