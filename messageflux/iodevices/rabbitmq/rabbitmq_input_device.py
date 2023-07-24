@@ -2,6 +2,7 @@ import logging
 import os
 import socket
 import ssl
+import threading
 from io import BytesIO
 from typing import TYPE_CHECKING, Dict, Optional, Tuple, Union, List, Any
 
@@ -26,16 +27,19 @@ class RabbitMQInputTransaction(InputTransaction):
     """
 
     def __init__(self,
+                 cancellation_token: threading.Event,
                  device: 'RabbitMQInputDevice',
                  channel: 'BlockingChannel',
                  delivery_tag: int):
         """
 
+        :param cancellation_token: the cancellation token, to check before acking
         :param device: the device that returned this transaction
         :param channel: the BlockingChannel that the item was read from
         :param delivery_tag: the delivery tag for this item
         """
         super(RabbitMQInputTransaction, self).__init__(device=device)
+        self._cancellation_token = cancellation_token
         self._channel = channel
         self._delivery_tag = delivery_tag
         self._logger = logging.getLogger(__name__)
@@ -56,12 +60,22 @@ class RabbitMQInputTransaction(InputTransaction):
 
     def _commit(self):
         try:
+            if self._cancellation_token.is_set():
+                try:
+                    self._channel.cancel()  # cancel the consumer before acking
+                except Exception:
+                    pass
             self._channel.basic_ack(self._delivery_tag)
         except Exception:
             self._logger.warning('commit failed', exc_info=True)
 
     def _rollback(self):
         try:
+            if self._cancellation_token.is_set():
+                try:
+                    self._channel.cancel()  # cancel the consumer before nacking
+                except Exception:
+                    pass
             self._channel.basic_nack(self._delivery_tag, requeue=True)
         except Exception:
             self._logger.warning('rollback failed', exc_info=True)
@@ -72,8 +86,8 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
     represents an RabbitMQ input device
     """
 
-    _channel: Union[ThreadLocalMember[Optional['BlockingChannel']],
-                    Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
+    _channel: Union[ThreadLocalMember[Optional['BlockingChannel']], Optional['BlockingChannel']] = ThreadLocalMember(
+        init_value=None)
 
     @staticmethod
     def _get_rabbit_headers(method_frame, header_frame):
@@ -130,7 +144,10 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
             if self._channel is not None and self._channel.is_open:
                 assert self._channel is not None
                 if self._use_consumer:
-                    self._channel.cancel()
+                    try:
+                        self._channel.cancel()
+                    except Exception:
+                        pass
                 self._channel.close()
             self._channel = self._device_manager.connection.channel()
 
@@ -149,10 +166,14 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         assert self._channel is not None
         return self._channel
 
-    def _get_data_from_queue(self, timeout: Optional[float], with_transaction: bool) -> Optional['ReadResult']:
+    def _get_data_from_queue(self,
+                             cancellation_token: threading.Event,
+                             timeout: Optional[float],
+                             with_transaction: bool) -> Optional['ReadResult']:
         """
         performs a single read from queue
 
+        :param cancellation_token: the cancellation token, to pass to transaction
         :param timeout: the timeout in seconds to block. negative number means no blocking
         :param with_transaction: does this read is to be done with transaction?
         :return: the stream and metadata, or None,None if no message in queue
@@ -174,13 +195,15 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         assert body is not None
         assert header_frame is not None
 
-        return self._create_response_from_frames(body,
-                                                 header_frame,
-                                                 method_frame,
-                                                 channel,
-                                                 with_transaction)
+        return self._create_response_from_frames(cancellation_token=cancellation_token,
+                                                 body=body,
+                                                 header_frame=header_frame,
+                                                 method_frame=method_frame,
+                                                 channel=channel,
+                                                 with_transaction=with_transaction)
 
     def _create_response_from_frames(self,
+                                     cancellation_token: threading.Event,
                                      body: bytes,
                                      header_frame: spec.BasicProperties,
                                      method_frame: Union[spec.Basic.Deliver, spec.Basic.GetOk],
@@ -189,6 +212,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         """
         creates the read result from the data returned from rabbitmq
 
+        :param cancellation_token: the cancellation token, to pass to transaction
         :param body: the body of the message
         :param header_frame: the header frame of the message
         :param method_frame: the method frame of the message
@@ -201,7 +225,10 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         delivery_tag = method_frame.delivery_tag
         assert delivery_tag is not None
         if with_transaction:
-            transaction: InputTransaction = RabbitMQInputTransaction(self, channel, delivery_tag)
+            transaction: InputTransaction = RabbitMQInputTransaction(cancellation_token=cancellation_token,
+                                                                     device=self,
+                                                                     channel=channel,
+                                                                     delivery_tag=delivery_tag)
         else:
             transaction = NULLTransaction(self)
         headers: Dict[str, Any] = header_frame.headers or {}  # type: ignore
@@ -216,9 +243,12 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
     def _get_frames_from_queue(self,
                                channel: 'BlockingChannel',
                                timeout: Optional[float],
-                               with_transaction: bool) -> Tuple[Optional[bytes],
-                                                                Optional[spec.BasicProperties],
-                                                                Optional[Union[spec.Basic.Deliver, spec.Basic.GetOk]]]:
+                               with_transaction: bool) -> Tuple[
+        Optional[bytes],
+        Optional[spec.BasicProperties],
+        Optional[Union[spec.Basic.Deliver, spec.Basic.GetOk]]
+    ]:
+
         """
         gets the actual frame from queue. use_consumer effects this method
 
@@ -253,7 +283,10 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
 
         return body, header_frame, method_frame
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         reads a stream from InputDevice (tries getting a message. if it fails, reconnects and tries again once)
 
@@ -266,11 +299,15 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
             raise ImportError('Please Install the required extra: messageflux[rabbitmq]') from exc
 
         try:
-            return self._get_data_from_queue(timeout=timeout, with_transaction=with_transaction)
+            return self._get_data_from_queue(cancellation_token=cancellation_token,
+                                             timeout=timeout,
+                                             with_transaction=with_transaction)
         except (AMQPConnectionError, AMQPChannelError):
             self._reconnect_device_manager()
             try:
-                return self._get_data_from_queue(timeout=timeout, with_transaction=with_transaction)
+                return self._get_data_from_queue(cancellation_token=cancellation_token,
+                                                 timeout=timeout,
+                                                 with_transaction=with_transaction)
             except Exception:
                 self._logger.exception(f"AMQError thrown. failed to get message. device name: {self._queue_name}")
                 raise

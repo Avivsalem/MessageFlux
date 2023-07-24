@@ -1,3 +1,4 @@
+import threading
 from abc import ABCMeta, abstractmethod
 from enum import Enum, unique
 from threading import Event
@@ -148,9 +149,14 @@ class InputTransactionScope(InputTransaction):
         self._with_transaction = with_transaction
         self._transactions: List[InputTransaction] = []
 
-    def read_message(self, timeout: Optional[float] = None) -> Optional['ReadResult']:
+    def read_message(self,
+                     cancellation_token: threading.Event,
+                     timeout: Optional[float] = None) -> Optional['ReadResult']:
         """
         this method returns a message from the device, and adds its transaction to the transaction scope
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds (None means block until message is available).
@@ -160,7 +166,9 @@ class InputTransactionScope(InputTransaction):
         the device headers can contain extra information about the device that returned the message
         """
 
-        read_result = self.device.read_message(timeout=timeout, with_transaction=self._with_transaction)
+        read_result = self.device.read_message(cancellation_token=cancellation_token,
+                                               timeout=timeout,
+                                               with_transaction=self._with_transaction)
 
         if read_result is not None:
             self._transactions.append(read_result.transaction)

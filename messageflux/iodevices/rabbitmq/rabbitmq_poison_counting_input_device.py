@@ -1,8 +1,8 @@
 import ssl
+import threading
 from abc import ABCMeta, abstractmethod
-from typing import List, Dict, Optional
-
 from time import perf_counter
+from typing import List, Dict, Optional
 
 from messageflux.iodevices.base import InputTransaction, ReadResult
 from messageflux.iodevices.rabbitmq.rabbitmq_input_device import RabbitMQInputDevice, RabbitMQInputDeviceManager
@@ -108,10 +108,13 @@ class RabbitMQPoisonCountingInputDevice(RabbitMQInputDevice):
         self._poison_counter = poison_counter
 
     def _get_data_from_queue(self,
+                             cancellation_token: threading.Event,
                              timeout: Optional[float],
                              with_transaction: bool) -> Optional['ReadResult']:
         """
         performs a single read from queue
+
+        :param cancellation_token: the cancellation token, to pass to transaction
         :param timeout: the timeout in seconds to block. None means no blocking
         :param with_transaction: does this read is to be done with transaction?
         :return: the stream and metadata, or None,None if no message in queue
@@ -141,9 +144,12 @@ class RabbitMQPoisonCountingInputDevice(RabbitMQInputDevice):
                 message_id = f'{self.name}-{header_frame.message_id}-{header_frame.timestamp}'
                 redeliver_count = self._poison_counter.increment_and_return_counter(message_id)
                 if redeliver_count < self._max_poison_count:  # this message is below the max_poison_threshold
-                    read_result = self._create_response_from_frames(body, header_frame, method_frame,
-                                                                    channel,
-                                                                    with_transaction)
+                    read_result = self._create_response_from_frames(cancellation_token=cancellation_token,
+                                                                    body=body,
+                                                                    header_frame=header_frame,
+                                                                    method_frame=method_frame,
+                                                                    channel=channel,
+                                                                    with_transaction=with_transaction)
                     return ReadResult(message=read_result.message,
                                       device_headers=read_result.device_headers,
                                       transaction=RabbitMQNoPoisonInputTransactionWrapper(
@@ -172,7 +178,12 @@ class RabbitMQPoisonCountingInputDevice(RabbitMQInputDevice):
 
                 continue
 
-        return self._create_response_from_frames(body, header_frame, method_frame, channel, with_transaction)
+        return self._create_response_from_frames(cancellation_token=cancellation_token,
+                                                 body=body,
+                                                 header_frame=header_frame,
+                                                 method_frame=method_frame,
+                                                 channel=channel,
+                                                 with_transaction=with_transaction)
 
 
 class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):

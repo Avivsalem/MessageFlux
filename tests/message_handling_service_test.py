@@ -1,5 +1,6 @@
 import logging
 import sys
+import threading
 import time
 from threading import Thread
 from typing import List, Optional, Tuple
@@ -22,7 +23,9 @@ class MockInputDevice(InputDevice['MockInputDeviceManager']):
         super(MockInputDevice, self).__init__(manager, name)
         self.input_list = input_list
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self, cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         try:
             return ReadResult(Message(self.input_list.pop().encode()), transaction=NULLTransaction(self))
         except IndexError:

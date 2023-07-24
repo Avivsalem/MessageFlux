@@ -1,7 +1,7 @@
 import logging
+import threading
+from time import perf_counter
 from typing import Optional, Collection, List, Callable
-
-from time import sleep, perf_counter
 
 from messageflux import InputDevice, ReadResult
 from messageflux.iodevices.base import InputDeviceManager, InputDeviceException
@@ -30,9 +30,15 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
         self._input_devices = input_devices
         self._logger = logging.getLogger(__name__)
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         reads a message from device
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
@@ -51,7 +57,9 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
             failures = []
             for curr_device in self._input_devices:
                 try:
-                    read_result = curr_device._read_message(0, with_transaction=with_transaction)
+                    read_result = curr_device._read_message(cancellation_token=cancellation_token,
+                                                            timeout=0,
+                                                            with_transaction=with_transaction)
                     if read_result is not None:
                         return read_result
                     if timeout is not None and perf_counter() >= end_time:
@@ -70,7 +78,7 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
             if timeout is not None and perf_counter() >= end_time:
                 return None
             else:
-                sleep(self._SLEEP_BETWEEN_ITERATIONS)
+                cancellation_token.wait(self._SLEEP_BETWEEN_ITERATIONS)
 
     def close(self):
         """

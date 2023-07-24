@@ -1,4 +1,5 @@
 import os
+from threading import Event
 
 from messageflux.iodevices.base import Message
 from messageflux.iodevices.file_system import FileSystemInputDeviceManager, FileSystemOutputDeviceManager
@@ -14,6 +15,7 @@ OUTPUT_NAME = "OUTPUT"
 
 
 def test_sanity(tmpdir):
+    cancellation_token = Event()
     tmpdir = str(tmpdir)
     input_fs_manager = FileSystemInputDeviceManager(tmpdir)
     output_fs_manager = FileSystemOutputDeviceManager(tmpdir)
@@ -34,7 +36,7 @@ def test_sanity(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is not None
         read_result.commit()
 
@@ -43,7 +45,7 @@ def test_sanity(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is None
 
 
@@ -70,6 +72,7 @@ class MockMessageStore(MessageStoreBase):
 
 
 def test_chained_message_stores(tmpdir):
+    cancellation_token = Event()
     tmpdir = str(tmpdir)
     input_fs_manager = FileSystemInputDeviceManager(tmpdir)
     output_fs_manager = FileSystemOutputDeviceManager(tmpdir)
@@ -92,7 +95,7 @@ def test_chained_message_stores(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is not None
         read_result.commit()
 
@@ -100,11 +103,12 @@ def test_chained_message_stores(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is None
 
 
 def test_rollback(tmpdir):
+    cancellation_token = Event()
     tmpdir = str(tmpdir)
     input_fs_manager = FileSystemInputDeviceManager(tmpdir)
     output_fs_manager = FileSystemOutputDeviceManager(tmpdir)
@@ -124,7 +128,7 @@ def test_rollback(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is not None
         read_result.rollback()
 
@@ -134,7 +138,7 @@ def test_rollback(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is not None
         read_result.commit()
 
@@ -143,6 +147,7 @@ def test_rollback(tmpdir):
 
 
 def test_no_deletion(tmpdir):
+    cancellation_token = Event()
     tmpdir = str(tmpdir)
     input_fs_manager = FileSystemInputDeviceManager(tmpdir)
     output_fs_manager = FileSystemOutputDeviceManager(tmpdir)
@@ -163,7 +168,7 @@ def test_no_deletion(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_aggregate_device([QUEUE_NAME])
-        read_result = input_device.read_message(1)
+        read_result = input_device.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is not None
         read_result.commit()
 

@@ -3,11 +3,10 @@ import logging
 import os
 import random
 import threading
+import time
 from collections import defaultdict
 from random import randint
 from typing import Optional, Dict, List, Set, Iterator
-
-import time
 
 from messageflux.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadResult, \
     InputDeviceException
@@ -406,9 +405,15 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                                                     with_transaction=with_transaction,
                                                     serializer=self._serializer)
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         """
         this method returns a message from the file system
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
@@ -441,7 +446,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
 
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
-                    time.sleep(self._SLEEP_BETWEEN_BATCHES)
+                    cancellation_token.wait(self._SLEEP_BETWEEN_BATCHES)
             else:
                 while True:
                     got_file = False
@@ -463,7 +468,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
                     if not got_file:
-                        time.sleep(self._SLEEP_BETWEEN_BATCHES)
+                        cancellation_token.wait(self._SLEEP_BETWEEN_BATCHES)
 
             return None
 

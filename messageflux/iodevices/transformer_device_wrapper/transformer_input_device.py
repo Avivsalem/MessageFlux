@@ -1,3 +1,4 @@
+import threading
 from abc import ABCMeta, abstractmethod
 from typing import Optional
 
@@ -56,8 +57,13 @@ class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
         self._transformer = transformer
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
-        read_result = self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
+        read_result = self._inner_device.read_message(cancellation_token=cancellation_token,
+                                                      timeout=timeout,
+                                                      with_transaction=with_transaction)
         if read_result is not None:
             read_result = self._transformer.transform_incoming_message(self, read_result)
 
