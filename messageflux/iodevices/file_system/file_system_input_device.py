@@ -406,9 +406,15 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                                                     with_transaction=with_transaction,
                                                     serializer=self._serializer)
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         """
         this method returns a message from the file system
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None

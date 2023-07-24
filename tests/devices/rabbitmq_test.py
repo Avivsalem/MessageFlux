@@ -1,5 +1,6 @@
 import os
 import ssl
+from threading import Event
 
 import pytest
 
@@ -25,6 +26,7 @@ def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceMan
     res = out_mgr.create_queue('', auto_delete=True)
     queue_name = res.method.queue
     try:
+        cancellation_token = Event()
         with out_mgr:
             with in_mgr:
                 inqueue = in_mgr.get_input_device(queue_name)
@@ -35,7 +37,9 @@ def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceMan
                 device_headers = {'priority': 3, 'message_id': 'msg_123'}
                 outqueue.send_message(Message(b"TEST_DATA", headers), device_headers)
 
-                read_result = inqueue.read_message(1, with_transaction=True)
+                read_result = inqueue.read_message(cancellation_token=cancellation_token,
+                                                   timeout=1,
+                                                   with_transaction=True)
                 assert read_result is not None
                 read_result.commit()
 
@@ -45,7 +49,7 @@ def _sanity(in_mgr: RabbitMQInputDeviceManager, out_mgr: RabbitMQOutputDeviceMan
                 assert read_result.device_headers['priority'] == 3
                 assert read_result.device_headers['message_id'] == 'msg_123'
 
-                assert inqueue.read_message(1) is None
+                assert inqueue.read_message(cancellation_token=cancellation_token, timeout=1) is None
 
     finally:
         out_mgr.delete_queue(queue_name, only_if_empty=False)
@@ -160,6 +164,7 @@ def test_message_and_headers_size():
 
 
 def _no_poison_rollback(poison_counter: PoisonCounterBase):
+    cancellation_token = Event()
     in_mgr = RabbitMQPoisonCountingInputDeviceManager(hosts=[RABBIT_HOST],
                                                       user=RABBIT_USERNAME,
                                                       password=RABBIT_PASSWORD,
@@ -182,23 +187,23 @@ def _no_poison_rollback(poison_counter: PoisonCounterBase):
         with in_mgr:
             inqueue = in_mgr.get_input_device(queue_name)
             with InputTransactionScope(inqueue) as transaction_scope:
-                read_result = transaction_scope.read_message(5)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token, timeout=5)
                 assert read_result is not None
                 assert read_result.message.bytes == b"TEST_DATA"
                 assert read_result.message.headers['test_header'] == 'test_value'
                 transaction_scope.rollback()
 
             with InputTransactionScope(inqueue) as transaction_scope:
-                read_result = transaction_scope.read_message(5)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token, timeout=5)
                 assert read_result is not None
                 assert read_result.message.bytes == b"TEST_DATA"
                 assert read_result.message.headers['test_header'] == 'test_value'
                 transaction_scope.rollback()
 
             with InputTransactionScope(inqueue) as transaction_scope:
-                read_result = transaction_scope.read_message(1)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token, timeout=1)
                 assert read_result is None
-                read_result = transaction_scope.read_message(1)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token, timeout=1)
                 assert read_result is None
 
 

@@ -1,8 +1,8 @@
 import logging
+import threading
 from abc import ABCMeta, abstractmethod
-from typing import Optional, List, TypeVar, Generic
-
 from time import sleep, perf_counter
+from typing import Optional, List, TypeVar, Generic
 
 from messageflux.iodevices.base.common import MessageBundle, Message, DeviceHeaders
 from messageflux.iodevices.base.input_transaction import InputTransaction, NULLTransaction
@@ -54,10 +54,15 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         return self._manager
 
     def read_message(self,
+                     cancellation_token: threading.Event,
                      timeout: Optional[float] = None,
                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device. and makes sure that the input device name header is present
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
+
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
         :param with_transaction: 'True' if the device should read message within transaction,
@@ -66,7 +71,9 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         :return: a ReadResult object or None if no message was available.
         the device headers can contain extra information about the device that returned the message
         """
-        read_result = self._read_message(timeout=timeout, with_transaction=with_transaction)
+        read_result = self._read_message(cancellation_token=cancellation_token,
+                                         timeout=timeout,
+                                         with_transaction=with_transaction)
         if read_result is not None:
             read_result.device_headers.setdefault(self.INPUT_DEVICE_NAME_HEADER, self.name)
 
@@ -74,10 +81,14 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
 
     @abstractmethod
     def _read_message(self,
+                      cancellation_token: threading.Event,
                       timeout: Optional[float] = None,
                       with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the device (should be implemented by child classes)
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
@@ -122,10 +133,14 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
         return self._last_read_device
 
     def _read_message(self,
+                      cancellation_token: threading.Event,
                       timeout: Optional[float] = None,
                       with_transaction: bool = True) -> Optional['ReadResult']:
         """
         this method returns a message from the first device available in inner devices
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
@@ -144,7 +159,9 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
         while True:
             for inner_device in self._inner_devices_iterator:
                 self._last_read_device = inner_device
-                read_result = inner_device.read_message(timeout=0, with_transaction=with_transaction)
+                read_result = inner_device.read_message(cancellation_token=cancellation_token,
+                                                        timeout=0,
+                                                        with_transaction=with_transaction)
                 if read_result is not None:
                     return read_result
 
@@ -237,7 +254,10 @@ class _NullDevice(InputDevice):
     def __init__(self):
         super(_NullDevice, self).__init__(_NullInputDeviceManager(), '__NULL__')
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         always returns None immediately
         """

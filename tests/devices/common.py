@@ -1,4 +1,5 @@
 import uuid
+from threading import Event
 from typing import Optional
 
 import time
@@ -35,12 +36,12 @@ def sanity_test(input_device_manager: InputDeviceManager,
     input_device_manager.connect()
     try:
         input_device = input_device_manager.get_input_device(device_name)
-        read_result = input_device.read_message()
+        read_result = input_device.read_message(cancellation_token=Event())
         assert read_result is not None
         _assert_messages_equal(org_message=test_message_1, new_message=read_result.message)
         read_result.commit()
 
-        read_result = input_device.read_message()
+        read_result = input_device.read_message(cancellation_token=Event())
         assert read_result is not None
         _assert_messages_equal(org_message=test_message_2, new_message=read_result.message)
         read_result.commit()
@@ -70,22 +71,23 @@ def rollback_test(input_device_manager: InputDeviceManager,
 
     input_device_manager.connect()
     try:
+        cancellation_token = Event()
         input_device = input_device_manager.get_input_device(device_name)
-        read_result1 = input_device.read_message()
+        read_result1 = input_device.read_message(cancellation_token=cancellation_token)
         assert read_result1 is not None
         _assert_messages_equal(org_message=test_message_1, new_message=read_result1.message)
-        read_result2 = input_device.read_message()
+        read_result2 = input_device.read_message(cancellation_token=cancellation_token)
         assert read_result2 is not None
         _assert_messages_equal(org_message=test_message_2, new_message=read_result2.message)
         read_result1.rollback()
         read_result2.rollback()
 
-        read_result = input_device.read_message()
+        read_result = input_device.read_message(cancellation_token=cancellation_token)
         assert read_result is not None
         _assert_messages_equal(org_message=test_message_1, new_message=read_result.message)
         read_result.commit()
 
-        read_result = input_device.read_message()
+        read_result = input_device.read_message(cancellation_token=cancellation_token)
         assert read_result is not None
         _assert_messages_equal(org_message=test_message_2, new_message=read_result.message)
         read_result.commit()

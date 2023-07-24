@@ -36,20 +36,27 @@ def test_sanity():
     loop_ended = Event()
     service.loop_ended_event.subscribe(lambda x: loop_ended.set())
     try:
+        cancellation_token = Event()
         Thread(target=service.start, daemon=True).start()
         loop_ended.wait(3)
-        read_result = output_device_manager.get_input_device('output_device1').read_message(timeout=3,
-                                                                                            with_transaction=False)
+        read_result = output_device_manager.get_input_device('output_device1').read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'output_device1'
 
-        read_result = output_device_manager.get_input_device('output_device2').read_message(timeout=3,
-                                                                                            with_transaction=False)
+        read_result = output_device_manager.get_input_device('output_device2').read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'output_device2'
 
-        read_result = output_device_manager.get_input_device('output_device3').read_message(timeout=3,
-                                                                                            with_transaction=False)
+        read_result = output_device_manager.get_input_device('output_device3').read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'output_device3'
     finally:
@@ -73,16 +80,20 @@ def test_filter():
     loop_ended = Event()
     service.loop_ended_event.subscribe(lambda x: loop_ended.set())
     try:
+        cancellation_token = Event()
         Thread(target=service.start, daemon=True).start()
         loop_ended.wait(3)
 
-        read_result = output_device_manager.get_input_device(output_device_name).read_message(timeout=3,
-                                                                                              with_transaction=False)
+        read_result = output_device_manager.get_input_device(output_device_name).read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.headers.get('num') == 1
 
-        read_result = output_device_manager.get_input_device(output_device_name).read_message(timeout=3,
-                                                                                              with_transaction=False)
+        read_result = output_device_manager.get_input_device(output_device_name).read_message(
+            cancellation_token=cancellation_token, timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.headers.get('num') == 3
 
@@ -113,21 +124,28 @@ def test_multiple():
     loop_ended = Event()
     service.loop_ended_event.subscribe(lambda x: loop_ended.set())
     try:
+        cancellation_token = Event()
         Thread(target=service.start, daemon=True).start()
         loop_ended.wait(3)
 
-        read_result = output_device_manager.get_input_device("test1").read_message(timeout=3,
-                                                                                   with_transaction=False)
+        read_result = output_device_manager.get_input_device("test1").read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'123'
 
-        read_result = output_device_manager.get_input_device("test2").read_message(timeout=3,
-                                                                                   with_transaction=False)
+        read_result = output_device_manager.get_input_device("test2").read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'123'
 
-        read_result = output_device_manager.get_input_device("test3").read_message(timeout=3,
-                                                                                   with_transaction=False)
+        read_result = output_device_manager.get_input_device("test3").read_message(
+            cancellation_token=cancellation_token,
+            timeout=3,
+            with_transaction=False)
         assert read_result is not None
         assert read_result.message.bytes == b'123'
 
