@@ -1,7 +1,7 @@
 import logging
 import threading
 from abc import ABCMeta, abstractmethod
-from time import sleep, perf_counter
+from time import perf_counter
 from typing import Optional, List, TypeVar, Generic
 
 from messageflux.iodevices.base.common import MessageBundle, Message, DeviceHeaders
@@ -173,7 +173,7 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
                 return None
             else:
                 # if all the devices were empty, wait before performing another iteration.
-                sleep(self._SLEEP_BETWEEN_ITERATIONS)
+                cancellation_token.wait(self._SLEEP_BETWEEN_ITERATIONS)
 
     def close(self):
         """

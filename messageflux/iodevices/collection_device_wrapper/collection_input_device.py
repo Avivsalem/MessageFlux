@@ -1,6 +1,6 @@
 import logging
 import threading
-from time import sleep, perf_counter
+from time import perf_counter
 from typing import Optional, Collection, List, Callable
 
 from messageflux import InputDevice, ReadResult
@@ -78,7 +78,7 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
             if timeout is not None and perf_counter() >= end_time:
                 return None
             else:
-                sleep(self._SLEEP_BETWEEN_ITERATIONS)
+                cancellation_token.wait(self._SLEEP_BETWEEN_ITERATIONS)
 
     def close(self):
         """

@@ -3,11 +3,10 @@ import logging
 import os
 import random
 import threading
+import time
 from collections import defaultdict
 from random import randint
 from typing import Optional, Dict, List, Set, Iterator
-
-import time
 
 from messageflux.iodevices.base import InputTransaction, InputDeviceManager, InputDevice, ReadResult, \
     InputDeviceException
@@ -447,7 +446,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
 
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
-                    time.sleep(self._SLEEP_BETWEEN_BATCHES)
+                    cancellation_token.wait(self._SLEEP_BETWEEN_BATCHES)
             else:
                 while True:
                     got_file = False
@@ -469,7 +468,7 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
                     if timeout is not None and time.perf_counter() >= deadline:
                         break
                     if not got_file:
-                        time.sleep(self._SLEEP_BETWEEN_BATCHES)
+                        cancellation_token.wait(self._SLEEP_BETWEEN_BATCHES)
 
             return None
 
