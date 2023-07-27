@@ -134,7 +134,7 @@ from messageflux.fastmessage_handler import FastMessage, MultipleReturnValues
 fm = FastMessage()
 
 
-@fm.map(input_device='some_queue')
+@fm.map(input_device='some_queue', output_device='some_other_queue')
 def do_something(x: int):
     return MultipleReturnValues([1, 'b', 3])  # will create 3 output messages, one for each item
 ```
