@@ -244,4 +244,30 @@ def test_custom_output_device_result():
     assert result[3].output_device_name == default_output_device
 
 
+def test_no_output_device():
+    fm: FastMessage = FastMessage()
+
+    @fm.map(input_device='input1')
+    def do_something1(m: Message, b: MessageBundle, d: InputDeviceName, y: int):
+        return MultipleReturnValues([
+            FastMessageOutput(value=1, output_device='test1'),
+            FastMessageOutput(value=2, output_device='test2'),
+            FastMessageOutput(value=3, output_device='test3'),
+            4
+        ])
+
+    result = fm.handle_message(FakeInputDevice('input1'),
+                               MessageBundle(message=Message(data=b'{"y": 10}',
+                                                             headers={'test': 'mtest'}),
+                                             device_headers={'test': 'btest'}))
+    assert result is not None
+    assert isinstance(result, List)
+    assert len(result) == 3
+    assert result[0].message_bundle.message.bytes == b'1'
+    assert result[0].output_device_name == "test1"
+    assert result[1].message_bundle.message.bytes == b'2'
+    assert result[1].output_device_name == "test2"
+    assert result[2].message_bundle.message.bytes == b'3'
+    assert result[2].output_device_name == "test3"
+
 # add tests for no output devices, etc...

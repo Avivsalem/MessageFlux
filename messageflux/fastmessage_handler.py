@@ -145,15 +145,10 @@ class _CallbackWrapper:
         if callback_return is None:
             return None
 
-        if self._output_device is None:
-            _logger.warning(f"callback for input device '{input_device.name}' returned value, "
-                            f"but is not mapped to output device")
-            return None
-
         return self._get_pipeline_results(value=callback_return,
                                           default_output_device=self._output_device)
 
-    def _get_pipeline_results(self, value: Any, default_output_device: str) -> List[PipelineResult]:
+    def _get_pipeline_results(self, value: Any, default_output_device: Optional[str]) -> List[PipelineResult]:
         results = []
         if isinstance(value, MultipleReturnValues):
             for item in value:
@@ -163,11 +158,19 @@ class _CallbackWrapper:
             results.extend(self._get_pipeline_results(value=value.value,
                                                       default_output_device=value.output_device))
         else:
-            results.append(self._get_single_pipeline_result(value, default_output_device))
+            pipeline_result = self._get_single_pipeline_result(value=value,
+                                                               output_device=default_output_device)
+            if pipeline_result is not None:
+                results.append(pipeline_result)
 
         return results
 
-    def _get_single_pipeline_result(self, value: Any, output_device: str) -> PipelineResult:
+    def _get_single_pipeline_result(self, value: Any, output_device: Optional[str]) -> Optional[PipelineResult]:
+        if output_device is None:
+            _logger.warning(f"callback for input device '{self._input_device}' returned value, "
+                            f"but is not mapped to output device")
+            return None
+
         if isinstance(value, MessageBundle):
             output_bundle = value
         elif isinstance(value, Message):
