@@ -58,7 +58,7 @@ jobs:
           RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_PASSWORD }}
         run: |
           pip install pytest pytest-cov
-          pytest tests
+          pytest --cov=./messageflux --cov-report term-missing --cov-report=html:./reports/coverage/html_results --cov-report xml:./reports/coverage/coverage-results.xml --junitxml=./reports/test-results.xml tests
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
