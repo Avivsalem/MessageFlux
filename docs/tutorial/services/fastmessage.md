@@ -129,8 +129,6 @@ All you have to do, is return a ```MultipleReturnValues``` (which is a ```List``
 ### Example
 
 ```python
-
-
 from messageflux.fastmessage_handler import FastMessage, MultipleReturnValues
 
 fm = FastMessage()
@@ -139,5 +137,25 @@ fm = FastMessage()
 @fm.map(input_device='some_queue')
 def do_something(x: int):
     return MultipleReturnValues([1, 'b', 3])  # will create 3 output messages, one for each item
+```
+
+
+## Returning Result to a different output device
+
+You can make the function return a result to a different output device then the one in the decorator
+
+You do this by using the ```FastMessageOutput``` class, and giving it the value to send, and the output device name to send to
+
+### Example
+
+```python
+from messageflux.fastmessage_handler import FastMessage, FastMessageOutput
+
+fm = FastMessage()
+
+
+@fm.map(input_device='some_queue', output_device='default_output_device')
+def do_something(x: int):
+    return FastMessageOutput(value=1, output_device='other_output_device') # this will send the value 1 to 'other_output_device' instead of the default
 ```
 

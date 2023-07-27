@@ -50,6 +50,15 @@ class MultipleReturnValues(list):
     pass
 
 
+@dataclass
+class FastMessageOutput:
+    """
+    a result that contains the output device name to send the value to
+    """
+    output_device: str
+    value: Any
+
+
 class _DefaultClass(str):
     pass
 
@@ -140,17 +149,25 @@ class _CallbackWrapper:
             _logger.warning(f"callback for input device '{input_device.name}' returned value, "
                             f"but is not mapped to output device")
             return None
+
+        return self._get_pipeline_results(value=callback_return,
+                                          default_output_device=self._output_device)
+
+    def _get_pipeline_results(self, value: Any, default_output_device: str) -> List[PipelineResult]:
         results = []
-        if isinstance(callback_return, MultipleReturnValues):
-            return_list: List[Any] = callback_return
+        if isinstance(value, MultipleReturnValues):
+            for item in value:
+                results.extend(self._get_pipeline_results(value=item,
+                                                          default_output_device=default_output_device))
+        elif isinstance(value, FastMessageOutput):
+            results.extend(self._get_pipeline_results(value=value.value,
+                                                      default_output_device=value.output_device))
         else:
-            return_list = [callback_return]
-        for return_value in return_list:
-            results.append(self._get_single_pipeline_result(return_value, self._output_device))
+            results.append(self._get_single_pipeline_result(value, default_output_device))
 
         return results
 
-    def _get_single_pipeline_result(self, value: Any, output_device: str):
+    def _get_single_pipeline_result(self, value: Any, output_device: str) -> PipelineResult:
         if isinstance(value, MessageBundle):
             output_bundle = value
         elif isinstance(value, Message):
@@ -167,7 +184,7 @@ class FastMessage(PipelineHandlerBase):
     def __init__(self, default_output_device: Optional[str] = None,
                  validation_error_handler: Optional[Callable[
                      [InputDevice, MessageBundle, ValidationError],
-                     Optional[PipelineResult]]] = None):
+                     Optional[Union[PipelineResult, List[PipelineResult]]]]] = None):
         """
 
         :param default_output_device: an optional default output device to send callaback results to,
