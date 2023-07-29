@@ -134,7 +134,7 @@ def test_dont_wait_for_batch():
     try:
         time.sleep(1)
         output_device.send_message(Message(b'3'))
-        time.sleep(1)
+        time.sleep(2)
 
         assert len(batch_handler.batches) == 2
         assert len(batch_handler.batches[0]) == 2

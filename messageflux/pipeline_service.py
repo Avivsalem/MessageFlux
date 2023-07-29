@@ -83,6 +83,11 @@ class PipelineService(MessageHandlingServiceBase):
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler
 
+    def _prepare_service(self):
+        super()._prepare_service()
+        if self._output_device_manager is not None:
+            self._output_device_manager.connect()
+
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
             pipeline_handler_result = self._pipeline_handler.handle_message(input_device, read_result)
@@ -99,3 +104,10 @@ class PipelineService(MessageHandlingServiceBase):
                     output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
                     output_device.send_message(message=pipeline_result.message_bundle.message,
                                                device_headers=pipeline_result.message_bundle.device_headers)
+
+    def _finalize_service(self, exception: Optional[Exception] = None):
+        try:
+            super()._finalize_service(exception)
+        finally:
+            if self._output_device_manager is not None:
+                self._output_device_manager.disconnect()
