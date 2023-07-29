@@ -200,6 +200,7 @@ def test_fatal():
     logging.getLogger().addHandler(stream_handler)
     service_stopping = threading.Event()
     service_stopping.clear()
+
     def _on_service_state_change(service_state: ServiceState):
         if service_state == ServiceState.STOPPING:
             service_stopping.set()
