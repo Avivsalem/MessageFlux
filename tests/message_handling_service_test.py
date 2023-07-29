@@ -74,7 +74,7 @@ def test_sanity():
         logging.getLogger().removeHandler(stream_handler)
 
 
-class TestBatchHandler(BatchMessageHandlerBase):
+class MyBatchHandler(BatchMessageHandlerBase):
     def __init__(self):
         self.batches = []
 
@@ -91,7 +91,7 @@ def test_batch_count():
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
     output_device.send_message(Message(b'3'))
-    batch_handler = TestBatchHandler()
+    batch_handler = MyBatchHandler()
     service = BatchMessageHandlingService(batch_handler=batch_handler,
                                           input_device_manager=input_device_manager,
                                           input_device_names=['bla'],
@@ -120,11 +120,11 @@ def test_dont_wait_for_batch():
     output_device = input_device_manager.get_output_device('bla')
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
-    batch_handler = TestBatchHandler()
+    batch_handler = MyBatchHandler()
     service = BatchMessageHandlingService(batch_handler=batch_handler,
                                           input_device_manager=input_device_manager,
                                           input_device_names=['bla'],
-                                          read_timeout=5,
+                                          read_timeout=10,
                                           wait_for_batch_count=False,
                                           max_batch_read_count=3)
 
@@ -132,7 +132,8 @@ def test_dont_wait_for_batch():
     service_thread.start()
 
     try:
-        time.sleep(1)
+        time.sleep(2)
+        assert len(batch_handler.batches) == 1
         output_device.send_message(Message(b'3'))
         time.sleep(1)
 
@@ -153,7 +154,7 @@ def test_wait_for_batch():
     output_device = input_device_manager.get_output_device('bla')
     output_device.send_message(Message(b'1'))
     output_device.send_message(Message(b'2'))
-    batch_handler = TestBatchHandler()
+    batch_handler = MyBatchHandler()
     service = BatchMessageHandlingService(batch_handler=batch_handler,
                                           input_device_manager=input_device_manager,
                                           input_device_names=['bla'],
