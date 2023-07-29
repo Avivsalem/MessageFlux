@@ -11,6 +11,7 @@ from messageflux import (InputDevice,
                          MessageHandlerBase,
                          BatchMessageHandlerBase,
                          BatchMessageHandlingService)
+from messageflux.base_service import ServiceState
 from messageflux.iodevices.base import Message, InputDeviceManager
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
@@ -187,11 +188,8 @@ class ErrorMessageHandler(MessageHandlerBase):
     def __init__(self, error_after_count: int):
         self._error_after_count = error_after_count
         self._count = 0
-        self.called = threading.Event()
-        self.called.clear()
 
     def handle_message(self, input_device: InputDevice, read_result: ReadResult):
-        self.called.set()
         self._count += 1
         if self._count >= self._error_after_count:
             raise Exception()
@@ -200,6 +198,11 @@ class ErrorMessageHandler(MessageHandlerBase):
 def test_fatal():
     stream_handler = logging.StreamHandler(sys.stdout)
     logging.getLogger().addHandler(stream_handler)
+    service_stopping = threading.Event()
+    service_stopping.clear()
+    def _on_service_state_change(service_state: ServiceState):
+        if service_state == ServiceState.STOPPING:
+            service_stopping.set()
 
     input_queue = ["3", "2", "1"]
     input_device_manager = MockInputDeviceManager(input_queue)
@@ -207,13 +210,14 @@ def test_fatal():
     service = MessageHandlingService(message_handler=error_handler,
                                      input_device_manager=input_device_manager,
                                      input_device_names=['bla'])
+    service.state_changed_event.subscribe(_on_service_state_change)
 
     addon = LoopHealthAddon(max_consecutive_failures=1).attach(service)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
-    error_handler.called.wait(3)
-    time.sleep(1)
+
+    service_stopping.wait(3)
     try:
         assert not service.is_alive
     finally:
@@ -237,8 +241,7 @@ def test_not_fatal():
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
 
-    error_handler.called.wait(3)
-    time.sleep(1)
+    time.sleep(3)
     try:
         assert service.is_alive
     finally:
