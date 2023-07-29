@@ -77,9 +77,12 @@ def test_sanity():
 class MyBatchHandler(BatchMessageHandlerBase):
     def __init__(self):
         self.batches = []
+        self.batch_was_read = threading.Event()
+        self.batch_was_read.clear()
 
     def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         self.batches.append(batch)
+        self.batch_was_read.set()
 
 
 def test_batch_count():
@@ -101,8 +104,8 @@ def test_batch_count():
     service_thread.start()
 
     try:
+        batch_handler.batch_was_read.wait(3)
         time.sleep(1)
-
         assert len(batch_handler.batches) == 2
         assert len(batch_handler.batches[0]) == 2
         assert len(batch_handler.batches[1]) == 1
@@ -132,10 +135,11 @@ def test_dont_wait_for_batch():
     service_thread.start()
 
     try:
-        time.sleep(2)
+        batch_handler.batch_was_read.wait(3)
         assert len(batch_handler.batches) == 1
+        batch_handler.batch_was_read.clear()
         output_device.send_message(Message(b'3'))
-        time.sleep(1)
+        batch_handler.batch_was_read.wait(2)
 
         assert len(batch_handler.batches) == 2
         assert len(batch_handler.batches[0]) == 2
@@ -166,9 +170,10 @@ def test_wait_for_batch():
     service_thread.start()
 
     try:
-        time.sleep(2)
+        batch_handler.batch_was_read.wait(2)
+        batch_handler.batch_was_read.clear()
         output_device.send_message(Message(b'3'))
-        time.sleep(3)
+        batch_handler.batch_was_read.wait(3)
 
         assert len(batch_handler.batches) == 1
         assert len(batch_handler.batches[0]) == 3
@@ -182,8 +187,11 @@ class ErrorMessageHandler(MessageHandlerBase):
     def __init__(self, error_after_count: int):
         self._error_after_count = error_after_count
         self._count = 0
+        self.called = threading.Event()
+        self.called.clear()
 
     def handle_message(self, input_device: InputDevice, read_result: ReadResult):
+        self.called.set()
         self._count += 1
         if self._count >= self._error_after_count:
             raise Exception()
@@ -204,8 +212,8 @@ def test_fatal():
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
-
-    time.sleep(3)
+    error_handler.called.wait(3)
+    time.sleep(1)
     try:
         assert not service.is_alive
     finally:
@@ -229,7 +237,8 @@ def test_not_fatal():
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
 
-    time.sleep(3)
+    error_handler.called.wait(3)
+    time.sleep(1)
     try:
         assert service.is_alive
     finally:
