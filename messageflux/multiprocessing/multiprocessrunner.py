@@ -1,15 +1,11 @@
 import logging
-import os
 import threading
-from multiprocessing.process import BaseProcess
-
 import time
+from multiprocessing.process import BaseProcess
 from typing import List, Optional
 
 from messageflux.base_service import BaseService
 from messageflux.multiprocessing.singleprocesshandler import ServiceFactory, SingleProcessHandler
-
-INSTANCE_COUNT_ENV_VAR = 'MULTI_PROCESS_INSTANCE_COUNT'
 
 
 class MultiProcessRunner(BaseService):
@@ -53,7 +49,6 @@ class MultiProcessRunner(BaseService):
         return False
 
     def _run_service(self, cancellation_token: threading.Event):
-        os.environ[INSTANCE_COUNT_ENV_VAR] = str(self._instance_count)
         for i in range(self._instance_count):
             self._logger.info(f'Starting service instance {i}')
             self._run_service_instance(i)
@@ -66,10 +61,11 @@ class MultiProcessRunner(BaseService):
         return [handler.process for handler in self._process_handlers if handler.process is not None]
 
     def _run_service_instance(self, instance_index: int):
-        handler = SingleProcessHandler(self._service_factory,
-                                       instance_index,
-                                       self._live_check_interval,
-                                       self._live_check_timeout)
+        handler = SingleProcessHandler(service_factory=self._service_factory,
+                                       instance_index=instance_index,
+                                       total_instances=self._instance_count,
+                                       live_check_interval=self._live_check_interval,
+                                       live_check_timeout=self._live_check_timeout)
         handler.start(self._on_handler_exit)
         self._process_handlers.append(handler)
 
@@ -133,7 +129,7 @@ def get_service_runner(*,
     :param restart_on_failure: should we restart a process if it fails?
     """
     if instance_count <= 1:
-        return service_factory.create_service()
+        return service_factory.create_service(instance_index=0, total_instances=1)
     else:
         return MultiProcessRunner(service_factory=service_factory,
                                   instance_count=instance_count,
