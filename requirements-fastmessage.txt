@@ -1,1 +1,1 @@
-pydantic>=1,<2
+pydantic>=1.10.1,<2
