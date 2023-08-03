@@ -65,9 +65,9 @@ version = { file = "VERSION" }
 dev = { file = "requirements-dev.txt" }
 fastmessage = { file = "requirements-fastmessage.txt" }
 objectstorage = { file = "requirements-objectstorage.txt" }
-objectstorage-mypy = { file = "requirements-objectstorage-mypy.txt" }
+objectstorage_mypy = { file = "requirements-objectstorage_mypy.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
-rabbitmq-mypy = { file = "requirements-rabbitmq-mypy.txt" }
+rabbitmq_mypy = { file = "requirements-rabbitmq_mypy.txt" }
 all = { file = "requirements-all.txt" }
 
 
