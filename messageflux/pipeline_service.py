@@ -79,6 +79,12 @@ class PipelineService(MessageHandlingServiceBase):
                  pipeline_handler: PipelineHandlerBase,
                  output_device_manager: Optional[OutputDeviceManager] = None,
                  **kwargs):
+        """
+
+        :param pipeline_handler: the pipeline handler to use for handling the messages
+        :param output_device_manager: Optional. the output device manager to send messages to
+        :param **kwargs: passed to parent as is
+        """
         super().__init__(**kwargs)
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler

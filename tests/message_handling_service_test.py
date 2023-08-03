@@ -11,6 +11,7 @@ from messageflux import (InputDevice,
                          MessageHandlerBase,
                          BatchMessageHandlerBase,
                          BatchMessageHandlingService)
+from messageflux.base_service import ServiceState
 from messageflux.iodevices.base import Message, InputDeviceManager
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
@@ -77,9 +78,12 @@ def test_sanity():
 class MyBatchHandler(BatchMessageHandlerBase):
     def __init__(self):
         self.batches = []
+        self.batch_was_read = threading.Event()
+        self.batch_was_read.clear()
 
     def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         self.batches.append(batch)
+        self.batch_was_read.set()
 
 
 def test_batch_count():
@@ -101,8 +105,8 @@ def test_batch_count():
     service_thread.start()
 
     try:
+        batch_handler.batch_was_read.wait(3)
         time.sleep(1)
-
         assert len(batch_handler.batches) == 2
         assert len(batch_handler.batches[0]) == 2
         assert len(batch_handler.batches[1]) == 1
@@ -132,10 +136,11 @@ def test_dont_wait_for_batch():
     service_thread.start()
 
     try:
-        time.sleep(2)
+        batch_handler.batch_was_read.wait(3)
         assert len(batch_handler.batches) == 1
+        batch_handler.batch_was_read.clear()
         output_device.send_message(Message(b'3'))
-        time.sleep(1)
+        batch_handler.batch_was_read.wait(2)
 
         assert len(batch_handler.batches) == 2
         assert len(batch_handler.batches[0]) == 2
@@ -166,9 +171,10 @@ def test_wait_for_batch():
     service_thread.start()
 
     try:
-        time.sleep(2)
+        batch_handler.batch_was_read.wait(2)
+        batch_handler.batch_was_read.clear()
         output_device.send_message(Message(b'3'))
-        time.sleep(3)
+        batch_handler.batch_was_read.wait(3)
 
         assert len(batch_handler.batches) == 1
         assert len(batch_handler.batches[0]) == 3
@@ -192,6 +198,12 @@ class ErrorMessageHandler(MessageHandlerBase):
 def test_fatal():
     stream_handler = logging.StreamHandler(sys.stdout)
     logging.getLogger().addHandler(stream_handler)
+    service_stopping = threading.Event()
+    service_stopping.clear()
+
+    def _on_service_state_change(service_state: ServiceState):
+        if service_state == ServiceState.STOPPING:
+            service_stopping.set()
 
     input_queue = ["3", "2", "1"]
     input_device_manager = MockInputDeviceManager(input_queue)
@@ -199,13 +211,14 @@ def test_fatal():
     service = MessageHandlingService(message_handler=error_handler,
                                      input_device_manager=input_device_manager,
                                      input_device_names=['bla'])
+    service.state_changed_event.subscribe(_on_service_state_change)
 
     addon = LoopHealthAddon(max_consecutive_failures=1).attach(service)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
 
-    time.sleep(3)
+    service_stopping.wait(3)
     try:
         assert not service.is_alive
     finally:
