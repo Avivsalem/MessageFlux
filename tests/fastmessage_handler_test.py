@@ -37,18 +37,18 @@ def test_sanity():
     default_output_device = str(uuid.uuid4()).replace('-', '')
     fm: FastMessage = FastMessage(default_output_device=default_output_device)
 
-    @fm.map(input_device='input1')
+    @fm.map()
     def do_something1(x: SomeModel, y: str, z: List[int] = None):
         return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
 
-    result = fm.handle_message(FakeInputDevice('input1'), MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "F":3}')))
+    result = fm.handle_message(FakeInputDevice('do_something1'), MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "F":3}')))
     assert result is not None
     result = result[0]
     assert result.output_device_name == default_output_device
     json_result = json.loads(result.message_bundle.message.bytes.decode())
     assert json_result['y'] == 'x=1, y=a, z=None'
 
-    result = fm.handle_message(FakeInputDevice('input1'),
+    result = fm.handle_message(FakeInputDevice('do_something1'),
                                MessageBundle(Message(b'{"x": {"x":1}, "y": "a", "z":[1,2]}')))
     assert result is not None
     result = result[0]
@@ -100,7 +100,7 @@ def test_duplicate_register():
 def test_missing_callback():
     fm: FastMessage = FastMessage()
 
-    @fm.map(input_device='input1')
+    @fm.map()
     def do_something1(x: SomeModel, y: str, z: List[int] = None):
         return SomeOtherModel(y=f'x={x.x}, y={y}, z={z}')
 

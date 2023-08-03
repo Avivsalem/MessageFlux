@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 try:
     from boto3.session import Config, Session  # type: ignore
 except ImportError as ex:
@@ -31,16 +32,16 @@ class S3Client:
         :param secret_key: the secret key
         """
         self._s3: 'S3ServiceResource' = Session().resource('s3',
-                                                         aws_access_key_id=access_key,
-                                                         aws_secret_access_key=secret_key,
-                                                         endpoint_url=endpoint,
-                                                         verify=False,
-                                                         config=Config(
-                                                             signature_version='s3',
-                                                             connect_timeout=timeout,
-                                                             retries={
-                                                                 "max_attempts": retries},
-                                                             s3={'addressing_style': 'path'}))
+                                                           aws_access_key_id=access_key,
+                                                           aws_secret_access_key=secret_key,
+                                                           endpoint_url=endpoint,
+                                                           verify=False,
+                                                           config=Config(
+                                                               signature_version='s3',
+                                                               connect_timeout=timeout,
+                                                               retries={
+                                                                   "max_attempts": retries},
+                                                               s3={'addressing_style': 'path'}))
 
     @property
     def s3_resource(self) -> 'S3ServiceResource':

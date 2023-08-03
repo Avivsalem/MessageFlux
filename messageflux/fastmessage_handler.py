@@ -36,6 +36,10 @@ class SpecialDefaultValueException(FastMessageException):
     pass
 
 
+class UnnamedCallableException(FastMessageException):
+    pass
+
+
 class InputDeviceName(str):
     """
     a place holder class for input_device name
@@ -217,9 +221,15 @@ class FastMessage(PipelineHandlerBase):
         """
         self._validation_error_handler = handler
 
+    def _get_callable_name(self, callback: Callable) -> str:
+        try:
+            return getattr(callback, "__name__")
+        except AttributeError as ex:
+            raise UnnamedCallableException(f"Callable {repr(callback)} doesn't have a name") from ex
+
     def register_callback(self,
                           callback: Callable,
-                          input_device: str,
+                          input_device: str = _DEFAULT,
                           output_device: Optional[str] = _DEFAULT):
         """
         registers a callback to a device
@@ -230,6 +240,9 @@ class FastMessage(PipelineHandlerBase):
         None means no output routing.
         if callback returns None, no routing will be made even if 'output_device' is not None
         """
+        if input_device is _DEFAULT:
+            input_device = self._get_callable_name(callback)
+
         if input_device in self._wrappers:
             raise DuplicateCallbackException(f"Can't register more than one callback on device '{input_device}'")
 
@@ -241,7 +254,7 @@ class FastMessage(PipelineHandlerBase):
                                                         output_device=output_device)
 
     def map(self,
-            input_device: str,
+            input_device: str = _DEFAULT,
             output_device: Optional[str] = _DEFAULT) -> Callable[[_CALLABLE_TYPE], _CALLABLE_TYPE]:
         """
         this is the decorator method
