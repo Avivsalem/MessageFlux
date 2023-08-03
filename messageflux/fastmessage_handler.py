@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from typing import Optional, Callable, Dict, List, Any, TypeVar, Union
 
 from messageflux import InputDevice
+from messageflux.iodevices.base import InputDeviceManager, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle, Message
-from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult
+from messageflux.pipeline_service import PipelineHandlerBase, PipelineResult, PipelineService
 
 try:
     from pydantic.typing import get_all_type_hints
@@ -188,7 +189,8 @@ class _CallbackWrapper:
 
 
 class FastMessage(PipelineHandlerBase):
-    def __init__(self, default_output_device: Optional[str] = None,
+    def __init__(self,
+                 default_output_device: Optional[str] = None,
                  validation_error_handler: Optional[Callable[
                      [InputDevice, MessageBundle, ValidationError],
                      Optional[Union[PipelineResult, List[PipelineResult]]]]] = None):
@@ -286,3 +288,27 @@ class FastMessage(PipelineHandlerBase):
                 raise
 
             return self._validation_error_handler(input_device, message_bundle, ve)
+
+    def create_service(self, *,
+                       input_device_manager: InputDeviceManager,
+                       input_device_names: Optional[Union[List[str], str]] = None,
+                       output_device_manager: Optional[OutputDeviceManager] = None,
+                       **kwargs) -> PipelineService:
+        """
+        creates a PipelineService, with this FastMessage object as its handler
+
+        :param input_device_manager: the input device manager to read items from
+        :param input_device_names: Optional. the list of input device names to read from
+        (defaults to all the registered mappings)
+        :param output_device_manager: Optional. the output device manager to use
+        :param **kwargs: passed to PipelineService __init__ as is
+        :return: the created PipelineService
+        """
+        if input_device_names is None:
+            input_device_names = self.input_devices
+
+        return PipelineService(input_device_manager=input_device_manager,
+                               input_device_names=input_device_names,
+                               pipeline_handler=self,
+                               output_device_manager=output_device_manager,
+                               **kwargs)
