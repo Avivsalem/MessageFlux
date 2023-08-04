@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Generator
 
 from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
 from messageflux.iodevices.base.common import MessageBundle, Message
@@ -32,7 +32,11 @@ class PipelineHandlerBase(metaclass=ABCMeta):
     @abstractmethod
     def handle_message(self,
                        input_device: InputDevice,
-                       message_bundle: MessageBundle) -> Optional[Union[PipelineResult, List[PipelineResult]]]:
+                       message_bundle: MessageBundle) -> Optional[Union[
+                                                                    PipelineResult,
+                                                                    List[PipelineResult],
+                                                                    Generator[PipelineResult, None, None]
+                                                                ]]:
         """
         Handles a message from an input device. and returns a tuple of the output device name, message and headers to
         send to.
@@ -41,7 +45,7 @@ class PipelineHandlerBase(metaclass=ABCMeta):
         :param message_bundle: The message that was received.
 
         :return: None if the message should not be sent to any output device.
-        PipelineResult if a message should be sent to the output device with the given name.
+        PipelineResult (or list or generator of) if messages should be sent to the output device with the given name.
         """
         pass
 
@@ -98,7 +102,7 @@ class PipelineService(MessageHandlingServiceBase):
         for input_device, read_result in batch:
             pipeline_handler_result = self._pipeline_handler.handle_message(input_device, read_result)
             if pipeline_handler_result is not None:
-                if not isinstance(pipeline_handler_result, List):
+                if isinstance(pipeline_handler_result, PipelineResult):
                     pipeline_handler_result = [pipeline_handler_result]
                 for pipeline_result in pipeline_handler_result:
                     if self._output_device_manager is None:
