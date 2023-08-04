@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from typing import List, Tuple, Optional, Union, Generator
+from typing import List, Tuple, Optional, Union, Iterable
 
 from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
 from messageflux.iodevices.base.common import MessageBundle, Message
@@ -32,11 +32,7 @@ class PipelineHandlerBase(metaclass=ABCMeta):
     @abstractmethod
     def handle_message(self,
                        input_device: InputDevice,
-                       message_bundle: MessageBundle) -> Optional[Union[
-                                                                    PipelineResult,
-                                                                    List[PipelineResult],
-                                                                    Generator[PipelineResult, None, None]
-                                                                ]]:
+                       message_bundle: MessageBundle) -> Optional[Union[PipelineResult, Iterable[PipelineResult]]]:
         """
         Handles a message from an input device. and returns a tuple of the output device name, message and headers to
         send to.
@@ -45,7 +41,7 @@ class PipelineHandlerBase(metaclass=ABCMeta):
         :param message_bundle: The message that was received.
 
         :return: None if the message should not be sent to any output device.
-        PipelineResult (or list or generator of) if messages should be sent to the output device with the given name.
+        PipelineResult (or iterable of) if messages should be sent to the output device with the given name.
         """
         pass
 
