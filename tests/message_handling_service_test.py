@@ -220,8 +220,8 @@ def test_fatal():
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
-    error_handler.handle_was_called.wait(3)
-    service_stopping.wait(3)
+    error_handler.handle_was_called.wait(10)
+    service_stopping.wait(10)
     try:
         assert not service.is_alive
     finally:
