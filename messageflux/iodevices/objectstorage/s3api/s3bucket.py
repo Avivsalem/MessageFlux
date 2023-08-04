@@ -14,7 +14,7 @@ except ImportError as ex:
 BUCKET_NAME_VALIDATOR = re.compile(r'^[a-z0-9][a-z0-9.\-]{1,61}[a-z0-9]$')
 
 if TYPE_CHECKING:
-    from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef, GetObjectOutputTypeDef
+    from mypy_boto3_s3.type_defs import LifecycleConfigurationBucketLifecycleTypeDef, GetObjectOutputTypeDef
     from mypy_boto3_s3 import S3ServiceResource
     from mypy_boto3_s3.service_resource import ObjectSummary
     from _typeshed import SupportsRead
@@ -246,7 +246,7 @@ class S3Bucket:
                 days = 1
             else:
                 status = 'Enabled'
-            lc: 'LifecycleConfigurationTypeDef' = {
+            lc: 'LifecycleConfigurationBucketLifecycleTypeDef' = {
                 'Rules': [{
                     'Status': status,
                     'Prefix': '',

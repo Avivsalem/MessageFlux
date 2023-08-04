@@ -186,10 +186,13 @@ def test_wait_for_batch():
 
 class ErrorMessageHandler(MessageHandlerBase):
     def __init__(self, error_after_count: int):
+        self.handle_was_called = threading.Event()
+        self.handle_was_called.clear()
         self._error_after_count = error_after_count
         self._count = 0
 
     def handle_message(self, input_device: InputDevice, read_result: ReadResult):
+        self.handle_was_called.set()
         self._count += 1
         if self._count >= self._error_after_count:
             raise Exception()
@@ -217,7 +220,7 @@ def test_fatal():
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
-
+    error_handler.handle_was_called.wait(3)
     service_stopping.wait(3)
     try:
         assert not service.is_alive
