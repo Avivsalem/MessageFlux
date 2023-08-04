@@ -5,7 +5,7 @@
 [![last commit](https://badgen.net/github/last-commit/Avivsalem/MessageFlux/main)](https://github.com/Avivsalem/MessageFlux/commit/main)
 [![tests](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml/badge.svg)](https://github.com/AvivSalem/MessageFlux/actions/workflows/tests.yml?query=branch%3Amain)
 [![Documentation Status](https://readthedocs.org/projects/messageflux/badge/?version=latest)](https://messageflux.readthedocs.io/en/latest/?badge=latest)
-[![pypi version](https://badgen.net/pypi/v/MessageFlux)](https://pypi.org/project/messageflux/)
+[![pypi version](https://badgen.net/pypi/v/messageflux)](https://pypi.org/project/messageflux/)
 [![python compatibility](https://badgen.net/pypi/python/MessageFlux)](https://pypi.org/project/messageflux/)
 [![downloads](https://img.shields.io/pypi/dm/messageflux)](https://pypi.org/project/messageflux/)
 
