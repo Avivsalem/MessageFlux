@@ -109,6 +109,7 @@ class BaseService(metaclass=ABCMeta):
             self._logger.info(f"Starting {self._name}")
             self._prepare_service()
             self._set_service_state(ServiceState.STARTED)
+            self._logger.info(f"Started {self._name}")
             self._run_service(cancellation_token=self._cancellation_token)
 
             # this loop is because wait() prevents signal handling on some systems.
