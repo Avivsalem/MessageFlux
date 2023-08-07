@@ -5,6 +5,8 @@ import time
 from threading import Thread
 from typing import List, Optional, Tuple
 
+import requests
+
 from messageflux import (InputDevice,
                          ReadResult,
                          MessageHandlingService,
@@ -16,6 +18,7 @@ from messageflux.iodevices.base import Message, InputDeviceManager
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.in_memory_device import InMemoryDeviceManager
 from messageflux.service_addons.loop_health_addon import LoopHealthAddon
+from messageflux.service_addons.webserver_liveness_addon import WebServerLivenessAddon
 
 
 class MockInputDevice(InputDevice['MockInputDeviceManager']):
@@ -216,7 +219,7 @@ def test_fatal():
                                      input_device_names=['bla'])
     service.state_changed_event.subscribe(_on_service_state_change)
 
-    addon = LoopHealthAddon(max_consecutive_failures=1).attach(service)
+    loop_addon = LoopHealthAddon(max_consecutive_failures=1).attach(service)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -226,11 +229,12 @@ def test_fatal():
         assert not service.is_alive
     finally:
         service.stop()
-        addon.detach()
+        loop_addon.detach()
         logging.getLogger().removeHandler(stream_handler)
 
 
 def test_not_fatal():
+    port = 18080
     stream_handler = logging.StreamHandler(sys.stdout)
     logging.getLogger().addHandler(stream_handler)
 
@@ -241,6 +245,7 @@ def test_not_fatal():
                                      input_device_manager=input_device_manager,
                                      input_device_names=['bla'])
     addon = LoopHealthAddon(max_consecutive_failures=3).attach(service)
+    webserver_addon = WebServerLivenessAddon(host="127.0.0.1", port=port).attach(service)
 
     service_thread = Thread(target=service.start, daemon=True)
     service_thread.start()
@@ -248,7 +253,9 @@ def test_not_fatal():
     time.sleep(3)
     try:
         assert service.is_alive
+        assert requests.get(f"http://127.0.0.1:{port}/").ok
     finally:
         service.stop()
         addon.detach()
+        webserver_addon.detach()
         logging.getLogger().removeHandler(stream_handler)
