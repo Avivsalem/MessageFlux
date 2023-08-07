@@ -84,12 +84,12 @@ class IsAliveAddon:
 
     def _is_alive(self):
         if self.service is None:
-            return "Not running", 500
+            return "Service is not attached", 503
 
         if self.service.service_state == ServiceState.STARTED:
             return "Running", 200
 
-        return "Not running", 500
+        return "Not running", 503
 
     def _start_server(self, host: str, port: int):
         serve(self._app, host=host, port=port)
