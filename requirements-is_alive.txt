@@ -1,2 +1,2 @@
-uvicorn>=0.22,<1
-fastapi>=0.100,<1
+flask>=2.3,<3
+waitress>=2.1,<3

@@ -2,11 +2,11 @@ import logging
 import threading
 from typing import Optional
 
-import uvicorn
-from fastapi import FastAPI
+from flask import Flask
 from messageflux.base_service import ServiceState
 from messageflux.server_loop_service import ServerLoopService
 from messageflux.utils import KwargsException
+from waitress import serve
 
 
 class IsAliveAddonException(KwargsException):
@@ -24,18 +24,22 @@ class IsAliveAddon:
 
     def __init__(self,
                  is_alive_endpoint: str = '/is_alive',
+                 host: str = '0.0.0.0',
                  port: int = 8080):
         """
         :param is_alive_endpoint: The endpoint that will answer the request
+        :param host: The host to server will listen on
         :param port: The port to server will listen on
         """
 
-        self._is_alive_endpoint = is_alive_endpoint
+        self.is_alive_endpoint = is_alive_endpoint
+        self._host = host
         self._port = port
         self._logger = logging.getLogger(__name__)
         self._service: Optional[ServerLoopService] = None
 
-        self._app = FastAPI()
+        self._app = Flask(__name__)
+        self._app.add_url_rule(self.is_alive_endpoint, None, self._is_alive)
 
     @property
     def service(self) -> Optional[ServerLoopService]:
@@ -78,20 +82,27 @@ class IsAliveAddon:
         elif service_state == ServiceState.STOPPING:
             self._on_service_stopping()
 
-    def _start_server(self):
-        @self._app.get(self._is_alive_endpoint)
-        def is_alive():
-            return "Running"
+    def _is_alive(self):
+        if self.service is None:
+            return "Not running", 500
 
-        server_configuration = uvicorn.Config(self._app, host="0.0.0.0", port=self._port, log_config=None)
-        self._server = uvicorn.Server(server_configuration)
-        self._server.run()
+        if self.service.service_state == ServiceState.STARTED:
+            return "Running", 200
+
+        return "Not running", 500
+
+    def _start_server(self, host: str, port: int):
+        serve(self._app, host=host, port=port)
 
     def _on_service_started(self):
         logging.info("Starting IsAliveAddon")
-        t = threading.Thread(target=self._start_server, daemon=True)
+        t = threading.Thread(target=self._start_server,
+                             kwargs={
+                                 'host': self._host,
+                                 'port': self._port,
+                             },
+                             daemon=True)
         t.start()
 
     def _on_service_stopping(self):
         logging.info("Stopping IsAliveAddon")
-        self._server.should_exit = True
