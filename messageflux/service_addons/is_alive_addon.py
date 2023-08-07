@@ -81,8 +81,7 @@ class IsAliveAddon:
     def _start_server(self):
         @self._app.get(self._is_alive_endpoint)
         def is_alive():
-            if self.service.service_state == ServiceState.STARTED:
-                return "Running"
+            return "Running"
 
         server_configuration = uvicorn.Config(self._app, host="0.0.0.0", port=self._port, log_config=None)
         self._server = uvicorn.Server(server_configuration)
