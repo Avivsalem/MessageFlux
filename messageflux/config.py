@@ -37,11 +37,9 @@ class Config:
         self._config_dict = config_dict
         self._input_device_manager = _init_from_config(config_dict['input_device_manager'])
         self._output_device_manager = _init_from_config(config_dict['output_device_manager'])
-    
+
     def get_input_device_manager(self):
         return self._input_device_manager
     
     def get_output_device_manager(self):
         return self._output_device_manager
-
-        

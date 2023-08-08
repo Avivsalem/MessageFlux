@@ -1,8 +1,12 @@
-from messageflux.main import run
 import typer
 import json
 
-def run_pipeline(pipeline_hanlder: str, config_str: str = None):
+from typing import Optional
+
+from messageflux.main import run
+
+
+def run_pipeline(pipeline_hanlder: str, config_str: Optional[str] = None):
     if config_str:
         config_dict = json.loads(config_str)
     else:
