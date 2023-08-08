@@ -8,3 +8,4 @@ from .message_handling_service import (BatchMessageHandlingService,
 from .pipeline_service import (PipelineService,
                                PipelineResult,
                                PipelineHandlerBase)
+from .main import run
