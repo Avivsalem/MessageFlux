@@ -2,7 +2,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from typing import List, Tuple, Optional, Union, Iterable
 
-from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
+from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult, InputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.message_handling_service import MessageHandlingServiceBase
 
@@ -76,6 +76,8 @@ class PipelineService(MessageHandlingServiceBase):
     """
 
     def __init__(self, *,
+                 input_device_manager: InputDeviceManager,
+                 input_device_names: Union[List[str], str],
                  pipeline_handler: PipelineHandlerBase,
                  output_device_manager: Optional[OutputDeviceManager] = None,
                  **kwargs):
@@ -85,7 +87,9 @@ class PipelineService(MessageHandlingServiceBase):
         :param output_device_manager: Optional. the output device manager to send messages to
         :param **kwargs: passed to parent as is
         """
-        super().__init__(**kwargs)
+        super().__init__(input_device_manager=input_device_manager,
+                         input_device_names=input_device_names,
+                         **kwargs)
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler
 

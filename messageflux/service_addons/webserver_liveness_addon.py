@@ -34,7 +34,7 @@ class WebServerLivenessAddon:
         self._host = host
         self._port = port
         self._service: Optional[BaseService] = None
-        self._web_server: Optional[ThreadingHTTPServer] = None
+        self._web_server: Optional[_MessageFluxHTTPServer] = None
 
     @property
     def service(self) -> Optional[BaseService]:
@@ -70,6 +70,8 @@ class WebServerLivenessAddon:
             return
         service.state_changed_event.unsubscribe(self._on_service_state_change)
         self._service = None
+        if self._web_server is not None:
+            self._web_server.messageflux_base_service = None
 
     def _on_service_state_change(self, service_state: ServiceState):
         if service_state == ServiceState.STARTED:
