@@ -106,14 +106,14 @@ class BatchMessageHandlerBase(metaclass=ABCMeta):
     a batch message handler base class. used to handle a batch of messages
     """
 
-    def connect(self):
+    def prepare(self):
         """
         called when the service starts.
         can be overrided by child class to perform some initialization logic
         """
         pass
 
-    def disconnect(self):
+    def shutdown(self):
         """
         called when the service stops.
         can be overrided by child class to perform some cleanup logic
@@ -147,10 +147,10 @@ class BatchMessageHandlingService(MessageHandlingServiceBase):
 
     def _prepare_service(self):
         super()._prepare_service()
-        self._message_handler.connect()
+        self._message_handler.prepare()
 
     def _finalize_service(self, exception: Optional[Exception] = None):
-        self._message_handler.disconnect()
+        self._message_handler.shutdown()
         super()._finalize_service(exception)
 
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
@@ -162,14 +162,14 @@ class MessageHandlerBase(metaclass=ABCMeta):
     a message handler base class. used to handle a single message
     """
 
-    def connect(self):
+    def prepare(self):
         """
         called when the service starts.
         can be overrided by child class to perform some initialization logic
         """
         pass
 
-    def disconnect(self):
+    def shutdown(self):
         """
         called when the service stops.
         can be overrided by child class to perform some cleanup logic
@@ -196,19 +196,19 @@ class MessageHandlingService(BatchMessageHandlingService):
         def __init__(self, massage_handler: MessageHandlerBase):
             self._message_handler = massage_handler
 
-        def connect(self):
+        def prepare(self):
             """
             called when the service starts.
             can be overrided by child class to perform some initialization logic
             """
-            self._message_handler.connect()
+            self._message_handler.prepare()
 
-        def disconnect(self):
+        def shutdown(self):
             """
             called when the service stops.
             can be overrided by child class to perform some cleanup logic
             """
-            self._message_handler.disconnect()
+            self._message_handler.shutdown()
 
         def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
             """
