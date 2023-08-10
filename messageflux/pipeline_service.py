@@ -29,6 +29,20 @@ class PipelineHandlerBase(metaclass=ABCMeta):
     a pipeline handler base class. used to handle a single message that passes through the pipeline
     """
 
+    def prepare(self):
+        """
+        called when the service starts.
+        can be overrided by child class to perform some initialization logic
+        """
+        pass
+
+    def shutdown(self):
+        """
+        called when the service stops.
+        can be overrided by child class to perform some cleanup logic
+        """
+        pass
+
     @abstractmethod
     def handle_message(self,
                        input_device: InputDevice,
@@ -97,6 +111,7 @@ class PipelineService(MessageHandlingServiceBase):
         super()._prepare_service()
         if self._output_device_manager is not None:
             self._output_device_manager.connect()
+        self._pipeline_handler.prepare()
 
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
@@ -121,3 +136,4 @@ class PipelineService(MessageHandlingServiceBase):
         finally:
             if self._output_device_manager is not None:
                 self._output_device_manager.disconnect()
+            self._pipeline_handler.shutdown()
