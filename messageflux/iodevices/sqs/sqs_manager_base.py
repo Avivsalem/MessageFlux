@@ -6,12 +6,12 @@ try:
     import boto3
     from mypy_boto3_sqs.service_resource import Queue
 except ImportError as ex:
-    raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
+    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
 
 
 class SQSManagerBase:
     def __init__(self) -> None:
-        self._sqs_resource = boto3.resource('sqs')
+        self._sqs_resource = boto3.resource("sqs")
         self._queue_cache: Dict[str, Queue] = {}
         self._logger = logging.getLogger(__name__)
 

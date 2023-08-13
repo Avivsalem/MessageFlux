@@ -4,8 +4,14 @@ import threading
 from io import BytesIO
 from typing import Dict, Optional, Union
 
-from messageflux.iodevices.base import InputDevice, InputTransaction, ReadResult, InputDeviceException, Message, \
-    InputDeviceManager
+from messageflux.iodevices.base import (
+    InputDevice,
+    InputTransaction,
+    ReadResult,
+    InputDeviceException,
+    Message,
+    InputDeviceManager,
+)
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 from messageflux.utils import get_random_id
@@ -16,18 +22,17 @@ try:
     from mypy_boto3_sqs.service_resource import Queue
     from mypy_boto3_sqs.client import SQSClient
 except ImportError as ex:
-    raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
+    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
 
 
 class SQSInputTransaction(InputTransaction):
     """
     represents a InputTransaction for SQS
     """
-    _device: 'SQSInputDevice'
 
-    def __init__(self,
-                 device: 'SQSInputDevice',
-                 receipt_handle: str):
+    _device: "SQSInputDevice"
+
+    def __init__(self, device: "SQSInputDevice", receipt_handle: str):
         """
 
         :param device: the device that returned this transaction
@@ -41,24 +46,26 @@ class SQSInputTransaction(InputTransaction):
         try:
             self._device.delete_message(self._receipt_handle)
         except Exception:
-            self._logger.exception('commit failed')
+            self._logger.exception("commit failed")
 
     def _rollback(self):
         try:
             self._device.change_visability_timeout(self._receipt_handle, 0)
         except Exception:
-            self._logger.warning('rollback failed', exc_info=True)
-    
+            self._logger.warning("rollback failed", exc_info=True)
 
-class SQSInputDevice(InputDevice['SQSInputDeviceManager']):
+
+class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
     """
     represents an SQS input device
     """
 
-    def __init__(self,
-                 device_manager: 'SQSInputDeviceManager',
-                 queue_name: str,
-                 included_message_attributes: Optional[Union[str, list]] = None):
+    def __init__(
+        self,
+        device_manager: "SQSInputDeviceManager",
+        queue_name: str,
+        included_message_attributes: Optional[Union[str, list]] = None,
+    ):
         """
         constructs a new input SQS device
 
@@ -75,25 +82,30 @@ class SQSInputDevice(InputDevice['SQSInputDeviceManager']):
         self._max_messages_per_request = 1
         self._queue = self.manager.get_queue(queue_name)
 
-    def _read_message(self, cancellation_token: threading.Event, 
-                            timeout: Optional[float] = None, 
-                            with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(
+        self,
+        cancellation_token: threading.Event,
+        timeout: Optional[float] = None,
+        with_transaction: bool = True,
+    ) -> Optional["ReadResult"]:
         """
         reads a stream from InputDevice (tries getting a message. if it fails, reconnects and tries again once)
 
         :param timeout: the timeout in seconds to block. negative number means no blocking
         :return: a tuple of stream and metadata from InputDevice, or (None, None) if no message is available
         """
-        
+
         sqs_messages = self._queue.receive_messages(
             MessageAttributeNames=["All"],
-            MaxNumberOfMessages=self._max_messages_per_request
+            MaxNumberOfMessages=self._max_messages_per_request,
         )
 
         if not sqs_messages:
             return None
-        
-        assert len(sqs_messages) == 1, "SQSInputDevice should only return one message at a time"
+
+        assert (
+            len(sqs_messages) == 1
+        ), "SQSInputDevice should only return one message at a time"
 
         sqs_message = sqs_messages[0]
 
@@ -105,12 +117,14 @@ class SQSInputDevice(InputDevice['SQSInputDeviceManager']):
                 },
                 data=BytesIO(sqs_message.body.encode()),
             ),
-            transaction = SQSInputTransaction(
+            transaction=SQSInputTransaction(
                 device=self,
                 receipt_handle=sqs_message.receipt_handle,
-            ) if with_transaction else NULLTransaction(self),
+            )
+            if with_transaction
+            else NULLTransaction(self),
         )
-    
+
     def delete_message(self, receipt_handle: str):
         """
         deletes a message from the queue
@@ -118,12 +132,7 @@ class SQSInputDevice(InputDevice['SQSInputDeviceManager']):
         :param receipt_handle: the receipt handle of the message
         """
         self._queue.delete_messages(
-            Entries=[
-                {
-                    "Id": get_random_id(),
-                    "ReceiptHandle": receipt_handle
-                }
-            ]
+            Entries=[{"Id": get_random_id(), "ReceiptHandle": receipt_handle}]
         )
 
     def change_visability_timeout(self, receipt_handle: str, timeout: int):
@@ -138,10 +147,11 @@ class SQSInputDevice(InputDevice['SQSInputDeviceManager']):
                 {
                     "Id": get_random_id(),
                     "ReceiptHandle": receipt_handle,
-                    "VisibilityTimeout": timeout
+                    "VisibilityTimeout": timeout,
                 }
             ]
         )
+
 
 class SQSInputDeviceManager(SQSManagerBase, InputDeviceManager[SQSInputDevice]):
     """
@@ -150,7 +160,6 @@ class SQSInputDeviceManager(SQSManagerBase, InputDeviceManager[SQSInputDevice]):
 
     def __init__(self):
         super(SQSManagerBase, self).__init__()
-
 
     def get_input_device(self, device_name: str) -> SQSInputDevice:
         """

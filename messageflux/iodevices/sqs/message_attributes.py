@@ -6,7 +6,7 @@ from typing import Any, Dict
 try:
     from mypy_boto3_sqs.type_defs import MessageAttributeValueQueueTypeDef
 except ImportError as ex:
-    raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
+    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
 
 
 def get_aws_data_type(value: Any) -> str:
@@ -30,7 +30,7 @@ def geterate_message_attributes(
             "DataType": get_aws_data_type(value),
             "StringValue": json.dumps(value)
             if not isinstance(value, str)
-            else value, # to avoid double encoding
+            else value,  # to avoid double encoding
         }
         for key, value in attributes.items()
     }
