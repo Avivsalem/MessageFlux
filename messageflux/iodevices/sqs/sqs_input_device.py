@@ -2,7 +2,7 @@ import logging
 import threading
 
 from io import BytesIO
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from messageflux.iodevices.base import (
     InputDevice,
@@ -15,14 +15,6 @@ from messageflux.iodevices.base import (
 from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 from messageflux.utils import get_random_id
-
-
-try:
-    import boto3
-    from mypy_boto3_sqs.service_resource import Queue
-    from mypy_boto3_sqs.client import SQSClient
-except ImportError as ex:
-    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
 
 
 class SQSInputTransaction(InputTransaction):
