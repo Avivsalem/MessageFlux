@@ -48,9 +48,6 @@ class SQSOutputDevice(OutputDevice['SQSOutputDeviceManager']):
         if "MessageId" not in response:
             raise OutputDeviceException("Couldn't send message to SQS")
 
-        if "Failed" in response:
-            raise OutputDeviceException(f"Couldn't send message to SQS: {response['Failed']}")
-
 
 class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
     """
