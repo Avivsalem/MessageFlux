@@ -3,12 +3,12 @@ from typing import Dict
 
 from messageflux.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle
-from messageflux.metadata_headers import MetadataHeaders
+from messageflux.iodevices.sqs.message_attributes import geterate_message_attributes
 from messageflux.utils import get_random_id
 
 try:
-    from mypy_boto3_sqs.service_resource import Queue
     import boto3
+    from mypy_boto3_sqs.service_resource import Queue
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
 
@@ -36,13 +36,13 @@ class SQSOutputDevice(OutputDevice['SQSOutputDeviceManager']):
         if self._is_fifo:
             response = self._sqs_queue.send_message(
                 MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=message_bundle.message.headers,
+                MessageAttributes=geterate_message_attributes(message_bundle.message.headers),
                 MessageGroupId=get_random_id(),
             )
         else:
             response = self._sqs_queue.send_message(
                 MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=message_bundle.message.headers,
+                MessageAttributes=geterate_message_attributes(message_bundle.message.headers),
             )
 
         if "MessageId" not in response:
