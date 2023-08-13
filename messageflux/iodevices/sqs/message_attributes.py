@@ -1,10 +1,10 @@
 import json
 
-from typing import Any, TypedDict
+from typing import Any, Dict
 
 
 try:
-    from mypy_boto3_sqs.type_defs import MessageAttributeValueTypeDef
+    from mypy_boto3_sqs.type_defs import MessageAttributeValueQueueTypeDef
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
 
@@ -23,8 +23,8 @@ def get_aws_data_type(value: Any) -> str:
 
 
 def geterate_message_attributes(
-    attributes: dict[str, Any]
-) -> dict[str, MessageAttributeValueTypeDef]:
+    attributes: Dict[str, Any]
+) -> Dict[str, MessageAttributeValueQueueTypeDef]:
     return {
         key: {
             "DataType": get_aws_data_type(value),
