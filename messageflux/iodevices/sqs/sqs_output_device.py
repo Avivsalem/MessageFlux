@@ -7,7 +7,8 @@ from messageflux.metadata_headers import MetadataHeaders
 from messageflux.utils import get_random_id
 
 try:
-    from mypy_boto3_sqs.service_resource import SQSServiceResource, Queue
+    from mypy_boto3_sqs.service_resource import Queue
+    import boto3
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[sqs]') from ex
 
@@ -25,19 +26,30 @@ class SQSOutputDevice(OutputDevice['SQSOutputDeviceManager']):
         :param queue_name: the name of the queue
         """
         super(SQSOutputDevice, self).__init__(device_manager, queue_name)
-        self._queue_name = queue_name
+        self._sqs_queue = self.manager.get_queue(queue_name)
+        
+        # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/sqs/get-queue-attributes.html#get-queue-attributes
+        self._is_fifo = queue_name.endswith(".fifo") 
         self._logger = logging.getLogger(__name__)
 
     def _send_message(self, message_bundle: MessageBundle):
-        sqs_queue = self.manager.get_queue(self._queue_name)
+        if self._is_fifo:
+            response = self._sqs_queue.send_message(
+                MessageBody=message_bundle.message.bytes.decode(),
+                MessageAttributes=message_bundle.message.headers,
+                MessageGroupId=get_random_id(),
+            )
+        else:
+            response = self._sqs_queue.send_message(
+                MessageBody=message_bundle.message.bytes.decode(),
+                MessageAttributes=message_bundle.message.headers,
+            )
 
-        sqs_queue.send_message(
-            MessageBody=message_bundle.message.bytes.decode(),
-            MessageAttributes=message_bundle.message.headers,
-            MessageDeduplicationId=message_bundle.device_headers.get('message_id',
-                                                                     message_bundle.message.headers.get(
-                                                                         MetadataHeaders.ITEM_ID, get_random_id())),
-        )
+        if "MessageId" not in response:
+            raise OutputDeviceException("Couldn't send message to SQS")
+
+        if "Failed" in response:
+            raise OutputDeviceException(f"Couldn't send message to SQS: {response['Failed']}")
 
 
 class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
@@ -45,15 +57,13 @@ class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
     this manager is used to create SQS devices
     """
 
-    def __init__(self, sqs_resource: SQSServiceResource):
+    def __init__(self):
         """
         This manager used to create SQS devices
-
-        :param sqs_resource: the SQS resource from boto
         """
         self._logger = logging.getLogger(__name__)
-
-        self._sqs_resource = sqs_resource
+        
+        self._sqs_resource = boto3.resource('sqs')
         self._queue_cache: Dict[str, Queue] = {}
 
     def get_output_device(self, queue_name: str) -> SQSOutputDevice:
@@ -61,7 +71,7 @@ class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
         Returns and outgoing device by name
 
         :param queue_name: the name of the queue
-        :return: an output device for 'queue_url'
+        :return: an output device for 'queue_name'
         """
         try:
             return SQSOutputDevice(self, queue_name)
@@ -70,9 +80,9 @@ class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
             self._logger.exception(message)
             raise OutputDeviceException(message) from e
 
-    def get_queue(self, queue_name: str, auto_create=False) -> Queue:
+    def get_queue(self, queue_name: str) -> Queue:
         """
-        gets the bucket from cache
+        gets the queue from cache
         """
         queue = self._queue_cache.get(queue_name, None)
         if queue is None:
