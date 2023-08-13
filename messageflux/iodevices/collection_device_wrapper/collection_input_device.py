@@ -1,7 +1,7 @@
 import logging
+import threading
+from time import perf_counter
 from typing import Optional, Collection, List, Callable
-
-from time import sleep, perf_counter
 
 from messageflux import InputDevice, ReadResult
 from messageflux.iodevices.base import InputDeviceManager, InputDeviceException
@@ -30,9 +30,15 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
         self._input_devices = input_devices
         self._logger = logging.getLogger(__name__)
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         """
         reads a message from device
+
+        :param cancellation_token: the cancellation token for this service. this can be used to know if cancellation
+        was requested
 
         :param timeout: an optional timeout (in seconds) to wait for the device to return a message.
         after 'timeout' seconds, if the device doesn't have a message to return, it will return None
@@ -51,7 +57,9 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
             failures = []
             for curr_device in self._input_devices:
                 try:
-                    read_result = curr_device._read_message(0, with_transaction=with_transaction)
+                    read_result = curr_device._read_message(cancellation_token=cancellation_token,
+                                                            timeout=0,
+                                                            with_transaction=with_transaction)
                     if read_result is not None:
                         return read_result
                     if timeout is not None and perf_counter() >= end_time:
@@ -70,7 +78,7 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
             if timeout is not None and perf_counter() >= end_time:
                 return None
             else:
-                sleep(self._SLEEP_BETWEEN_ITERATIONS)
+                cancellation_token.wait(self._SLEEP_BETWEEN_ITERATIONS)
 
     def close(self):
         """
@@ -129,25 +137,25 @@ class CollectionInputDeviceManager(InputDeviceManager[CollectionInputDevice]):
                 self._logger.warning(
                     f'Error closing underlying manager {type(manager).__name__}', exc_info=True)
 
-    def get_input_device(self, device_name: str) -> CollectionInputDevice:
+    def get_input_device(self, name: str) -> CollectionInputDevice:
         """
         Returns an input device by name
 
-        :param device_name: the name of the device to read from
+        :param name: the name of the device to read from
         :return: an input device for 'device_name'
         """
         devices: List[InputDevice] = []
         failures = []
         for manager in self._inner_managers:
             try:
-                device = manager.get_input_device(device_name)
+                device = manager.get_input_device(name)
                 devices.append(device)
             except Exception as ex:
                 failures.append(ex)
                 self._logger.warning(
-                    f"Error creating input device {device_name} from {type(manager).__name__} manager", exc_info=True)
+                    f"Error creating input device {name} from {type(manager).__name__} manager", exc_info=True)
         if not devices:
             self._logger.error("Couldn't create any input device")
-            raise InputDeviceException(f"Couldn't create input device '{device_name}'", inner_exceptions=failures)
+            raise InputDeviceException(f"Couldn't create input device '{name}'", inner_exceptions=failures)
 
-        return CollectionInputDevice(self, device_name, self._collection_maker(devices))
+        return CollectionInputDevice(self, name, self._collection_maker(devices))

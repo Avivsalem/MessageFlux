@@ -144,26 +144,26 @@ class FailoverOutputDeviceManager(OutputDeviceManager[OutputDevice]):
             else:
                 raise
 
-    def get_output_device(self, device_name: str) -> OutputDevice:
+    def get_output_device(self, name: str) -> OutputDevice:
         """
         Returns an output device by name
 
-        :param device_name: the name of the device to write to
+        :param name: the name of the device to write to
         :return: an output device for 'device_name'
         """
         inner_device = None
         try:
-            inner_device = self._inner_device_manager.get_output_device(device_name)
+            inner_device = self._inner_device_manager.get_output_device(name)
         except Exception:
             self._logger.warning(
-                f'Error creating output device {device_name} from {type(self._inner_device_manager).__name__} manager',
+                f'Error creating output device {name} from {type(self._inner_device_manager).__name__} manager',
                 exc_info=True)
         try:
-            failover_device = self._failover_device_manager.get_output_device(device_name)
+            failover_device = self._failover_device_manager.get_output_device(name)
         except Exception:
             if inner_device is not None:
                 self._logger.warning(
-                    f'Error creating output device {device_name} from {type(self._failover_device_manager).__name__} '
+                    f'Error creating output device {name} from {type(self._failover_device_manager).__name__} '
                     f'manager',
                     exc_info=True)
                 return inner_device
@@ -176,4 +176,4 @@ class FailoverOutputDeviceManager(OutputDeviceManager[OutputDevice]):
         return FailoverOutputDevice(device_manager=self,
                                     inner_device=inner_device,
                                     failover_device=failover_device,
-                                    device_name=device_name)
+                                    device_name=name)

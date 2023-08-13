@@ -6,8 +6,7 @@ import time
 
 from messageflux.base_service import BaseService
 from messageflux.multiprocessing import ServiceFactory
-from messageflux.multiprocessing.multiprocessrunner import INSTANCE_COUNT_ENV_VAR, MultiProcessRunner
-from messageflux.multiprocessing.singleprocesshandler import INSTANCE_INDEX_ENV_VAR
+from messageflux.multiprocessing.multiprocessrunner import MultiProcessRunner
 
 DEFAULT_LOG_FORMATTER = logging.Formatter(
     u"%(asctime)-15s [%(levelname)s] [PID:%(process)d] %(message)s")
@@ -21,26 +20,30 @@ class MockServiceFactory(ServiceFactory):
         self._fail = fail
         self._should_exit = should_exit
 
-    def create_service(self) -> BaseService:
-        return MockService(self._tmpdir, fail=self._fail, should_exit=self._should_exit)
+    def create_service(self, instance_index: int, total_instances: int) -> BaseService:
+        return MockService(self._tmpdir,
+                           instance_index=instance_index,
+                           total_instances=total_instances,
+                           fail=self._fail,
+                           should_exit=self._should_exit)
 
 
 class MockService(BaseService):
-    def __init__(self, temp_dir, fail=False, should_exit=True):
+    def __init__(self, temp_dir, instance_index: int, total_instances: int, fail=False, should_exit=True):
         super(MockService, self).__init__()
+        self._instance_index = instance_index
+        self._total_instances = total_instances
         self._temp_dir = temp_dir
         self._fail = fail
         self._exit = should_exit
 
     def _run_service(self, cancellation_token: threading.Event):
-        process_index = os.environ[INSTANCE_INDEX_ENV_VAR]
-        print('Started Process {} out of {}'.format(process_index,
-                                                    os.environ[INSTANCE_COUNT_ENV_VAR]))
+        print(f'Started Process {self._instance_index} out of {self._total_instances}')
         try:
             filename = os.path.join(self._temp_dir, str(os.getpid()))
             with open(filename, 'w') as f:
                 f.write('data')
-            print(f"{process_index}: file written")
+            print(f"{self._instance_index}: file written")
             if self._fail:
                 raise Exception()
             else:

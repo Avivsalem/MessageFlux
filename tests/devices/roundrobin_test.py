@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import threading
 import time
 from typing import Optional
 
@@ -22,20 +23,24 @@ class ErrorIODevice(OutputDevice, InputDevice):
     def _send_message(self, message_bundle: MessageBundle):
         raise Exception('MOCK read ERROR')
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional['ReadResult']:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional['ReadResult']:
         raise Exception('MOCK send ERROR')
 
 
 class ErrorIODeviceManager(InputDeviceManager, OutputDeviceManager):
 
-    def get_input_device(self, device_name):
-        return ErrorIODevice(None, device_name)
+    def get_input_device(self, name):
+        return ErrorIODevice(None, name)
 
-    def get_output_device(self, device_name):
-        return ErrorIODevice(None, device_name)
+    def get_output_device(self, name):
+        return ErrorIODevice(None, name)
 
 
 def test_sanity(tmpdir):
+    cancellation_token = threading.Event()
     logger = logging.getLogger()
     logger.addHandler(DEFAULT_LOG_HANDLER)
     logger.setLevel(logging.INFO)
@@ -56,11 +61,11 @@ def test_sanity(tmpdir):
     with rri_manager as manager:
         input_device = manager.get_input_device('MyTest')
         with InputTransactionScope(input_device) as transaction_scope:
-            res = transaction_scope.read_message()
+            res = transaction_scope.read_message(cancellation_token=cancellation_token)
             assert res.message.bytes == b'data1'
-            res = transaction_scope.read_message()
+            res = transaction_scope.read_message(cancellation_token=cancellation_token)
             assert res.message.bytes == b'data2'
-            res = transaction_scope.read_message(timeout=0)
+            res = transaction_scope.read_message(cancellation_token=cancellation_token, timeout=0)
             assert res is None
 
         assert not os.listdir(os.path.join(input_fs_manager.queues_folder, 'MyTest'))
@@ -75,6 +80,7 @@ def test_sanity(tmpdir):
 
 
 def test_order_input():
+    cancellation_token = threading.Event()
     device_name = 'TEST'
     manager1 = InMemoryDeviceManager()
     manager2 = InMemoryDeviceManager()
@@ -100,7 +106,7 @@ def test_order_input():
     rrt = rri_manager.get_input_device(device_name)
     streams = []
     for i in range(3):
-        res = rrt.read_message(timeout=0, with_transaction=False)
+        res = rrt.read_message(cancellation_token=cancellation_token, timeout=0, with_transaction=False)
         if res is None:
             continue
         streams.append(res.message.bytes.decode())
@@ -110,7 +116,7 @@ def test_order_input():
 
     streams = []
     for i in range(3):
-        res = rrt.read_message(timeout=0, with_transaction=False)
+        res = rrt.read_message(cancellation_token=cancellation_token, timeout=0, with_transaction=False)
         if res is None:
             continue
         streams.append(res.message.bytes.decode())
@@ -120,7 +126,7 @@ def test_order_input():
 
     streams = []
     for i in range(3):
-        res = rrt.read_message(timeout=0, with_transaction=False)
+        res = rrt.read_message(cancellation_token=cancellation_token, timeout=0, with_transaction=False)
         if res is None:
             continue
         streams.append(res.message.bytes.decode())
@@ -130,7 +136,7 @@ def test_order_input():
 
     streams = []
     for i in range(3):
-        res = rrt.read_message(timeout=0, with_transaction=False)
+        res = rrt.read_message(cancellation_token=cancellation_token, timeout=0, with_transaction=False)
         if res is None:
             continue
         streams.append(res.message.bytes.decode())
@@ -157,7 +163,7 @@ def test_order_output():
     idd = manager1.get_input_device(device_name)
     streams = []
     for i in range(2):
-        res = idd.read_message(timeout=0, with_transaction=False)
+        res = idd.read_message(cancellation_token=threading.Event(), timeout=0, with_transaction=False)
         if res is None:
             continue
         streams.append(res.message.bytes.decode())
@@ -178,7 +184,7 @@ def test_all_error():
     with rri_manager as manager:
         input_device = manager.get_input_device('MyTest')
         try:
-            _ = input_device.read_message(timeout=0, with_transaction=False)
+            _ = input_device.read_message(cancellation_token=threading.Event(), timeout=0, with_transaction=False)
         except Exception as ex:
             assert isinstance(ex, AggregatedException)
             assert len(ex.inner_exceptions) == 2

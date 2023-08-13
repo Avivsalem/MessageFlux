@@ -1,8 +1,12 @@
+from typing import TYPE_CHECKING
+
 try:
     from boto3.session import Config, Session  # type: ignore
-    from mypy_boto3_s3 import S3ServiceResource
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3ServiceResource
 
 _S3_DEFAULT_TIMEOUT = 1
 _S3_DEFAULT_RETRIES = 2
@@ -27,20 +31,20 @@ class S3Client:
         :param access_key: the access key
         :param secret_key: the secret key
         """
-        self._s3: S3ServiceResource = Session().resource('s3',
-                                                         aws_access_key_id=access_key,
-                                                         aws_secret_access_key=secret_key,
-                                                         endpoint_url=endpoint,
-                                                         verify=False,
-                                                         config=Config(
-                                                             signature_version='s3',
-                                                             connect_timeout=timeout,
-                                                             retries={
-                                                                 "max_attempts": retries},
-                                                             s3={'addressing_style': 'path'}))
+        self._s3: 'S3ServiceResource' = Session().resource('s3',
+                                                           aws_access_key_id=access_key,
+                                                           aws_secret_access_key=secret_key,
+                                                           endpoint_url=endpoint,
+                                                           verify=False,
+                                                           config=Config(
+                                                               signature_version='s3',
+                                                               connect_timeout=timeout,
+                                                               retries={
+                                                                   "max_attempts": retries},
+                                                               s3={'addressing_style': 'path'}))
 
     @property
-    def s3_resource(self) -> S3ServiceResource:
+    def s3_resource(self) -> 'S3ServiceResource':
         """
         returns the actual s3 client
 

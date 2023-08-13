@@ -7,9 +7,6 @@ from typing_extensions import Literal
 from urllib.parse import urljoin
 
 try:
-    from mypy_boto3_s3 import S3ServiceResource
-    from mypy_boto3_s3.service_resource import ObjectSummary
-    from mypy_boto3_s3.type_defs import LifecycleConfigurationTypeDef, GetObjectOutputTypeDef
     from boto3.s3.inject import ClientError
 except ImportError as ex:
     raise ImportError('Please Install the required extra: messageflux[objectstorage]') from ex
@@ -17,6 +14,9 @@ except ImportError as ex:
 BUCKET_NAME_VALIDATOR = re.compile(r'^[a-z0-9][a-z0-9.\-]{1,61}[a-z0-9]$')
 
 if TYPE_CHECKING:
+    from mypy_boto3_s3.type_defs import LifecycleConfigurationBucketLifecycleTypeDef, GetObjectOutputTypeDef
+    from mypy_boto3_s3 import S3ServiceResource
+    from mypy_boto3_s3.service_resource import ObjectSummary
     from _typeshed import SupportsRead
 
 
@@ -46,14 +46,14 @@ class S3Object:
     represents an s3 object with lazy content get
     """
 
-    def __init__(self, object_summery: ObjectSummary, object_cache: Optional[GetObjectOutputTypeDef] = None):
+    def __init__(self, object_summery: 'ObjectSummary', object_cache: Optional['GetObjectOutputTypeDef'] = None):
         self._object_summery = object_summery
         self._object_cache = object_cache
         self._body: Optional[BytesIO] = None
         self._metadata: Optional[Dict[str, str]] = None
 
     @property
-    def _object_dict(self) -> GetObjectOutputTypeDef:
+    def _object_dict(self) -> 'GetObjectOutputTypeDef':
         if self._object_cache is None:
             self._object_cache = self._object_summery.get()
         return self._object_cache
@@ -116,7 +116,7 @@ class S3Bucket:
     """
 
     @staticmethod
-    def create_bucket(s3_resource: S3ServiceResource,
+    def create_bucket(s3_resource: 'S3ServiceResource',
                       bucket_name: str,
                       lifetime_in_days: Optional[int] = None,
                       allow_public_access=False) -> 'S3Bucket':
@@ -139,7 +139,7 @@ class S3Bucket:
         return bucket
 
     @staticmethod
-    def list_buckets(s3_resource: S3ServiceResource) -> Iterator['S3Bucket']:
+    def list_buckets(s3_resource: 'S3ServiceResource') -> Iterator['S3Bucket']:
         """
         returns a list of all the buckets in this client
 
@@ -149,7 +149,7 @@ class S3Bucket:
         for bucket in s3_resource.buckets.all():
             yield S3Bucket(bucket_name=bucket.name, s3_resource=s3_resource)
 
-    def __init__(self, bucket_name: str, s3_resource: S3ServiceResource, auto_create: bool = False):
+    def __init__(self, bucket_name: str, s3_resource: 'S3ServiceResource', auto_create: bool = False):
         """
         this class represents a single S3 Bucket
 
@@ -188,7 +188,7 @@ class S3Bucket:
         self._s3bucket.delete()
 
     @property
-    def s3_resource(self) -> S3ServiceResource:
+    def s3_resource(self) -> 'S3ServiceResource':
         """
         the client for this bucket
         """
@@ -246,7 +246,7 @@ class S3Bucket:
                 days = 1
             else:
                 status = 'Enabled'
-            lc: LifecycleConfigurationTypeDef = {
+            lc: 'LifecycleConfigurationBucketLifecycleTypeDef' = {
                 'Rules': [{
                     'Status': status,
                     'Prefix': '',

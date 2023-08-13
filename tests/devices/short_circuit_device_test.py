@@ -1,3 +1,4 @@
+import threading
 from typing import Optional
 
 import pytest
@@ -24,7 +25,10 @@ class ErrorInputDevice(InputDevice):
         # noinspection PyTypeChecker
         super(ErrorInputDevice, self).__init__(None, '')
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         if with_transaction:
             raise MyException()
         else:
@@ -50,39 +54,40 @@ class ErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
 
 
 def test_sanity_input():
+    cancellation_token = threading.Event()
     error_device_manager = ErrorDeviceManager()
     input_device_mananger = ShortCircuitInputDeviceManager(error_device_manager, 2, 2)
     input_device_mananger.connect()
     input_device = input_device_mananger.get_input_device("test")
 
     with pytest.raises(MyException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
 
     with pytest.raises(MyException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
 
     assert input_device.is_in_short_circuit_state
 
     with pytest.raises(ShortCircuitException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
 
     sleep(1)
 
     with pytest.raises(ShortCircuitException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
 
     sleep(1.1)
 
     with pytest.raises(MyException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
 
-    input_device.read_message(with_transaction=False)
-
-    with pytest.raises(MyException):
-        input_device.read_message()
+    input_device.read_message(cancellation_token=cancellation_token, with_transaction=False)
 
     with pytest.raises(MyException):
-        input_device.read_message()
+        input_device.read_message(cancellation_token=cancellation_token)
+
+    with pytest.raises(MyException):
+        input_device.read_message(cancellation_token=cancellation_token)
 
 
 def test_sanity_output():

@@ -3,14 +3,17 @@ import os
 import re
 from abc import abstractmethod, ABCMeta
 from hashlib import md5
-from typing import Optional, BinaryIO, Dict, Any, Tuple
+from typing import Optional, BinaryIO, Dict, Any, Tuple, TYPE_CHECKING
 
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.iodevices.message_store_device_wrapper.message_store_base import MessageStoreException, \
     MessageStoreBase
-from messageflux.iodevices.objectstorage.s3api.s3bucket import BUCKET_NAME_VALIDATOR, S3Bucket, S3ServiceResource
+from messageflux.iodevices.objectstorage.s3api.s3bucket import BUCKET_NAME_VALIDATOR, S3Bucket
 from messageflux.metadata_headers import MetadataHeaders
 from messageflux.utils import get_random_id, json_safe_encoder
+
+if TYPE_CHECKING:
+    from mypy_boto3_s3 import S3ServiceResource
 
 KEY_HEADER_CONST = "__KEY__"
 
@@ -64,7 +67,7 @@ class _S3MessageStoreBase(MessageStoreBase, metaclass=ABCMeta):
     _ORIGINAL_HEADERS_KEY = "originalheaders"
 
     def __init__(self,
-                 s3_resource: S3ServiceResource,
+                 s3_resource: 'S3ServiceResource',
                  magic: bytes,
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None):
@@ -196,7 +199,7 @@ class S3MessageStore(_S3MessageStoreBase):
     """
 
     def __init__(self,
-                 s3_resource: S3ServiceResource,
+                 s3_resource: 'S3ServiceResource',
                  magic: bytes = b"__S3_MSGSTORE__",
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
@@ -235,7 +238,7 @@ class S3UploadMessageStore(_S3MessageStoreBase):
     """
 
     def __init__(self,
-                 s3_resource: S3ServiceResource,
+                 s3_resource: 'S3ServiceResource',
                  magic: bytes = b"__S3_UPLOAD_MSGSTORE__",
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None,

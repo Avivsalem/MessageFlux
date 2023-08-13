@@ -24,6 +24,8 @@ theme:
 
   features:
     - content.code.annotate
+    - content.code.copy
+    - content.code.select
 
 extra_css: [ css/extra.css ]
 
@@ -52,6 +54,9 @@ markdown_extensions:
   - markdown.extensions.admonition
   - pymdownx.highlight:
       anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - pymdownx.blocks.tab

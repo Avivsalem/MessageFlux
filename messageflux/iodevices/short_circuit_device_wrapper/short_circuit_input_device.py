@@ -1,3 +1,4 @@
+import threading
 from typing import Optional
 
 from messageflux.iodevices.base import InputDevice, ReadResult, InputDeviceManager
@@ -19,10 +20,15 @@ class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice['ShortCircuitI
         ShortCircuitDeviceBase.__init__(self, short_circuit_fail_count, short_circuit_time)
         self._inner_device = inner_device
 
-    def _read_message(self, timeout: Optional[float] = None, with_transaction: bool = True) -> Optional[ReadResult]:
+    def _read_message(self,
+                      cancellation_token: threading.Event,
+                      timeout: Optional[float] = None,
+                      with_transaction: bool = True) -> Optional[ReadResult]:
         self._validate_short_circuit()
         with self._failure_count_context():
-            return self._inner_device.read_message(timeout=timeout, with_transaction=with_transaction)
+            return self._inner_device.read_message(cancellation_token=cancellation_token,
+                                                   timeout=timeout,
+                                                   with_transaction=with_transaction)
 
     def close(self):
         """

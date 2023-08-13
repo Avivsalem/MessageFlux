@@ -1,7 +1,7 @@
 import threading
 from abc import abstractmethod, ABCMeta
 from time import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from messageflux.iodevices.base import (InputTransactionScope,
                                         InputDeviceManager,
@@ -17,7 +17,7 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
 
     def __init__(self, *,
                  input_device_manager: InputDeviceManager,
-                 input_device_names: List[str],
+                 input_device_names: Union[List[str], str],
                  use_transactions: bool = True,
                  read_timeout: float = 5,
                  max_batch_read_count: int = 1,
@@ -37,6 +37,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
         """
         super().__init__(**kwargs)
         self._input_device_manager = input_device_manager
+        if isinstance(input_device_names, str):
+            input_device_names = [input_device_names]
         self._input_device_names = input_device_names
         self._use_transactions = use_transactions
         self._read_timeout = max(read_timeout, 0)
@@ -55,7 +57,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
             batch: List[Tuple[InputDevice, ReadResult]] = []
 
             # read first message with _read_timeout anyway
-            read_result = transaction_scope.read_message(timeout=self._read_timeout)
+            read_result = transaction_scope.read_message(cancellation_token=cancellation_token,
+                                                         timeout=self._read_timeout)
             if read_result is not None:
                 last_read_device = self._aggregate_input_device.last_read_device
                 assert last_read_device is not None
@@ -73,7 +76,8 @@ class MessageHandlingServiceBase(ServerLoopService, metaclass=ABCMeta):
                 else:
                     timeout = 0  # if not wait_for_batch, try to read another message without waiting at all
 
-                read_result = transaction_scope.read_message(timeout=timeout)
+                read_result = transaction_scope.read_message(cancellation_token=cancellation_token,
+                                                             timeout=timeout)
                 if read_result is None:
                     break  # no more messages to read
                 last_read_device = self._aggregate_input_device.last_read_device
@@ -102,14 +106,14 @@ class BatchMessageHandlerBase(metaclass=ABCMeta):
     a batch message handler base class. used to handle a batch of messages
     """
 
-    def connect(self):
+    def prepare(self):
         """
         called when the service starts.
         can be overrided by child class to perform some initialization logic
         """
         pass
 
-    def disconnect(self):
+    def shutdown(self):
         """
         called when the service stops.
         can be overrided by child class to perform some cleanup logic
@@ -143,10 +147,10 @@ class BatchMessageHandlingService(MessageHandlingServiceBase):
 
     def _prepare_service(self):
         super()._prepare_service()
-        self._message_handler.connect()
+        self._message_handler.prepare()
 
     def _finalize_service(self, exception: Optional[Exception] = None):
-        self._message_handler.disconnect()
+        self._message_handler.shutdown()
         super()._finalize_service(exception)
 
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
@@ -158,14 +162,14 @@ class MessageHandlerBase(metaclass=ABCMeta):
     a message handler base class. used to handle a single message
     """
 
-    def connect(self):
+    def prepare(self):
         """
         called when the service starts.
         can be overrided by child class to perform some initialization logic
         """
         pass
 
-    def disconnect(self):
+    def shutdown(self):
         """
         called when the service stops.
         can be overrided by child class to perform some cleanup logic
@@ -192,19 +196,19 @@ class MessageHandlingService(BatchMessageHandlingService):
         def __init__(self, massage_handler: MessageHandlerBase):
             self._message_handler = massage_handler
 
-        def connect(self):
+        def prepare(self):
             """
             called when the service starts.
             can be overrided by child class to perform some initialization logic
             """
-            self._message_handler.connect()
+            self._message_handler.prepare()
 
-        def disconnect(self):
+        def shutdown(self):
             """
             called when the service stops.
             can be overrided by child class to perform some cleanup logic
             """
-            self._message_handler.disconnect()
+            self._message_handler.shutdown()
 
         def handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
             """

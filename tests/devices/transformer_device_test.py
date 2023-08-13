@@ -1,4 +1,5 @@
 import uuid
+from threading import Event
 
 from messageflux.iodevices.base import Message, ReadResult
 from messageflux.iodevices.base.common import MessageBundle
@@ -26,6 +27,7 @@ class MockMessageStoreTransformer(InputTransformerBase, OutputTransformerBase):
 
 
 def test_sanity():
+    cancellation_token = Event()
     memory_device_manager = InMemoryDeviceManager()
     message_store_transformer = MockMessageStoreTransformer()
     input_device_manager = TransformerInputDeviceManager(memory_device_manager, message_store_transformer)
@@ -39,16 +41,17 @@ def test_sanity():
     assert len(message_store_transformer.messages) == 2
 
     input_device = input_device_manager.get_input_device(test_device_name)
-    read_result = input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(cancellation_token=cancellation_token, with_transaction=False)
     assert read_result is not None
     assert read_result.message.bytes == b'hello1'
 
-    read_result = input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(cancellation_token=cancellation_token, with_transaction=False)
     assert read_result is not None
     assert read_result.message.bytes == b'hello2'
 
 
 def test_zlib():
+    cancellation_token = Event()
     memory_device_manager = InMemoryDeviceManager()
     zlib_transformer = ZLIBTransformer()
     zlib_input_device_manager = TransformerInputDeviceManager(memory_device_manager, zlib_transformer)
@@ -62,11 +65,11 @@ def test_zlib():
     output_device1.send_message(Message(b'hello2'))
 
     input_device = zlib_input_device_manager.get_input_device(test_device_name)
-    read_result = input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(cancellation_token=cancellation_token,  with_transaction=False)
     assert read_result is not None
     assert read_result.message.bytes == b'hello1'
 
-    read_result = input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(cancellation_token=cancellation_token, with_transaction=False)
     assert read_result is not None
     assert read_result.message.bytes == b'hello2'
 
@@ -74,12 +77,12 @@ def test_zlib():
     output_device1.send_message(Message(b'X' * 1000))
 
     input_device1 = memory_device_manager.get_input_device(test_device_name)
-    read_result = input_device1.read_message(with_transaction=True)
+    read_result = input_device1.read_message(cancellation_token=cancellation_token, with_transaction=True)
     assert read_result is not None
     assert len(read_result.message.bytes) < 1000
     read_result.rollback()
 
     input_device = zlib_input_device_manager.get_input_device(test_device_name)
-    read_result = input_device.read_message(with_transaction=False)
+    read_result = input_device.read_message(cancellation_token=cancellation_token, with_transaction=False)
     assert read_result is not None
     assert read_result.message.bytes == b'X' * 1000

@@ -1,2 +1,2 @@
 from .multiprocessrunner import MultiProcessRunner, get_service_runner
-from .singleprocesshandler import ServiceFactory
+from .singleprocesshandler import ServiceFactory, INSTANCE_INDEX_ENV_VAR, INSTANCE_COUNT_ENV_VAR

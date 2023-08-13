@@ -1,5 +1,6 @@
 import os
 from io import BytesIO
+from threading import Event
 from uuid import uuid4
 
 from messageflux.iodevices.base import InputTransactionScope, Message
@@ -46,7 +47,7 @@ def test_sanity(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        read_result = input_device.read_message(with_transaction=False)
+        read_result = input_device.read_message(cancellation_token=Event(), with_transaction=False)
         assert read_result is not None
         assert read_result.message.stream.read() == b'data'
         read_result.message.stream.seek(0)
@@ -72,7 +73,7 @@ def test_sanity_unsorted(tmpdir):
 
     with input_manager:
         input_device = input_manager.get_input_device(QUEUE_NAME)
-        read_result = input_device.read_message(with_transaction=False)
+        read_result = input_device.read_message(cancellation_token=Event(), with_transaction=False)
         assert read_result is not None
     with output_manager:
         output_device = output_manager.get_output_device(OUTPUT_NAME)
@@ -96,10 +97,11 @@ def test_rollback(tmpdir):
         f.write(serializer.serialize(Message(b'data')).read())
     try:
         with input_manager:
+            cancellation_token = Event()
             input_device = input_manager.get_input_device(QUEUE_NAME)
             with InputTransactionScope(input_device) as transaction_scope:
-                _ = transaction_scope.read_message()
-                _ = transaction_scope.read_message()
+                _ = transaction_scope.read_message(cancellation_token=cancellation_token)
+                _ = transaction_scope.read_message(cancellation_token=cancellation_token)
                 assert len(os.listdir(input_manager.bookkeeping_folder)) == 1
                 tran_log = TransactionLog._load_file(
                     os.path.join(input_manager.bookkeeping_folder, os.listdir(input_manager.bookkeeping_folder)[0]))
@@ -124,14 +126,15 @@ def test_backout(tmpdir):
         f.write(serializer.serialize(Message(b'data')).read())
 
     with input_manager:
+        cancellation_token = Event()
         for i in range(3):
             queue = input_manager.get_input_device(QUEUE_NAME)
-            read_result = queue.read_message()
+            read_result = queue.read_message(cancellation_token=cancellation_token)
             assert read_result is not None
             read_result.rollback()
 
         queue = input_manager.get_input_device(QUEUE_NAME)
-        read_result = queue.read_message(timeout=1)
+        read_result = queue.read_message(cancellation_token=cancellation_token, timeout=1)
         assert read_result is None
 
         assert len(os.listdir(os.path.join(input_manager.queues_folder, QUEUE_NAME, 'POISON'))) == 1

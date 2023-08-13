@@ -8,15 +8,17 @@ backend-path = ["_custom_build"]
 
 [project]
 name = "messageflux"
-requires-python = '>=3.7,<3.11'
+requires-python = '>=3.7,<3.12'
 readme = "README.md"
-license = { text = "GNU General Public License v3 (GPLv3)" }
+license = { text = "MIT" }
 classifiers = [
     'Programming Language :: Python',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Programming Language :: Python :: 3.9',
     'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'License :: OSI Approved :: MIT License',
 ]
 dynamic = [
     "dependencies",
@@ -26,7 +28,7 @@ dynamic = [
 
 [project.urls]
 Homepage = "https://github.com/Avivsalem/MessageFlux/"
-Documentation  = "https://messageflux.readthedocs.io/"
+Documentation = "https://messageflux.readthedocs.io/"
 
 [[project.authors]]
 name = "Aviv Salem"
@@ -61,8 +63,10 @@ version = { file = "VERSION" }
 
 [tool.setuptools.dynamic.optional-dependencies]
 dev = { file = "requirements-dev.txt" }
-rabbitmq = { file = "requirements-rabbitmq.txt" }
 objectstorage = { file = "requirements-objectstorage.txt" }
+objectstorage_mypy = { file = "requirements-objectstorage_mypy.txt" }
+rabbitmq = { file = "requirements-rabbitmq.txt" }
+rabbitmq_mypy = { file = "requirements-rabbitmq_mypy.txt" }
 all = { file = "requirements-all.txt" }
 
 

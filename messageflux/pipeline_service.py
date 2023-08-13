@@ -1,19 +1,27 @@
+import logging
 from abc import ABCMeta, abstractmethod
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union, Iterable
 
-from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult
-from messageflux.iodevices.base.common import MessageBundle
+from messageflux.iodevices.base import InputDevice, OutputDeviceManager, ReadResult, InputDeviceManager
+from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.message_handling_service import MessageHandlingServiceBase
 
+_logger = logging.getLogger(__name__)
 
-@dataclass
+
 class PipelineResult:
     """
     a result from pipeline handler
     """
-    output_device_name: str
-    message_bundle: MessageBundle
+
+    def __init__(self,
+                 output_device_name: str,
+                 message_bundle: Union[MessageBundle, Message]):
+        self.output_device_name = output_device_name
+        if isinstance(message_bundle, Message):
+            message_bundle = MessageBundle(message=message_bundle)
+
+        self.message_bundle = message_bundle
 
 
 class PipelineHandlerBase(metaclass=ABCMeta):
@@ -21,10 +29,24 @@ class PipelineHandlerBase(metaclass=ABCMeta):
     a pipeline handler base class. used to handle a single message that passes through the pipeline
     """
 
+    def prepare(self):
+        """
+        called when the service starts.
+        can be overrided by child class to perform some initialization logic
+        """
+        pass
+
+    def shutdown(self):
+        """
+        called when the service stops.
+        can be overrided by child class to perform some cleanup logic
+        """
+        pass
+
     @abstractmethod
     def handle_message(self,
                        input_device: InputDevice,
-                       message_bundle: MessageBundle) -> Optional[PipelineResult]:
+                       message_bundle: MessageBundle) -> Optional[Union[PipelineResult, Iterable[PipelineResult]]]:
         """
         Handles a message from an input device. and returns a tuple of the output device name, message and headers to
         send to.
@@ -33,7 +55,7 @@ class PipelineHandlerBase(metaclass=ABCMeta):
         :param message_bundle: The message that was received.
 
         :return: None if the message should not be sent to any output device.
-        PipelineResult if a message should be sent to the output device with the given name.
+        PipelineResult (or iterable of) if messages should be sent to the output device with the given name.
         """
         pass
 
@@ -68,17 +90,50 @@ class PipelineService(MessageHandlingServiceBase):
     """
 
     def __init__(self, *,
-                 output_device_manager: OutputDeviceManager,
+                 input_device_manager: InputDeviceManager,
+                 input_device_names: Union[List[str], str],
                  pipeline_handler: PipelineHandlerBase,
+                 output_device_manager: Optional[OutputDeviceManager] = None,
                  **kwargs):
-        super().__init__(**kwargs)
+        """
+
+        :param pipeline_handler: the pipeline handler to use for handling the messages
+        :param output_device_manager: Optional. the output device manager to send messages to
+        :param **kwargs: passed to parent as is
+        """
+        super().__init__(input_device_manager=input_device_manager,
+                         input_device_names=input_device_names,
+                         **kwargs)
         self._output_device_manager = output_device_manager
         self._pipeline_handler = pipeline_handler
 
+    def _prepare_service(self):
+        super()._prepare_service()
+        if self._output_device_manager is not None:
+            self._output_device_manager.connect()
+        self._pipeline_handler.prepare()
+
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         for input_device, read_result in batch:
-            pipeline_result = self._pipeline_handler.handle_message(input_device, read_result)
-            if pipeline_result is not None:
-                output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
-                output_device.send_message(message=pipeline_result.message_bundle.message,
-                                           device_headers=pipeline_result.message_bundle.device_headers)
+            pipeline_handler_result = self._pipeline_handler.handle_message(input_device, read_result)
+            if pipeline_handler_result is not None:
+                if isinstance(pipeline_handler_result, PipelineResult):
+                    pipeline_handler_result = [pipeline_handler_result]
+                for pipeline_result in pipeline_handler_result:
+                    if self._output_device_manager is None:
+                        _logger.warning("pipeline handler returned a result to output to device: "
+                                        f"'{pipeline_result.output_device_name}', "
+                                        f"but no output_device_manager was given")
+                        continue
+
+                    output_device = self._output_device_manager.get_output_device(pipeline_result.output_device_name)
+                    output_device.send_message(message=pipeline_result.message_bundle.message,
+                                               device_headers=pipeline_result.message_bundle.device_headers)
+
+    def _finalize_service(self, exception: Optional[Exception] = None):
+        try:
+            super()._finalize_service(exception)
+        finally:
+            if self._output_device_manager is not None:
+                self._output_device_manager.disconnect()
+            self._pipeline_handler.shutdown()
