@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import TYPE_CHECKING
 
 from messageflux.iodevices.base import (
     OutputDevice,
@@ -7,14 +7,17 @@ from messageflux.iodevices.base import (
     OutputDeviceManager,
 )
 from messageflux.iodevices.base.common import MessageBundle
-from messageflux.iodevices.sqs.message_attributes import geterate_message_attributes
+from messageflux.iodevices.sqs.message_attributes import generate_message_attributes
+from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 from messageflux.utils import get_random_id
 
-try:
-    import boto3
-    from mypy_boto3_sqs.service_resource import Queue
-except ImportError as ex:
-    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
+# try:
+#     import boto3
+# except ImportError as ex:
+#     raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
+#
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import SQSServiceResource
 
 
 class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
@@ -40,7 +43,7 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
         if self._is_fifo:
             response = self._sqs_queue.send_message(
                 MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=geterate_message_attributes(
+                MessageAttributes=generate_message_attributes(
                     message_bundle.message.headers
                 ),
                 MessageGroupId=get_random_id(),
@@ -48,7 +51,7 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
         else:
             response = self._sqs_queue.send_message(
                 MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=geterate_message_attributes(
+                MessageAttributes=generate_message_attributes(
                     message_bundle.message.headers
                 ),
             )
@@ -57,19 +60,17 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
             raise OutputDeviceException("Couldn't send message to SQS")
 
 
-class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
+class SQSOutputDeviceManager(SQSManagerBase, OutputDeviceManager[SQSOutputDevice]):
     """
     this manager is used to create SQS devices
     """
 
-    def __init__(self):
+    def __init__(self, sqs_resource: 'SQSServiceResource'):
         """
-        This manager used to create SQS devices
+        :param sqs_resource: the boto sqs service resource
         """
+        super().__init__(sqs_resource=sqs_resource)
         self._logger = logging.getLogger(__name__)
-
-        self._sqs_resource = boto3.resource("sqs")
-        self._queue_cache: Dict[str, Queue] = {}
 
     def get_output_device(self, queue_name: str) -> SQSOutputDevice:
         """
@@ -84,14 +85,3 @@ class SQSOutputDeviceManager(OutputDeviceManager[SQSOutputDevice]):
             message = f"Couldn't create output device '{queue_name}'"
             self._logger.exception(message)
             raise OutputDeviceException(message) from e
-
-    def get_queue(self, queue_name: str) -> Queue:
-        """
-        gets the queue from cache
-        """
-        queue = self._queue_cache.get(queue_name, None)
-        if queue is None:
-            queue = self._sqs_resource.get_queue_by_name(QueueName=queue_name)
-            self._queue_cache[queue_name] = queue
-
-        return queue

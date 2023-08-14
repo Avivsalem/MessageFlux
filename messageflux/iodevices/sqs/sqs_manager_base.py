@@ -1,21 +1,29 @@
 import logging
 
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 
-try:
-    import boto3
-    from mypy_boto3_sqs.service_resource import Queue
-except ImportError as ex:
-    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
+# try:
+#     import boto3
+# except ImportError as ex:
+#     raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import Queue, SQSServiceResource
 
 
 class SQSManagerBase:
-    def __init__(self) -> None:
-        self._sqs_resource = boto3.resource("sqs")
-        self._queue_cache: Dict[str, Queue] = {}
+    """
+    base class for sqs device managers
+    """
+    def __init__(self, sqs_resource: 'SQSServiceResource') -> None:
+        """
+        :param sqs_resource: the boto sqs service resource
+        """
+        self._sqs_resource = sqs_resource
+        self._queue_cache: Dict[str, 'Queue'] = {}
         self._logger = logging.getLogger(__name__)
 
-    def get_queue(self, queue_name: str) -> Queue:
+    def get_queue(self, queue_name: str) -> 'Queue':
         """
         gets the queue from cache
         """

@@ -65,6 +65,8 @@ version = { file = "VERSION" }
 dev = { file = "requirements-dev.txt" }
 objectstorage = { file = "requirements-objectstorage.txt" }
 objectstorage_mypy = { file = "requirements-objectstorage_mypy.txt" }
+sqs = { file = "requirements-sqs.txt" }
+sqs_mypy = { file = "requirements-sqs_mypy.txt" }
 rabbitmq = { file = "requirements-rabbitmq.txt" }
 rabbitmq_mypy = { file = "requirements-rabbitmq_mypy.txt" }
 all = { file = "requirements-all.txt" }
