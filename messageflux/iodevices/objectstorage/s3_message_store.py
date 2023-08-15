@@ -5,6 +5,8 @@ from abc import abstractmethod, ABCMeta
 from hashlib import md5
 from typing import Optional, BinaryIO, Dict, Any, Tuple, TYPE_CHECKING
 
+import boto3
+
 from messageflux.iodevices.base.common import MessageBundle, Message
 from messageflux.iodevices.message_store_device_wrapper.message_store_base import MessageStoreException, \
     MessageStoreBase
@@ -67,8 +69,8 @@ class _S3MessageStoreBase(MessageStoreBase, metaclass=ABCMeta):
     _ORIGINAL_HEADERS_KEY = "originalheaders"
 
     def __init__(self,
-                 s3_resource: 'S3ServiceResource',
                  magic: bytes,
+                 s3_resource: Optional['S3ServiceResource'] = None,
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None):
         """
@@ -82,6 +84,9 @@ class _S3MessageStoreBase(MessageStoreBase, metaclass=ABCMeta):
         """
         self.bucket_name_formatter = bucket_name_formatter or BucketNameFormatterBase()
         self._magic = magic
+
+        if s3_resource is None:
+            s3_resource = boto3.resource('s3')
 
         self._s3_resource = s3_resource
         self._auto_create_bucket = auto_create_bucket
@@ -199,7 +204,7 @@ class S3MessageStore(_S3MessageStoreBase):
     """
 
     def __init__(self,
-                 s3_resource: 'S3ServiceResource',
+                 s3_resource: Optional['S3ServiceResource'] = None,
                  magic: bytes = b"__S3_MSGSTORE__",
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
@@ -207,7 +212,7 @@ class S3MessageStore(_S3MessageStoreBase):
         """
         An S3 based message store
 
-        :param s3_resource: the s3 resource from boto
+        :param s3_resource: the s3 resource from boto (or None, to create it from env vars)
         :param auto_create_bucket: Whether or not a bucket will be created
                                    when a message is being put in a nonexistent one.
         :param bucket_name_formatter: a formatter to use to manipulate the bucket name.
@@ -238,7 +243,7 @@ class S3UploadMessageStore(_S3MessageStoreBase):
     """
 
     def __init__(self,
-                 s3_resource: 'S3ServiceResource',
+                 s3_resource: Optional['S3ServiceResource'] = None,
                  magic: bytes = b"__S3_UPLOAD_MSGSTORE__",
                  auto_create_bucket: bool = False,
                  bucket_name_formatter: Optional[BucketNameFormatterBase] = None,
@@ -246,7 +251,7 @@ class S3UploadMessageStore(_S3MessageStoreBase):
         """
         An S3 based message store
 
-        :param s3_resource: the s3 resource from boto
+        :param s3_resource: the s3 resource from boto (or None, to create it from env vars)
         :param auto_create_bucket: Whether or not a bucket will be created
                                    when a message is being put in a nonexistent one.
         :param bucket_name_formatter: a formatter to use to manipulate the bucket name.
