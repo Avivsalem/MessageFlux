@@ -1,5 +1,4 @@
 import logging
-from typing import TYPE_CHECKING
 
 from messageflux.iodevices.base import (
     OutputDevice,
@@ -10,14 +9,6 @@ from messageflux.iodevices.base.common import MessageBundle
 from messageflux.iodevices.sqs.message_attributes import generate_message_attributes
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 from messageflux.utils import get_random_id
-
-# try:
-#     import boto3
-# except ImportError as ex:
-#     raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
-#
-if TYPE_CHECKING:
-    from mypy_boto3_sqs.service_resource import SQSServiceResource
 
 
 class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
@@ -64,13 +55,6 @@ class SQSOutputDeviceManager(SQSManagerBase, OutputDeviceManager[SQSOutputDevice
     """
     this manager is used to create SQS devices
     """
-
-    def __init__(self, sqs_resource: 'SQSServiceResource'):
-        """
-        :param sqs_resource: the boto sqs service resource
-        """
-        super().__init__(sqs_resource=sqs_resource)
-        self._logger = logging.getLogger(__name__)
 
     def get_output_device(self, queue_name: str) -> SQSOutputDevice:
         """

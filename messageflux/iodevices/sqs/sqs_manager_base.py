@@ -1,11 +1,11 @@
 import logging
 
-from typing import Dict, TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING, Optional
 
-# try:
-#     import boto3
-# except ImportError as ex:
-#     raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
+try:
+    import boto3
+except ImportError as ex:
+    raise ImportError("Please Install the required extra: messageflux[sqs]") from ex
 
 if TYPE_CHECKING:
     from mypy_boto3_sqs.service_resource import Queue, SQSServiceResource
@@ -15,10 +15,14 @@ class SQSManagerBase:
     """
     base class for sqs device managers
     """
-    def __init__(self, sqs_resource: 'SQSServiceResource') -> None:
+
+    def __init__(self, sqs_resource: Optional['SQSServiceResource'] = None) -> None:
         """
-        :param sqs_resource: the boto sqs service resource
+        :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
         """
+        if sqs_resource is None:
+            sqs_resource = boto3.resource('sqs')
+
         self._sqs_resource = sqs_resource
         self._queue_cache: Dict[str, 'Queue'] = {}
         self._logger = logging.getLogger(__name__)

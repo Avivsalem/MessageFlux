@@ -15,7 +15,7 @@ from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 
 if TYPE_CHECKING:
-    from mypy_boto3_sqs.service_resource import SQSServiceResource, Message as SQSMessage
+    from mypy_boto3_sqs.service_resource import Message as SQSMessage
 
 
 class SQSInputTransaction(InputTransaction):
@@ -130,9 +130,6 @@ class SQSInputDeviceManager(SQSManagerBase, InputDeviceManager[SQSInputDevice]):
     """
     SQS input device manager
     """
-
-    def __init__(self, sqs_resource: 'SQSServiceResource'):
-        super().__init__(sqs_resource=sqs_resource)
 
     def get_input_device(self, device_name: str) -> SQSInputDevice:
         """
