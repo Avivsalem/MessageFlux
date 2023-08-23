@@ -37,3 +37,13 @@ class SQSManagerBase:
             self._queue_cache[queue_name] = queue
 
         return queue
+
+    def create_queue(self, queue_name: str, **kwargs) -> 'Queue':
+        """
+        creates a queue
+
+        :param queue_name: the queue name to create
+        :return: the newly created queue
+        """
+
+        return self._sqs_resource.create_queue(QueueName=queue_name, **kwargs)
