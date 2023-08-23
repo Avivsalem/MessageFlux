@@ -81,7 +81,7 @@ def rollback_test(input_device_manager: InputDeviceManager,
         _assert_messages_equal(org_message=test_message_2, new_message=read_result2.message)
         read_result1.rollback()
         read_result2.rollback()
-
+        time.sleep(sleep_between_sends)
         read_result = input_device.read_message(cancellation_token=cancellation_token)
         assert read_result is not None
         _assert_messages_equal(org_message=test_message_1, new_message=read_result.message)
