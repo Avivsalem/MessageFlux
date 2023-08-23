@@ -3,8 +3,8 @@ import uuid
 import boto3
 from moto import mock_sqs
 
-from messageflux.iodevices.sqs.sqs_input_device import SQSInputDeviceManager
-from messageflux.iodevices.sqs.sqs_output_device import SQSOutputDeviceManager
+from messageflux.iodevices.sqs import SQSInputDeviceManager
+from messageflux.iodevices.sqs import SQSOutputDeviceManager
 from tests.devices.common import sanity_test, rollback_test
 
 
