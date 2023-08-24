@@ -16,7 +16,8 @@ class SQSManagerBase:
     base class for sqs device managers
     """
 
-    def __init__(self, sqs_resource: Optional['SQSServiceResource'] = None) -> None:
+    def __init__(self, *,
+                 sqs_resource: Optional['SQSServiceResource'] = None) -> None:
         """
         :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
         """
