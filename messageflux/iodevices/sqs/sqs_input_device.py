@@ -1,7 +1,7 @@
 import logging
 import threading
 from io import BytesIO
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING, Dict, List, Any
 
 from messageflux.iodevices.base import (
     InputDevice,
@@ -15,7 +15,7 @@ from messageflux.iodevices.base.input_transaction import NULLTransaction
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 
 if TYPE_CHECKING:
-    from mypy_boto3_sqs.service_resource import Message as SQSMessage
+    from mypy_boto3_sqs.service_resource import Message as SQSMessage, SQSServiceResource
 
 
 class SQSInputTransaction(InputTransaction):
@@ -57,13 +57,16 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
             self,
             device_manager: "SQSInputDeviceManager",
             queue_name: str,
-            included_message_attributes: Optional[Union[str, list]] = None,  # TODO: what's this?
+            max_messages_per_request: int = 1,
+            included_message_attributes: Optional[Union[str, List[str]]] = None,
     ):
         """
         constructs a new input SQS device
 
         :param device_manager: the SQS device Manager that holds this device
         :param queue_name: the name for the queue
+        :param max_messages_per_request: maximum messages to retrieve from the queue (max 10)
+        :param included_message_attributes: list of message attributes to get for the message. defaults to ALL
 
         """
         super().__init__(device_manager, queue_name)
@@ -72,8 +75,27 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
             included_message_attributes = ["All"]
 
         self._included_message_attributes = included_message_attributes
-        self._max_messages_per_request = 1  # TODO: get this in manager
+        self._max_messages_per_request = min(max_messages_per_request, 10)
         self._queue = self.manager.get_queue(queue_name)
+        self._message_cache: List['SQSMessage'] = []
+
+    def _get_sqs_message(self, timeout: Optional[float]) -> 'Optional[SQSMessage]':
+        if not self._message_cache:
+            additional_args: Dict[str, Any] = {}
+
+            if timeout is not None:
+                additional_args = dict(WaitTimeSeconds=int(timeout))
+
+            sqs_messages = self._queue.receive_messages(
+                MessageAttributeNames=self._included_message_attributes,
+                MaxNumberOfMessages=self._max_messages_per_request,
+                **additional_args
+            )
+            if not sqs_messages:
+                return None
+            self._message_cache.extend(sqs_messages)
+
+        return self._message_cache.pop(0)
 
     def _read_message(
             self,
@@ -87,24 +109,10 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
         :param timeout: the timeout in seconds to block. negative number means no blocking
         :return: a tuple of stream and metadata from InputDevice, or (None, None) if no message is available
         """
-        if timeout is None:
-            sqs_messages = self._queue.receive_messages(
-                MessageAttributeNames=self._included_message_attributes,
-                MaxNumberOfMessages=self._max_messages_per_request,
-            )  # TODO: what's the visibility timeout? should we extend it?
-        else:
-            sqs_messages = self._queue.receive_messages(
-                MessageAttributeNames=self._included_message_attributes,
-                MaxNumberOfMessages=self._max_messages_per_request,
-                WaitTimeSeconds=int(timeout)
-            )  # TODO: what's the visibility timeout? should we extend it?
 
-        if not sqs_messages:
+        sqs_message = self._get_sqs_message(timeout=timeout)
+        if sqs_message is None:
             return None
-
-        assert (len(sqs_messages) == 1), "SQSInputDevice should only return one message at a time"
-
-        sqs_message = sqs_messages[0]
 
         transaction: InputTransaction
         if with_transaction:
@@ -114,11 +122,13 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
             transaction = NULLTransaction(self)
             sqs_message.delete()
 
+        message_attributes = sqs_message.message_attributes or {}
+
         return ReadResult(
             message=Message(
                 headers={
                     key: value["BinaryValue"] if value['DataType'] == "Binary" else value['StringValue']
-                    for key, value in sqs_message.message_attributes.items()
+                    for key, value in message_attributes.items()
                 },
                 data=BytesIO(sqs_message.body.encode()),
             ),
@@ -131,16 +141,39 @@ class SQSInputDeviceManager(SQSManagerBase, InputDeviceManager[SQSInputDevice]):
     SQS input device manager
     """
 
-    def get_input_device(self, device_name: str) -> SQSInputDevice:
+    def __init__(self, *,
+                 sqs_resource: Optional['SQSServiceResource'] = None,
+                 max_messages_per_request: int = 1,
+                 included_message_attributes: Optional[Union[str, List[str]]] = None, ) -> None:
+        """
+        :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
+        :param max_messages_per_request: maximum messages to retrieve from the queue (max 10)
+        :param included_message_attributes: list of message attributes to get for the message. defaults to ALL
+        """
+        super().__init__(sqs_resource=sqs_resource)
+        self._device_cache: Dict[str, SQSInputDevice] = {}
+        self._max_messages_per_request = max_messages_per_request
+        self._included_message_attributes = included_message_attributes
+
+    def get_input_device(self, name: str) -> SQSInputDevice:
         """
         Returns an incoming device by name
 
-        :param device_name: the name of the device to read from
+        :param name: the name of the device to read from
         :return: an input device for 'device_name'
         """
         try:
-            return SQSInputDevice(self, device_name)
+            device = self._device_cache.get(name, None)
+            if device is None:
+                device = SQSInputDevice(device_manager=self,
+                                        queue_name=name,
+                                        max_messages_per_request=self._max_messages_per_request,
+                                        included_message_attributes=self._included_message_attributes)
+
+                self._device_cache[name] = device
+
+            return device
         except Exception as e:
-            message = f"Couldn't create input device '{device_name}'"
+            message = f"Couldn't create input device '{name}'"
             self._logger.exception(message)
             raise InputDeviceException(message) from e
