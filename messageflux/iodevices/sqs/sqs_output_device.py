@@ -1,4 +1,5 @@
 import logging
+from typing import Optional, Dict, TYPE_CHECKING, Any
 
 from messageflux.iodevices.base import (
     OutputDevice,
@@ -9,6 +10,9 @@ from messageflux.iodevices.base.common import MessageBundle
 from messageflux.iodevices.sqs.message_attributes import generate_message_attributes
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 from messageflux.utils import get_random_id
+
+if TYPE_CHECKING:
+    from mypy_boto3_sqs.service_resource import SQSServiceResource
 
 
 class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
@@ -31,21 +35,17 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
         self._logger = logging.getLogger(__name__)
 
     def _send_message(self, message_bundle: MessageBundle):
+        additional_args: Dict[str, Any] = {}
         if self._is_fifo:
-            response = self._sqs_queue.send_message(
-                MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=generate_message_attributes(
-                    message_bundle.message.headers
-                ),
-                MessageGroupId=get_random_id(),
-            )
-        else:
-            response = self._sqs_queue.send_message(
-                MessageBody=message_bundle.message.bytes.decode(),
-                MessageAttributes=generate_message_attributes(
-                    message_bundle.message.headers
-                ),
-            )
+            additional_args = dict(MessageGroupId=get_random_id())
+
+        response = self._sqs_queue.send_message(
+            MessageBody=message_bundle.message.bytes.decode(),
+            MessageAttributes=generate_message_attributes(
+                message_bundle.message.headers
+            ),
+            **additional_args,
+        )
 
         if "MessageId" not in response:
             raise OutputDeviceException("Couldn't send message to SQS")
@@ -56,16 +56,29 @@ class SQSOutputDeviceManager(SQSManagerBase, OutputDeviceManager[SQSOutputDevice
     this manager is used to create SQS devices
     """
 
-    def get_output_device(self, queue_name: str) -> SQSOutputDevice:
+    def __init__(self, sqs_resource: Optional['SQSServiceResource'] = None) -> None:
+        """
+        :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
+        """
+        super().__init__(sqs_resource=sqs_resource)
+        self._device_cache: Dict[str, SQSOutputDevice] = {}
+
+    def get_output_device(self, name: str) -> SQSOutputDevice:
         """
         Returns and outgoing device by name
 
-        :param queue_name: the name of the queue
+        :param name: the name of the queue
         :return: an output device for 'queue_name'
         """
         try:
-            return SQSOutputDevice(self, queue_name)
+            device = self._device_cache.get(name, None)
+            if device is None:
+                device = SQSOutputDevice(self, name)
+                self._device_cache[name] = device
+
+            return device
+
         except Exception as e:
-            message = f"Couldn't create output device '{queue_name}'"
+            message = f"Couldn't create output device '{name}'"
             self._logger.exception(message)
             raise OutputDeviceException(message) from e
