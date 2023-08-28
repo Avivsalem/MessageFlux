@@ -12,6 +12,7 @@ from messageflux.iodevices.base import (
     InputDeviceManager,
 )
 from messageflux.iodevices.base.input_transaction import NULLTransaction
+from messageflux.iodevices.sqs.message_attributes import decode_message_attributes
 from messageflux.iodevices.sqs.sqs_manager_base import SQSManagerBase
 
 if TYPE_CHECKING:
@@ -126,10 +127,7 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
 
         return ReadResult(
             message=Message(
-                headers={
-                    key: value["BinaryValue"] if value['DataType'] == "Binary" else value['StringValue']
-                    for key, value in message_attributes.items()
-                },
+                headers=decode_message_attributes(message_attributes),
                 data=BytesIO(sqs_message.body.encode()),
             ),
             transaction=transaction

@@ -1,8 +1,8 @@
+import decimal
 import logging
 import ssl
-from typing import BinaryIO, Dict, Any, Union, Optional, List, TYPE_CHECKING
-
 import time
+from typing import BinaryIO, Dict, Any, Union, Optional, List, TYPE_CHECKING
 
 from messageflux.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle
@@ -65,8 +65,9 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
     """
     _PUBLISH_CONFIRM_HEADER = "__RABBITMQ_PUBLISH_CONFIRM__"
 
-    _outgoing_channel: Union[ThreadLocalMember[Optional['BlockingChannel']],
-                             Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
+    _outgoing_channel: Union[
+        ThreadLocalMember[Optional['BlockingChannel']],
+        Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
 
     def __init__(self,
                  hosts: Union[List[str], str],
@@ -270,6 +271,9 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
             headers = headers.copy()
         headers[self._PUBLISH_CONFIRM_HEADER] = self.publish_confirm
 
+        for header in headers:  # this solves a weird bug in pika, which doesn't handle floats...
+            if isinstance(headers[header], float):
+                headers[header] = decimal.Decimal(headers[header])
         data.seek(0)
 
         str_expiration: Optional[str] = None
