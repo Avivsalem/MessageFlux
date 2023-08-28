@@ -29,6 +29,7 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
         """
         super(SQSOutputDevice, self).__init__(device_manager, queue_name)
         self._sqs_queue = self.manager.get_queue(queue_name)
+        self._message_group_id = get_random_id()
 
         # https://awscli.amazonaws.com/v2/documentation/api/latest/reference/sqs/get-queue-attributes.html#get-queue-attributes
         self._is_fifo = queue_name.endswith(".fifo")
@@ -37,7 +38,7 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
     def _send_message(self, message_bundle: MessageBundle):
         additional_args: Dict[str, Any] = {}
         if self._is_fifo:
-            additional_args = dict(MessageGroupId=get_random_id())
+            additional_args = dict(MessageGroupId=self._message_group_id)
 
         response = self._sqs_queue.send_message(
             MessageBody=message_bundle.message.bytes.decode(),
