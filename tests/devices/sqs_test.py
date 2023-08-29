@@ -20,7 +20,8 @@ def test_generic_sanity():
         try:
             sanity_test(input_device_manager=input_manager,
                         output_device_manager=output_manager,
-                        device_name=queue_name)
+                        device_name=queue_name,
+                        extra_headers={'test_bytes': b'bytes'})
         finally:
             q.delete()
 

@@ -1,8 +1,7 @@
+import time
 import uuid
 from threading import Event
-from typing import Optional
-
-import time
+from typing import Optional, Dict, Any
 
 from messageflux.iodevices.base import InputDeviceManager, OutputDeviceManager, Message
 
@@ -16,13 +15,25 @@ def _assert_messages_equal(org_message: Message, new_message: Message):
 def sanity_test(input_device_manager: InputDeviceManager,
                 output_device_manager: OutputDeviceManager,
                 device_name: Optional[str] = None,
-                sleep_between_sends=0.01):
+                sleep_between_sends: float = 0.01,
+                extra_headers: Optional[Dict[str, Any]] = None):
     """
     Common test for all devices.
     """
+    if extra_headers is None:
+        extra_headers = {}
     device_name = device_name or str(uuid.uuid4())
-    test_message_1 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test1'})
-    test_message_2 = Message(str(uuid.uuid4()).encode(), headers={'test': 'test2'})
+    test_message_1 = Message(str(uuid.uuid4()).encode(), headers={'test_str': 'test1',
+                                                                  'test_int': 1,
+                                                                  'test_float': 2.5,
+                                                                  'test_bool': True,
+                                                                  **extra_headers})
+
+    test_message_2 = Message(str(uuid.uuid4()).encode(), headers={'test_str': 'test2',
+                                                                  'test_int': 2,
+                                                                  'test_float': 3.5,
+                                                                  'test_bool': False,
+                                                                  **extra_headers})
 
     output_device_manager.connect()
     try:
