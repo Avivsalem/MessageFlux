@@ -47,7 +47,7 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         self._output_device = self._output_device_manager.get_output_device(name=self._output_device_name)
         self._metadata = metadata or {}
         self._queue: queue.Queue = queue.Queue()
-        self._wait_on_queue_timeout = max(wait_on_queue_timeout, 1)
+        self._wait_on_queue_timeout = max(wait_on_queue_timeout, 0.1)
         self._send_to_device_thread: Optional[Thread] = None
 
         super(BulkRotatingDeviceHandler, self).__init__(live_log_path=live_log_path,
