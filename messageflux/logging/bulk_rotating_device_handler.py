@@ -1,7 +1,6 @@
 import os
 import queue
 import traceback
-from queue import Queue
 from threading import Thread
 from typing import Optional, Dict, Any
 
@@ -38,7 +37,8 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         :param max_time: the maximum time (in seconds) to wait before rotation
         :param live_log_prefix: the prefix for live log file
         :param wait_on_queue_timeout: the timeout in seconds to wait for the publish queue to have messages.
-        must be greater then 0. lower number will make the thread busy wait. higher number will take more time to kill thread when close is called
+        must be greater then 0. lower number will make the thread busy wait.
+        higher number will take more time to kill thread when close is called
         """
         self._output_device_manager = output_device_manager
         self._output_device_name = output_device_name
@@ -46,7 +46,7 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         self._output_device_manager.connect()
         self._output_device = self._output_device_manager.get_output_device(name=self._output_device_name)
         self._metadata = metadata or {}
-        self._queue = Queue()
+        self._queue: queue.Queue = queue.Queue()
         self._wait_on_queue_timeout = max(wait_on_queue_timeout, 1)
         self._send_to_device_thread: Optional[Thread] = None
 
