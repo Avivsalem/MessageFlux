@@ -46,7 +46,7 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         self._output_device_manager.connect()
         self._output_device = self._output_device_manager.get_output_device(name=self._output_device_name)
         self._metadata = metadata or {}
-        self._queue: queue.Queue = queue.Queue()
+        self._queue: Optional[queue.Queue] = None
         self._wait_on_queue_timeout = max(wait_on_queue_timeout, 0.1)
         self._send_to_device_thread: Optional[Thread] = None
 
@@ -57,6 +57,7 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
                                                         live_log_prefix=live_log_prefix)
 
     def _do_send_to_device_thread(self):
+        assert self._queue is not None
         while self._run:
             try:
                 file_to_send = self._queue.get(timeout=self._wait_on_queue_timeout)
@@ -74,10 +75,12 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         this moves the live log from a file, to its destination (the rotated log path)
         """
         if self._send_to_device_thread is None and self._run:
+            self._queue = queue.Queue()
             self._send_to_device_thread = Thread(target=self._do_send_to_device_thread)
             self._send_to_device_thread.start()
 
-        self._queue.put_nowait(src_file)
+        if self._queue is not None:
+            self._queue.put_nowait(src_file)
 
     def close(self):
         """
