@@ -57,7 +57,9 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
                                                         live_log_prefix=live_log_prefix)
 
     def _do_send_to_device_thread(self):
-        assert self._queue is not None
+        if self._queue is None:
+            self._queue = queue.Queue()
+
         while self._run:
             try:
                 file_to_send = self._queue.get(timeout=self._wait_on_queue_timeout)
