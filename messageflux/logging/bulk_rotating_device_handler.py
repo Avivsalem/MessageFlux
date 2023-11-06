@@ -1,4 +1,8 @@
 import os
+import queue
+import traceback
+from queue import Queue
+from threading import Thread
 from typing import Optional, Dict, Any
 
 from messageflux.iodevices.base import OutputDeviceManager, Message
@@ -18,7 +22,8 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
                  bkp_log_path: Optional[str] = None,
                  max_records: int = 1000,
                  max_time: int = 60,
-                 live_log_prefix: str = ''):
+                 live_log_prefix: str = '',
+                 wait_on_queue_timeout: float = 1.0):
         """
         Open a log file and use it as the stream for logging.
         when max_records are written, or max_time has passed, a rollover occurs
@@ -32,6 +37,8 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         :param max_records: the maximum number of records to write before rotation
         :param max_time: the maximum time (in seconds) to wait before rotation
         :param live_log_prefix: the prefix for live log file
+        :param wait_on_queue_timeout: the timeout in seconds to wait for the publish queue to have messages.
+        must be greater then 0. lower number will make the thread busy wait. higher number will take more time to kill thread when close is called
         """
         self._output_device_manager = output_device_manager
         self._output_device_name = output_device_name
@@ -39,6 +46,9 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         self._output_device_manager.connect()
         self._output_device = self._output_device_manager.get_output_device(name=self._output_device_name)
         self._metadata = metadata or {}
+        self._queue = Queue()
+        self._wait_on_queue_timeout = max(wait_on_queue_timeout, 1)
+        self._send_to_device_thread: Optional[Thread] = None
 
         super(BulkRotatingDeviceHandler, self).__init__(live_log_path=live_log_path,
                                                         bkp_log_path=bkp_log_path,
@@ -46,14 +56,28 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
                                                         max_time=max_time,
                                                         live_log_prefix=live_log_prefix)
 
+    def _do_send_to_device_thread(self):
+        while self._run:
+            try:
+                file_to_send = self._queue.get(timeout=self._wait_on_queue_timeout)
+                with open(file_to_send, 'rb') as log_file:
+                    self._output_device.send_message(Message(log_file, self._metadata.copy()))
+
+                os.remove(file_to_send)
+            except queue.Empty:
+                pass
+            except Exception:
+                print('Error in send to device thread. error:\r\n' + traceback.format_exc())
+
     def _move_log_to_destination(self, src_file: str):
         """
         this moves the live log from a file, to its destination (the rotated log path)
         """
-        with open(src_file, 'rb') as log_file:
-            self._output_device.send_message(Message(log_file, self._metadata.copy()))
+        if self._send_to_device_thread is None and self._run:
+            self._send_to_device_thread = Thread(target=self._do_send_to_device_thread)
+            self._send_to_device_thread.start()
 
-        os.remove(src_file)
+        self._queue.put_nowait(src_file)
 
     def close(self):
         """

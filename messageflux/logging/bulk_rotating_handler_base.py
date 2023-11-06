@@ -1,3 +1,4 @@
+import itertools
 import os
 import random
 import socket
@@ -8,10 +9,8 @@ from datetime import datetime
 from logging.handlers import BaseRotatingHandler
 from os import scandir
 from shutil import move
-from typing import Optional, Iterator
-
-import itertools
 from time import sleep, time
+from typing import Optional, Iterator
 
 from messageflux.utils import get_random_id
 
@@ -161,26 +160,37 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         super(BulkRotatingHandlerBase, self).emit(record)
         self._record_count += 1
 
+    def _move_log_file_to_bkp_dir(self) -> str:
+        """
+        moves the current log file to the backup dir, and returns its new filename
+        :return: the new filename for the log file
+        """
+        dst_filename = os.path.join(self._bkp_log_path, self._get_unique_log_filename())
+        self._safe_move(self.baseFilename, dst_filename)
+        return dst_filename
+
     def doRollover(self):
         """
         Do a rollover, as described in __init__().
         """
+        bkp_filename = None
         self.acquire()
         try:
             if self.stream:
                 self.stream.close()
                 self.stream = None  # type: ignore
-
             if os.path.exists(self.baseFilename):
-                try:
-                    self._move_log_to_destination(self.baseFilename)
-                except Exception:
-                    dst_filename = os.path.join(self._bkp_log_path, self._get_unique_log_filename())
-                    self._safe_move(self.baseFilename, dst_filename)
+                bkp_filename = self._move_log_file_to_bkp_dir()
         finally:
             self._record_count = 0
             self._next_rotate = time() + self._max_time
             self.release()
+
+        if bkp_filename:
+            try:
+                self._move_log_to_destination(bkp_filename)
+            except Exception:
+                print('Error in while rolling over. error:\r\n' + traceback.format_exc())
 
     def shouldRollover(self, record):
         """
