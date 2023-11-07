@@ -18,12 +18,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'}} # run only if tests succeeded or run manually
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }} # run only if tests succeeded or run manually
     steps:
-      - name: Post the screenshot
-        env:
-          EVENT_OBJ: ${{ toJson(github.event) }}
-        run: echo $EVENT_OBJ
+#      - name: Post the screenshot
+#        env:
+#          EVENT_OBJ: ${{ toJson(github.event) }}
+#        run: echo $EVENT_OBJ
 
       # Checkout the latest code from the repo
       - name: Checkout repo
