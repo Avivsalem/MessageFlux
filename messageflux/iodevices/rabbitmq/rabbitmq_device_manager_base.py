@@ -32,10 +32,15 @@ class RabbitMQDeviceManagerBase:
     Notice that pika is imported inside the methods here,
     since it causes trouble when using this device in multiprocess.
     """
-    _connection: Union[ThreadLocalMember[Optional['BlockingConnection']],
-    Optional['BlockingConnection']] = ThreadLocalMember(init_value=None)
-    _maintenance_channel: Union[ThreadLocalMember[Optional['BlockingChannel']],
-    Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
+    _connection: Union[
+        ThreadLocalMember[Optional['BlockingConnection']],
+        Optional['BlockingConnection']
+    ] = ThreadLocalMember(init_value=None)
+
+    _maintenance_channel: Union[
+        ThreadLocalMember[Optional['BlockingChannel']],
+        Optional['BlockingChannel']
+    ] = ThreadLocalMember(init_value=None)
 
     def __init__(self,
                  hosts: Union[List[str], str],
