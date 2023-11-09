@@ -38,7 +38,7 @@ class RabbitMQInputTransaction(InputTransaction):
         :param channel: the BlockingChannel that the item was read from
         :param delivery_tag: the delivery tag for this item
         """
-        super(RabbitMQInputTransaction, self).__init__(device=device)
+        super().__init__(device=device)
         self._cancellation_token = cancellation_token
         self._channel = channel
         self._delivery_tag = delivery_tag
@@ -124,7 +124,9 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         only relevent if "use_consumer" is True
         :param bool use_consumer: True to use the 'consume' method, False to use 'basic_get'
         """
-        super().__init__(device_manager, queue_name)
+        super().__init__(manager=device_manager,
+                         name=queue_name)
+
         self._device_manager = device_manager
         self._queue_name = queue_name
         self._logger = logging.getLogger(__name__)
@@ -318,6 +320,7 @@ class RabbitMQInputDevice(InputDevice['RabbitMQInputDeviceManager']):
         """
         closes the connection to device
         """
+        super().close()
         try:
             if self._channel is not None and self._channel.is_open:
                 if self._use_consumer:
@@ -347,8 +350,8 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                  prefetch_count: int = 1,
                  use_consumer: bool = True,
                  blocked_connection_timeout: Optional[float] = None,
-                 default_direct_exchange: Optional[str] = None
-                 ):
+                 default_direct_exchange: Optional[str] = None,
+                 **kwargs):
         """
         This manager used to create RabbitMQ devices (direct queues)
 
@@ -385,7 +388,8 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                          connection_type="Input",
                          heartbeat=heartbeat,
                          connection_attempts=connection_attempts,
-                         blocked_connection_timeout=blocked_connection_timeout)
+                         blocked_connection_timeout=blocked_connection_timeout,
+                         **kwargs)
 
         self._prefetch_count = prefetch_count
         self._use_consumer = use_consumer
@@ -399,7 +403,7 @@ class RabbitMQInputDeviceManager(RabbitMQDeviceManagerBase, InputDeviceManager[R
                                    prefetch_count=self._prefetch_count,
                                    use_consumer=self._use_consumer)
 
-    def get_input_device(self, name: str) -> RabbitMQInputDevice:
+    def _create_input_device(self, name: str) -> RabbitMQInputDevice:
         """
         Returns an incoming device by name
 

@@ -50,11 +50,11 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         self._wait_on_queue_timeout = max(wait_on_queue_timeout, 0.1)
         self._send_to_device_thread: Optional[Thread] = None
 
-        super(BulkRotatingDeviceHandler, self).__init__(live_log_path=live_log_path,
-                                                        bkp_log_path=bkp_log_path,
-                                                        max_records=max_records,
-                                                        max_time=max_time,
-                                                        live_log_prefix=live_log_prefix)
+        super().__init__(live_log_path=live_log_path,
+                         bkp_log_path=bkp_log_path,
+                         max_records=max_records,
+                         max_time=max_time,
+                         live_log_prefix=live_log_prefix)
 
     def _do_send_to_device_thread(self):
         if self._queue is None:
@@ -89,6 +89,6 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         closes the handler (disconnects from the output device)
         """
         try:
-            super(BulkRotatingDeviceHandler, self).close()
+            super().close()
         finally:
             self._output_device_manager.disconnect()

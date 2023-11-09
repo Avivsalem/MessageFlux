@@ -27,7 +27,9 @@ class RabbitMQOutputDevice(OutputDevice['RabbitMQOutputDeviceManager']):
         :param routing_key: the routing key for this queue
         :param exchange: the exchange name in RabbitMQ for this output device
         """
-        super(RabbitMQOutputDevice, self).__init__(device_manager, routing_key)
+        super().__init__(manager=device_manager,
+                         name=routing_key)
+
         self._routing_key = routing_key
         self._exchange = exchange
         self._logger = logging.getLogger(__name__)
@@ -86,7 +88,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
                  max_header_name_length: int = 1024,
                  default_rabbit_headers: Optional[Dict[str, Any]] = None,
                  blocked_connection_timeout: Optional[float] = None,
-                 ):
+                 **kwargs):
         """
         This manager used to create RabbitMQ devices (direct queues)
 
@@ -114,17 +116,18 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
             passing `ConnectionBlockedTimeout` exception to on_close_callback
             in asynchronous adapters or raising it in `BlockingConnection`.
         """
-        super(RabbitMQOutputDeviceManager, self).__init__(hosts=hosts,
-                                                          user=user,
-                                                          password=password,
-                                                          port=port,
-                                                          ssl_context=ssl_context,
-                                                          virtual_host=virtual_host,
-                                                          client_args=client_args,
-                                                          connection_type="Output",
-                                                          heartbeat=heartbeat,
-                                                          connection_attempts=connection_attempts,
-                                                          blocked_connection_timeout=blocked_connection_timeout)
+        super().__init__(hosts=hosts,
+                         user=user,
+                         password=password,
+                         port=port,
+                         ssl_context=ssl_context,
+                         virtual_host=virtual_host,
+                         client_args=client_args,
+                         connection_type="Output",
+                         heartbeat=heartbeat,
+                         connection_attempts=connection_attempts,
+                         blocked_connection_timeout=blocked_connection_timeout,
+                         **kwargs)
 
         self._default_output_exchange = default_output_exchange
         self._publish_confirm = publish_confirm
@@ -309,7 +312,7 @@ class RabbitMQOutputDeviceManager(RabbitMQDeviceManagerBase, OutputDeviceManager
         except Exception as ex:
             raise OutputDeviceException('Could not connect to rabbitmq.') from ex
 
-    def get_output_device(self, name: str, exchange: Optional[str] = None) -> RabbitMQOutputDevice:
+    def _create_output_device(self, name: str, exchange: Optional[str] = None) -> RabbitMQOutputDevice:
         """
         Returns and outgoing device by name
 

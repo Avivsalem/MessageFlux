@@ -33,7 +33,7 @@ class FileSystemInputTransaction(InputTransaction):
         :param org_path: the original path of the file we read
         :param tmp_path: the temp path of the file we read
         """
-        super(FileSystemInputTransaction, self).__init__(device=device)
+        super().__init__(device=device)
         self._org_path = org_path
         self._tmp_path = tmp_path
         self._device_manager = device.manager
@@ -283,7 +283,9 @@ class FileSystemInputDevice(InputDevice['FileSystemInputDeviceManager']):
         :param min_file_age: the minimum time in seconds since last modification to file, before we to try to read it...
         :param serializer: the serializer to use for reading messages from files
         """
-        super(FileSystemInputDevice, self).__init__(manager, name)
+        super().__init__(manager=manager,
+                         name=name)
+
         self.min_file_age = min_file_age
         self._sorted = fifo
         self._tmp_folder = tmp_folder
@@ -489,7 +491,8 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
                  serializer: Optional[FileSystemSerializerBase] = None,
                  fifo: bool = True,
                  min_input_file_age: int = 0,
-                 transaction_log_save_interval: int = 10):
+                 transaction_log_save_interval: int = 10,
+                 **kwargs):
         """
         :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
@@ -504,7 +507,8 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
                          queue_dir_name=queue_dir_name,
                          tmp_dir_name=tmp_dir_name,
                          bookkeeping_dir_name=bookkeeping_dir_name,
-                         serializer=serializer)
+                         serializer=serializer, **kwargs)
+
         self._fifo = fifo
         self._min_input_file_age = min_input_file_age
         transaction_log_filename = os.path.join(self.bookkeeping_folder, f'{self._unique_manager_id}.transactionlog')
@@ -559,7 +563,7 @@ class FileSystemInputDeviceManager(FileSystemDeviceManagerBase, InputDeviceManag
         """
         return self._transaction_log
 
-    def get_input_device(self, name: str) -> FileSystemInputDevice:
+    def _create_input_device(self, name: str) -> FileSystemInputDevice:
         """
         Returns an input device by name
 

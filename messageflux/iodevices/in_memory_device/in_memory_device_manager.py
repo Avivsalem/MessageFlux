@@ -50,7 +50,7 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
         """
 
         def __init__(self, device: 'InMemoryInputDevice', message: _QueueMessage):
-            super().__init__(device)
+            super().__init__(device=device)
             self._message = message
             self._device: InMemoryInputDevice = device
 
@@ -67,7 +67,10 @@ class InMemoryInputDevice(InputDevice['InMemoryDeviceManager']):
                  name: str,
                  queue: List[_QueueMessage],
                  queue_not_empty_condition: Condition):
-        super().__init__(manager, name)
+
+        super().__init__(manager=manager,
+                         name=name)
+
         self._queue = queue
         self._queue_not_empty = queue_not_empty_condition
 
@@ -106,7 +109,10 @@ class InMemoryOutputDevice(OutputDevice['InMemoryDeviceManager']):
                  name: str,
                  queue: List[_QueueMessage],
                  queue_not_empty_condition: Condition):
-        super().__init__(manager, name)
+
+        super().__init__(manager=manager,
+                         name=name)
+
         self._queue = queue
         self._queue_not_empty = queue_not_empty_condition
 
@@ -127,7 +133,8 @@ class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDevic
     notice that the messages are shared only within the same manager!
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._queues: Dict[str, Tuple[List[_QueueMessage], Condition]] = {}
 
     def _get_queue_tuple(self, name: str) -> Tuple[List[_QueueMessage], Condition]:
@@ -141,7 +148,7 @@ class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDevic
 
         return queue, condition
 
-    def get_input_device(self, name: str) -> InMemoryInputDevice:
+    def _create_input_device(self, name: str) -> InMemoryInputDevice:
         """
         creates an input device.
 
@@ -152,7 +159,7 @@ class InMemoryDeviceManager(InputDeviceManager[InMemoryInputDevice], OutputDevic
 
         return InMemoryInputDevice(self, name, queue, condition)
 
-    def get_output_device(self, name: str) -> InMemoryOutputDevice:
+    def _create_output_device(self, name: str) -> InMemoryOutputDevice:
         """
         creates an output device.
 

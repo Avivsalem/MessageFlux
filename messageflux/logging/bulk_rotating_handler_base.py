@@ -157,7 +157,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
 
     def emit(self, record):
         self._ensure_logger_rotate_thread()
-        super(BulkRotatingHandlerBase, self).emit(record)
+        super().emit(record)
         self._record_count += 1
 
     def _move_log_file_to_bkp_dir(self) -> str:
@@ -212,6 +212,6 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         """
         stops the logger thread and flushes
         """
-        super(BulkRotatingHandlerBase, self).close()
+        super().close()
         self._run = False
         self.doRollover()

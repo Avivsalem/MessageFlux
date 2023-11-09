@@ -2,7 +2,7 @@ import logging
 import threading
 from abc import ABCMeta, abstractmethod
 from time import perf_counter
-from typing import Optional, List, TypeVar, Generic
+from typing import Optional, List, TypeVar, Generic, Dict
 
 from messageflux.iodevices.base.common import MessageBundle, Message, DeviceHeaders
 from messageflux.iodevices.base.input_transaction import InputTransaction, NULLTransaction
@@ -105,7 +105,7 @@ class InputDevice(Generic[TManagerType], metaclass=ABCMeta):
         """
         and optional method that cleans device resources if necessary
         """
-        pass
+        self._manager.delete_input_device_from_cache(self.name)
 
 
 class AggregatedInputDevice(InputDevice[TManagerType]):
@@ -120,7 +120,9 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
         :param manager: the input device manager that created this device
         :param inner_devices: the list of input devices to read from
         """
-        super().__init__(manager=manager, name="AggregateInputDevice")
+        super().__init__(manager=manager,
+                         name="AggregateInputDevice")
+
         self._inner_devices_iterator: StatefulListIterator[InputDevice] = StatefulListIterator(inner_devices)
         self._last_read_device: Optional[InputDevice] = None
         self._logger = logging.getLogger(__name__)
@@ -179,6 +181,7 @@ class AggregatedInputDevice(InputDevice[TManagerType]):
         """
         tries to close underlying devices
         """
+        super().close()
         for inner_device in self._inner_devices_iterator:
             try:
                 inner_device.close()
@@ -190,6 +193,10 @@ class InputDeviceManager(Generic[TInputDeviceType], metaclass=ABCMeta):
     """
     this is the base class for input device managers. this class is used to create input devices.
     """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._input_device_cache: Dict[str, TInputDeviceType] = {}
 
     def __enter__(self):
         self.connect()
@@ -210,8 +217,32 @@ class InputDeviceManager(Generic[TInputDeviceType], metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
     def get_input_device(self, name: str) -> TInputDeviceType:
+        """
+        checks the cache for a device with 'name' and returns it. creates it if it's not in cache
+
+        :param name: the name of the input device to return
+        :return: the input device
+        """
+        input_device = self._input_device_cache.get(name, None)
+        if input_device is None:
+            input_device = self._create_input_device(name)
+            self._input_device_cache[name] = input_device
+
+        return input_device
+
+    def delete_input_device_from_cache(self, name: str) -> bool:
+        """
+        deletes a cached input device from cache.
+
+        :param name:the device to delete from cache
+        :return: True if the device existed and deleted, False otherwise
+        """
+        device = self._input_device_cache.pop(name, None)
+        return device is not None
+
+    @abstractmethod
+    def _create_input_device(self, name: str) -> TInputDeviceType:
         """
         creates an input device. should be implemented in child classes
 
@@ -239,7 +270,10 @@ class _NullInputDeviceManager(InputDeviceManager):
     this is a stub used to create null device
     """
 
-    def get_input_device(self, name: str) -> InputDevice:
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _create_input_device(self, name: str) -> InputDevice:
         """
         returns a null device
         """
@@ -252,7 +286,8 @@ class _NullDevice(InputDevice):
     """
 
     def __init__(self):
-        super(_NullDevice, self).__init__(_NullInputDeviceManager(), '__NULL__')
+        super().__init__(manager=_NullInputDeviceManager(),
+                         name='__NULL__')
 
     def _read_message(self,
                       cancellation_token: threading.Event,
@@ -282,8 +317,8 @@ class ReadResult(MessageBundle):
         :param device_headers: Additional Headers that may return data from device, or affect its operation.
         :param transaction: the transaction returned by the reading device
         """
-        super(ReadResult, self).__init__(message=message,
-                                         device_headers=device_headers)
+        super().__init__(message=message,
+                         device_headers=device_headers)
 
         self._transaction = transaction
 

@@ -1,10 +1,9 @@
 import datetime
 import os
 import threading
-from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any, Union
-
 from itertools import cycle, islice
 from time import perf_counter
+from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any, Union
 
 EllipsisType = type(...)
 
@@ -26,7 +25,7 @@ class AggregatedException(KwargsException):
     """
 
     def __init__(self, *args, inner_exceptions: Optional[List[Exception]] = None, **kwargs):
-        super(AggregatedException, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.inner_exceptions = inner_exceptions
 
 

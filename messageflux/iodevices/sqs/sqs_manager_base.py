@@ -17,10 +17,12 @@ class SQSManagerBase:
     """
 
     def __init__(self, *,
-                 sqs_resource: Optional['SQSServiceResource'] = None) -> None:
+                 sqs_resource: Optional['SQSServiceResource'] = None, **kwargs) -> None:
         """
         :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
         """
+        super().__init__(**kwargs)
+
         if sqs_resource is None:
             sqs_resource = boto3.resource('sqs')
 
