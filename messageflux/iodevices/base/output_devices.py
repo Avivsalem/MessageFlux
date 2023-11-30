@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Dict
 
 from messageflux.iodevices.base.common import Message, DeviceHeaders, MessageBundle
 from messageflux.utils import AggregatedException
@@ -73,13 +73,17 @@ class OutputDevice(Generic[TManagerType], metaclass=ABCMeta):
         """
         and optional method that cleans device resources if necessary
         """
-        pass
+        self._manager.delete_output_device_from_cache(self.name)
 
 
 class OutputDeviceManager(Generic[TOutputDeviceType], metaclass=ABCMeta):
     """
     this is a base class for output device managers. it is used to create output devices
     """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._output_device_cache: Dict[str, TOutputDeviceType] = {}
 
     def __enter__(self):
         self.connect()
@@ -100,8 +104,32 @@ class OutputDeviceManager(Generic[TOutputDeviceType], metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
+    def delete_output_device_from_cache(self, name: str) -> bool:
+        """
+        deletes a cached output device from cache.
+
+        :param name:the device to delete from cache
+        :return: True if the device existed and deleted, False otherwise
+        """
+        device = self._output_device_cache.pop(name, None)
+        return device is not None
+
     def get_output_device(self, name: str) -> TOutputDeviceType:
+        """
+        creates an output device. this should be implemented by child classes
+
+        :param name: the name of the output device to create
+        :return: the created output device
+        """
+        output_device = self._output_device_cache.get(name, None)
+        if output_device is None:
+            output_device = self._create_output_device(name)
+            self._output_device_cache[name] = output_device
+
+        return output_device
+
+    @abstractmethod
+    def _create_output_device(self, name: str) -> TOutputDeviceType:
         """
         creates an output device. this should be implemented by child classes
 

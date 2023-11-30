@@ -21,7 +21,8 @@ class FileSystemDeviceManagerBase:
                  queue_dir_name: str = DEFAULT_QUEUES_SUB_DIR,
                  tmp_dir_name: str = DEFAULT_TMPDIR_SUB_DIR,
                  bookkeeping_dir_name: str = DEFAULT_BOOKKEEPING_SUB_DIR,
-                 serializer: Optional[FileSystemSerializerBase] = None):
+                 serializer: Optional[FileSystemSerializerBase] = None,
+                 **kwargs):
         """
         :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
@@ -29,6 +30,8 @@ class FileSystemDeviceManagerBase:
         :param bookkeeping_dir_name: the name of the subdirectory under root_folder that holds the book-keeping data
         :param serializer: the serializer to use to write messages to files. None will use the default serializer
         """
+        super().__init__(**kwargs)
+
         self._root_folder = root_folder
         self._queues_folder = os.path.join(root_folder, queue_dir_name)
         self._tmp_folder = os.path.join(root_folder, tmp_dir_name)

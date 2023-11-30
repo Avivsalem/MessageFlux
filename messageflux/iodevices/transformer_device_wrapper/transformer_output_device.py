@@ -52,7 +52,7 @@ class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
         :param inner_device: the inner device that this device wraps
         :param transformer: the output transformer to use
         """
-        super().__init__(manager, name)
+        super().__init__(manager=manager, name=name)
         self._transformer = transformer
         self._inner_device = inner_device
 
@@ -64,6 +64,8 @@ class TransformerOutputDevice(OutputDevice['TransformerOutputDeviceManager']):
         """
         closes the inner device
         """
+        super().close()
+
         self._inner_device.close()
 
 
@@ -72,12 +74,14 @@ class TransformerOutputDeviceManager(OutputDeviceManager[TransformerOutputDevice
     a wrapper output device manager, that wraps the devices in transformer output devices
     """
 
-    def __init__(self, inner_device_manager: OutputDeviceManager, transformer: OutputTransformerBase):
+    def __init__(self, inner_device_manager: OutputDeviceManager, transformer: OutputTransformerBase, **kwargs):
         """
 
         :param inner_device_manager: the inner device manager
         :param transformer: the transformer to use
         """
+        super().__init__(**kwargs)
+
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
@@ -95,7 +99,7 @@ class TransformerOutputDeviceManager(OutputDeviceManager[TransformerOutputDevice
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
-    def get_output_device(self, name: str) -> TransformerOutputDevice:
+    def _create_output_device(self, name: str) -> TransformerOutputDevice:
         """
         returns a wrapped output device
         :param name: the name of the device to get

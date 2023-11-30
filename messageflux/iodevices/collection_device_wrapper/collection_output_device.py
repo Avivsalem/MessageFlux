@@ -20,7 +20,9 @@ class CollectionOutputDevice(OutputDevice['CollectionOutputDeviceManager']):
         :param device_name: the name of this device
         :param output_devices: the outgoing devices to send to
         """
-        super(CollectionOutputDevice, self).__init__(device_manager, device_name)
+        super().__init__(manager=device_manager,
+                         name=device_name)
+
         self._output_devices = output_devices
 
         self._logger = logging.getLogger(__name__)
@@ -47,6 +49,8 @@ class CollectionOutputDevice(OutputDevice['CollectionOutputDeviceManager']):
         """
         closes the connection to device
         """
+        super().close()
+
         for device in self._output_devices:
             try:
                 device.close()
@@ -61,13 +65,14 @@ class CollectionOutputDeviceManager(OutputDeviceManager[CollectionOutputDevice])
 
     def __init__(self,
                  inner_managers: List[OutputDeviceManager],
-                 collection_maker: Callable[[List[OutputDevice]], Collection[OutputDevice]]):
+                 collection_maker: Callable[[List[OutputDevice]], Collection[OutputDevice]], **kwargs):
         """
         This class is used to create Collection OutputDevices
 
         :param inner_managers: the actual OutputDeviceManager instances to generate devices from
         :param collection_maker: the callable to make the iterable collection from list of devices
         """
+        super().__init__(**kwargs)
         self._inner_managers = inner_managers
         self._logger = logging.getLogger(__name__)
         self._collection_maker = collection_maker
@@ -100,7 +105,7 @@ class CollectionOutputDeviceManager(OutputDeviceManager[CollectionOutputDevice])
                 self._logger.warning(
                     f'Error closing underlying manager {type(manager).__name__}', exc_info=True)
 
-    def get_output_device(self, name: str) -> CollectionOutputDevice:
+    def _create_output_device(self, name: str) -> CollectionOutputDevice:
         """
         Returns an output device by name
 

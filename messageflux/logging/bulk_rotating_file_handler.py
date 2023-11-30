@@ -32,13 +32,13 @@ class BulkRotatingFileHandler(BulkRotatingHandlerBase):
         self._rotated_log_path = os.path.abspath(rotated_log_path)
         os.makedirs(self._rotated_log_path, exist_ok=True)
 
-        super(BulkRotatingFileHandler, self).__init__(live_log_path=live_log_path,
-                                                      bkp_log_path=bkp_log_path,
-                                                      max_records=max_records,
-                                                      max_time=max_time,
-                                                      live_log_prefix=live_log_prefix)
+        super().__init__(live_log_path=live_log_path,
+                         bkp_log_path=bkp_log_path,
+                         max_records=max_records,
+                         max_time=max_time,
+                         live_log_prefix=live_log_prefix)
 
-    def _move_log_to_destination(self, src_file: str):
+    def _move_log_to_destination(self, src_file: str, is_bkp=False):
         """
         this moves the live log from a file, to its destination (the rotated log path)
         """

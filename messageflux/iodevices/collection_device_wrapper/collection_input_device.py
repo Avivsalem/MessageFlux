@@ -26,7 +26,9 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
         :param input_devices: the devices that this aggregate device reads from
 
         """
-        super(CollectionInputDevice, self).__init__(device_manager, device_name)
+        super().__init__(manager=device_manager,
+                         name=device_name)
+
         self._input_devices = input_devices
         self._logger = logging.getLogger(__name__)
 
@@ -84,6 +86,7 @@ class CollectionInputDevice(InputDevice['CollectionInputDeviceManager']):
         """
         closes the connection to device
         """
+        super().close()
         for device in self._input_devices:
             try:
                 device.close()
@@ -98,13 +101,15 @@ class CollectionInputDeviceManager(InputDeviceManager[CollectionInputDevice]):
 
     def __init__(self,
                  inner_managers: List[InputDeviceManager],
-                 collection_maker: Callable[[List[InputDevice]], Collection[InputDevice]]):
+                 collection_maker: Callable[[List[InputDevice]], Collection[InputDevice]], **kwargs):
         """
         This class is used to create Collection InputDevices
 
         :param inner_managers: the actual InputDeviceManager instances to generate devices from
         :param collection_maker: the callable to make the iterable collection from list of devices
         """
+        super().__init__(**kwargs)
+
         self._inner_managers = inner_managers
         self._logger = logging.getLogger(__name__)
         self._collection_maker = collection_maker
@@ -137,7 +142,7 @@ class CollectionInputDeviceManager(InputDeviceManager[CollectionInputDevice]):
                 self._logger.warning(
                     f'Error closing underlying manager {type(manager).__name__}', exc_info=True)
 
-    def get_input_device(self, name: str) -> CollectionInputDevice:
+    def _create_input_device(self, name: str) -> CollectionInputDevice:
         """
         Returns an input device by name
 

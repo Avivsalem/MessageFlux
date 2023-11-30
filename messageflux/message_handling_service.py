@@ -151,7 +151,7 @@ class BatchMessageHandlingService(MessageHandlingServiceBase):
 
     def _finalize_service(self, exception: Optional[Exception] = None):
         self._message_handler.shutdown()
-        super()._finalize_service(exception)
+        super()._finalize_service(exception=exception)
 
     def _handle_message_batch(self, batch: List[Tuple[InputDevice, ReadResult]]):
         self._message_handler.handle_message_batch(batch)
@@ -223,4 +223,5 @@ class MessageHandlingService(BatchMessageHandlingService):
         """
         :param **kwargs: passed to parent as is
         """
-        super().__init__(batch_handler=self._BatchMessageHandlerAdapter(message_handler), **kwargs)
+        super().__init__(batch_handler=self._BatchMessageHandlerAdapter(message_handler),
+                         **kwargs)

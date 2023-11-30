@@ -38,7 +38,8 @@ rabbitmq_device_manager = RabbitMQOutputDeviceManager(hosts=['my_rabbit_host'],
                                                       user='USERNAME',
                                                       password='PASSWORD')
 
-rabbitmq_queue = rabbitmq_device_manager.get_output_device('MY_QUEUE_NAME')  # get the output device (rabbitmq queue)
+rabbitmq_queue = rabbitmq_device_manager.get_output_device(
+  'MY_QUEUE_NAME')  # get the output device (rabbitmq queue)
 message = Message(b'data to send')
 rabbitmq_queue.send_message(message)  # sends the message to the queue
 ```
@@ -73,8 +74,8 @@ rabbitmq_failover = RabbitMQOutputDeviceManager(hosts=['my_rabbit_failover_host'
 device_manager = FailoverOutputDeviceManager(inner_device_manager=rabbitmq_primary,
                                              failover_device_manager=rabbitmq_failover)
 
-
 rabbitmq_queue = device_manager.get_output_device('MY_QUEUE_NAME')  # this is now a FailoverOutputDevice
 message = Message(b'data to send')
-rabbitmq_queue.send_message(message)  # sends the message to the primary queue. if there's an error, then send to the failover queue
+rabbitmq_queue.send_message(
+  message)  # sends the message to the primary queue. if there's an error, then send to the failover queue
 ```

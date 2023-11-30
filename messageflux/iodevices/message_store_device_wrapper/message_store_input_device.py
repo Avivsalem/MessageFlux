@@ -31,7 +31,7 @@ class MessageStoreInputTransactionWrapper(InputTransaction):
         :param delete_on_commit: Whether or not we should delete the stored buffer after committing a message from the
                                  relevant input device
         """
-        super(MessageStoreInputTransactionWrapper, self).__init__(device)
+        super().__init__(device=device)
         self._inner_transaction = inner_transaction
         self._delete_on_commit = delete_on_commit
         self._message_store = message_store
@@ -67,7 +67,7 @@ class MessageStoreInputTransformer(_MessageStoreTransformerBase, InputTransforme
         :param message_store: the message store to use
         :param delete_on_commit: should we the delete the message from the message store on transaction commit?
         """
-        super(MessageStoreInputTransformer, self).__init__(message_store=message_store)
+        super().__init__(message_store=message_store)
         self._delete_on_commit = delete_on_commit
 
     def transform_incoming_message(self, input_device: TransformerInputDevice, read_result: ReadResult) -> ReadResult:
@@ -113,7 +113,7 @@ class MessageStoreInputDeviceManagerWrapper(TransformerInputDeviceManager):
     def __init__(self,
                  inner_manager: InputDeviceManager,
                  message_store: MessageStoreBase,
-                 delete_on_commit: bool = True):
+                 delete_on_commit: bool = True, **kwargs):
         """
         This class is used to wrap IODeviceManager with message store functionality
 
@@ -124,6 +124,10 @@ class MessageStoreInputDeviceManagerWrapper(TransformerInputDeviceManager):
                                  to leave the stored message in order to avoid conflicts between systems that read
                                  duplications of the same message.
         """
+
         transformer = MessageStoreInputTransformer(message_store=message_store,
                                                    delete_on_commit=delete_on_commit)
-        super(MessageStoreInputDeviceManagerWrapper, self).__init__(inner_manager, transformer)
+
+        super().__init__(inner_device_manager=inner_manager,
+                         transformer=transformer,
+                         **kwargs)

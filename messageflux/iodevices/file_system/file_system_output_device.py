@@ -32,7 +32,9 @@ class FileSystemOutputDevice(OutputDevice['FileSystemOutputDeviceManager']):
         :param format_filename: the filename format to save the product, "{filename}-{item_id}"
         :param serializer: the serializer to use
         """
-        super(FileSystemOutputDevice, self).__init__(manager, name)
+        super().__init__(manager=manager,
+                         name=name)
+
         self._tmp_folder = tmp_folder
         self._output_folder = os.path.join(queues_folder, name)
         try:
@@ -99,7 +101,8 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
                  tmp_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_TMPDIR_SUB_DIR,
                  bookkeeping_dir_name: str = FileSystemDeviceManagerBase.DEFAULT_BOOKKEEPING_SUB_DIR,
                  serializer: Optional[FileSystemSerializerBase] = None,
-                 output_filename_format: Optional[str] = None):
+                 output_filename_format: Optional[str] = None,
+                 **kwargs):
         """
         :param root_folder: the root folder to use for the manager
         :param queue_dir_name: the name of the subdirectory under root_folder that holds the queues
@@ -108,11 +111,12 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
         :param serializer: the serializer to use to write messages to files. None will use the default serializer
         :param output_filename_format: the filename format to save a product, "{filename}-{item_id}"
         """
-        super(FileSystemOutputDeviceManager, self).__init__(root_folder=root_folder,
-                                                            queue_dir_name=queue_dir_name,
-                                                            tmp_dir_name=tmp_dir_name,
-                                                            bookkeeping_dir_name=bookkeeping_dir_name,
-                                                            serializer=serializer)
+        super().__init__(root_folder=root_folder,
+                         queue_dir_name=queue_dir_name,
+                         tmp_dir_name=tmp_dir_name,
+                         bookkeeping_dir_name=bookkeeping_dir_name,
+                         serializer=serializer,
+                         **kwargs)
         self._output_filename_format = output_filename_format
 
     def connect(self):
@@ -124,7 +128,7 @@ class FileSystemOutputDeviceManager(FileSystemDeviceManagerBase, OutputDeviceMan
         except Exception as ex:
             raise OutputDeviceException('Error connection to Device Manager') from ex
 
-    def get_output_device(self, name: str) -> FileSystemOutputDevice:
+    def _create_output_device(self, name: str) -> FileSystemOutputDevice:
         """
         Returns an outgoing device by name
 

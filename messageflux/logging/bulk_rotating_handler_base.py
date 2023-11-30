@@ -63,9 +63,11 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         self._bkp_copy_thread.start()
 
     @abstractmethod
-    def _move_log_to_destination(self, src_file):
+    def _move_log_to_destination(self, src_file, is_bkp=False):
         """
         this moves the live log from a file, to its destination
+
+        :param is_bkp: if True, that means this is called from the backup thread
         """
         raise NotImplementedError()
 
@@ -139,7 +141,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
                     if file_age < self._max_time * 2:
                         # don't move files that are too new (might be a file of another pod/process)
                         continue
-                    self._move_log_to_destination(src)
+                    self._move_log_to_destination(src, is_bkp=True)
             except Exception:
                 print('Error in bkp copy thread. error:\r\n' + traceback.format_exc())
             # sleep for at least a few seconds, so we won't spam
@@ -157,7 +159,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
 
     def emit(self, record):
         self._ensure_logger_rotate_thread()
-        super(BulkRotatingHandlerBase, self).emit(record)
+        super().emit(record)
         self._record_count += 1
 
     def _move_log_file_to_bkp_dir(self) -> str:
@@ -188,7 +190,7 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
 
         if bkp_filename:
             try:
-                self._move_log_to_destination(bkp_filename)
+                self._move_log_to_destination(bkp_filename, is_bkp=False)
             except Exception:
                 print('Error in while rolling over. error:\r\n' + traceback.format_exc())
 
@@ -212,6 +214,6 @@ class BulkRotatingHandlerBase(BaseRotatingHandler, metaclass=ABCMeta):
         """
         stops the logger thread and flushes
         """
-        super(BulkRotatingHandlerBase, self).close()
+        super().close()
         self._run = False
         self.doRollover()

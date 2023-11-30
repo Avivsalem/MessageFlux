@@ -1,8 +1,8 @@
 import logging
+from typing import Optional
 
 from messageflux.iodevices.base import OutputDevice, OutputDeviceException, OutputDeviceManager
 from messageflux.iodevices.base.common import MessageBundle
-from typing import Optional
 
 
 class FailoverOutputDevice(OutputDevice['FailoverOutputDeviceManager']):
@@ -24,7 +24,9 @@ class FailoverOutputDevice(OutputDevice['FailoverOutputDeviceManager']):
         """
         if device_name is None:
             device_name = inner_device.name
-        super(FailoverOutputDevice, self).__init__(device_manager, device_name)
+        super().__init__(manager=device_manager,
+                         name=device_name)
+
         self._inner_device = inner_device
         self._failover_device = failover_device
         self._logger = logging.getLogger(__name__)
@@ -49,6 +51,8 @@ class FailoverOutputDevice(OutputDevice['FailoverOutputDeviceManager']):
         """
         closes the underlying devices
         """
+        super().close()
+
         primary_worked = False
         try:
             self._inner_device.close()
@@ -92,11 +96,16 @@ class FailoverOutputDeviceManager(OutputDeviceManager[OutputDevice]):
     Output Device Manager that uses a failover if the send fails
     """
 
-    def __init__(self, inner_device_manager: OutputDeviceManager, failover_device_manager: OutputDeviceManager):
+    def __init__(self,
+                 inner_device_manager: OutputDeviceManager,
+                 failover_device_manager: OutputDeviceManager,
+                 **kwargs):
         """
         :param inner_device_manager: the device to wrap
         :param failover_device_manager: the failover device_manager to send to in case of primary fail
         """
+        super().__init__(**kwargs)
+
         self._inner_device_manager = inner_device_manager
         self._failover_device_manager = failover_device_manager
         self._logger = logging.getLogger(__name__)
@@ -144,7 +153,7 @@ class FailoverOutputDeviceManager(OutputDeviceManager[OutputDevice]):
             else:
                 raise
 
-    def get_output_device(self, name: str) -> OutputDevice:
+    def _create_output_device(self, name: str) -> OutputDevice:
         """
         Returns an output device by name
 

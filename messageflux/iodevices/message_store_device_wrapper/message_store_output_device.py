@@ -89,7 +89,8 @@ class MessageStoreOutputDeviceManagerWrapper(TransformerOutputDeviceManager):
     def __init__(self,
                  inner_manager: OutputDeviceManager,
                  message_store: MessageStoreBase,
-                 size_threshold: int = -1):
+                 size_threshold: int = -1,
+                 **kwargs):
         """
         This class is used to wrap IODeviceManager with message store functionality
 
@@ -102,5 +103,7 @@ class MessageStoreOutputDeviceManagerWrapper(TransformerOutputDeviceManager):
         transformer = MessageStoreOutputTransformer(message_store=message_store,
                                                     size_threshold=size_threshold)
 
-        super(MessageStoreOutputDeviceManagerWrapper, self).__init__(inner_manager, transformer)
+        super().__init__(inner_device_manager=inner_manager,
+                         transformer=transformer,
+                         **kwargs)
         self.size_threshold = size_threshold

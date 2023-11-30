@@ -1,10 +1,9 @@
 import logging
 import socket
 import ssl
+import sys
 from random import shuffle
 from typing import TYPE_CHECKING, List, Optional, Dict, Any, Union, Type
-
-import sys
 
 from messageflux.utils import ThreadLocalMember, KwargsException
 
@@ -33,10 +32,15 @@ class RabbitMQDeviceManagerBase:
     Notice that pika is imported inside the methods here,
     since it causes trouble when using this device in multiprocess.
     """
-    _connection: Union[ThreadLocalMember[Optional['BlockingConnection']],
-                       Optional['BlockingConnection']] = ThreadLocalMember(init_value=None)
-    _maintenance_channel: Union[ThreadLocalMember[Optional['BlockingChannel']],
-                                Optional['BlockingChannel']] = ThreadLocalMember(init_value=None)
+    _connection: Union[
+        ThreadLocalMember[Optional['BlockingConnection']],
+        Optional['BlockingConnection']
+    ] = ThreadLocalMember(init_value=None)
+
+    _maintenance_channel: Union[
+        ThreadLocalMember[Optional['BlockingChannel']],
+        Optional['BlockingChannel']
+    ] = ThreadLocalMember(init_value=None)
 
     def __init__(self,
                  hosts: Union[List[str], str],
@@ -49,7 +53,8 @@ class RabbitMQDeviceManagerBase:
                  connection_type: str = "None",
                  heartbeat: int = 300,
                  connection_attempts: int = 5,
-                 blocked_connection_timeout: Optional[float] = None):
+                 blocked_connection_timeout: Optional[float] = None,
+                 **kwargs):
         """
         This manager used to create RabbitMQ devices (direct queues)
 
@@ -71,6 +76,8 @@ class RabbitMQDeviceManagerBase:
             passing `ConnectionBlockedTimeout` exception to on_close_callback
             in asynchronous adapters or raising it in `BlockingConnection`.
         """
+        super().__init__(**kwargs)
+
         try:
             import pika
         except ImportError as ex:

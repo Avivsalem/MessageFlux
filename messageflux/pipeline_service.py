@@ -132,7 +132,7 @@ class PipelineService(MessageHandlingServiceBase):
 
     def _finalize_service(self, exception: Optional[Exception] = None):
         try:
-            super()._finalize_service(exception)
+            super()._finalize_service(exception=exception)
         finally:
             if self._output_device_manager is not None:
                 self._output_device_manager.disconnect()

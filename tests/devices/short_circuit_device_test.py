@@ -1,8 +1,8 @@
 import threading
+from time import sleep
 from typing import Optional
 
 import pytest
-from time import sleep
 
 from messageflux.iodevices.base import (InputDeviceManager,
                                         OutputDeviceManager,
@@ -46,10 +46,13 @@ class ErrorOutputDevice(OutputDevice):
 
 
 class ErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
-    def get_input_device(self, name: str) -> InputDevice:
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _create_input_device(self, name: str) -> InputDevice:
         return ErrorInputDevice()
 
-    def get_output_device(self, name: str) -> OutputDevice:
+    def _create_output_device(self, name: str) -> OutputDevice:
         return ErrorOutputDevice()
 
 
