@@ -38,7 +38,7 @@ class BulkRotatingFileHandler(BulkRotatingHandlerBase):
                          max_time=max_time,
                          live_log_prefix=live_log_prefix)
 
-    def _move_log_to_destination(self, src_file: str):
+    def _move_log_to_destination(self, src_file: str, is_bkp=False):
         """
         this moves the live log from a file, to its destination (the rotated log path)
         """

@@ -56,6 +56,12 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
                          max_time=max_time,
                          live_log_prefix=live_log_prefix)
 
+    def _publish_file(self, filepath: str):
+        with open(filepath, 'rb') as log_file:
+            self._output_device.send_message(Message(log_file, self._metadata.copy()))
+
+        os.remove(filepath)
+
     def _do_send_to_device_thread(self):
         if self._queue is None:
             self._queue = queue.Queue()
@@ -63,26 +69,26 @@ class BulkRotatingDeviceHandler(BulkRotatingHandlerBase):
         while self._run:
             try:
                 file_to_send = self._queue.get(timeout=self._wait_on_queue_timeout)
-                with open(file_to_send, 'rb') as log_file:
-                    self._output_device.send_message(Message(log_file, self._metadata.copy()))
-
-                os.remove(file_to_send)
+                self._publish_file(file_to_send)
             except queue.Empty:
                 pass
             except Exception:
                 print('Error in send to device thread. error:\r\n' + traceback.format_exc())
 
-    def _move_log_to_destination(self, src_file: str):
+    def _move_log_to_destination(self, src_file: str, is_bkp=False):
         """
         this moves the live log from a file, to its destination (the rotated log path)
         """
-        if self._send_to_device_thread is None and self._run:
-            self._queue = queue.Queue()
-            self._send_to_device_thread = Thread(target=self._do_send_to_device_thread)
-            self._send_to_device_thread.start()
+        if is_bkp:
+            self._publish_file(src_file)
+        else:
+            if self._send_to_device_thread is None and self._run:
+                self._queue = queue.Queue()
+                self._send_to_device_thread = Thread(target=self._do_send_to_device_thread)
+                self._send_to_device_thread.start()
 
-        if self._queue is not None:
-            self._queue.put_nowait(src_file)
+            if self._queue is not None:
+                self._queue.put_nowait(src_file)
 
     def close(self):
         """
