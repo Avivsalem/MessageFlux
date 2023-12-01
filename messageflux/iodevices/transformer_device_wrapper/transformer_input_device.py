@@ -53,7 +53,9 @@ class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
         :param inner_device: the inner device that it wraps
         :param transformer: the transformer to use to transform the incoming messages
         """
-        super(TransformerInputDevice, self).__init__(manager, name)
+        super().__init__(manager=manager,
+                         name=name)
+
         self._transformer = transformer
         self._inner_device = inner_device
 
@@ -73,6 +75,7 @@ class TransformerInputDevice(InputDevice['TransformerInputDeviceManager']):
         """
         closes the inner device
         """
+        super().close()
         self._inner_device.close()
 
 
@@ -81,12 +84,13 @@ class TransformerInputDeviceManager(InputDeviceManager[TransformerInputDevice]):
     a wrapper input device manager, that wraps the devices in transformer input devices
     """
 
-    def __init__(self, inner_device_manager: InputDeviceManager, transformer: InputTransformerBase):
+    def __init__(self, inner_device_manager: InputDeviceManager, transformer: InputTransformerBase, **kwargs):
         """
 
         :param inner_device_manager: the inner device manager
         :param transformer: the input transformer to use
         """
+        super().__init__(**kwargs)
         self._inner_device_manager = inner_device_manager
         self._transformer = transformer
 
@@ -104,7 +108,7 @@ class TransformerInputDeviceManager(InputDeviceManager[TransformerInputDevice]):
         self._inner_device_manager.disconnect()
         self._transformer.disconnect()
 
-    def get_input_device(self, name: str) -> TransformerInputDevice:
+    def _create_input_device(self, name: str) -> TransformerInputDevice:
         """
         returns a wrapped input device
 

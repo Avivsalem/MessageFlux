@@ -32,7 +32,7 @@ class SQSInputTransaction(InputTransaction):
         :param device: the device that returned this transaction
         :param message: the received message
         """
-        super(SQSInputTransaction, self).__init__(device=device)
+        super().__init__(device=device)
         self._message = message
         self._logger = logging.getLogger(__name__)
 
@@ -70,7 +70,8 @@ class SQSInputDevice(InputDevice["SQSInputDeviceManager"]):
         :param included_message_attributes: list of message attributes to get for the message. defaults to ALL
 
         """
-        super().__init__(device_manager, queue_name)
+        super().__init__(manager=device_manager,
+                         name=queue_name)
 
         if included_message_attributes is None:
             included_message_attributes = ["All"]
@@ -142,18 +143,20 @@ class SQSInputDeviceManager(SQSManagerBase, InputDeviceManager[SQSInputDevice]):
     def __init__(self, *,
                  sqs_resource: Optional['SQSServiceResource'] = None,
                  max_messages_per_request: int = 1,
-                 included_message_attributes: Optional[Union[str, List[str]]] = None, ) -> None:
+                 included_message_attributes: Optional[Union[str, List[str]]] = None, **kwargs) -> None:
         """
         :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
         :param max_messages_per_request: maximum messages to retrieve from the queue (max 10)
         :param included_message_attributes: list of message attributes to get for the message. defaults to ALL
         """
-        super().__init__(sqs_resource=sqs_resource)
+        super().__init__(sqs_resource=sqs_resource,
+                         **kwargs)
+
         self._device_cache: Dict[str, SQSInputDevice] = {}
         self._max_messages_per_request = max_messages_per_request
         self._included_message_attributes = included_message_attributes
 
-    def get_input_device(self, name: str) -> SQSInputDevice:
+    def _create_input_device(self, name: str) -> SQSInputDevice:
         """
         Returns an incoming device by name
 

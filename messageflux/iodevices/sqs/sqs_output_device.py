@@ -27,7 +27,9 @@ class SQSOutputDevice(OutputDevice["SQSOutputDeviceManager"]):
         :param device_manager: the SQS device Manager that holds this device
         :param queue_name: the name of the queue
         """
-        super(SQSOutputDevice, self).__init__(device_manager, queue_name)
+        super().__init__(manager=device_manager,
+                         name=queue_name)
+
         self._sqs_queue = self.manager.get_queue(queue_name)
         self._message_group_id = get_random_id()
 
@@ -57,14 +59,15 @@ class SQSOutputDeviceManager(SQSManagerBase, OutputDeviceManager[SQSOutputDevice
     this manager is used to create SQS devices
     """
 
-    def __init__(self, sqs_resource: Optional['SQSServiceResource'] = None) -> None:
+    def __init__(self, sqs_resource: Optional['SQSServiceResource'] = None, **kwargs) -> None:
         """
         :param sqs_resource: the boto sqs service resource. Defaults to creating from env vars
         """
-        super().__init__(sqs_resource=sqs_resource)
+        super().__init__(sqs_resource=sqs_resource,
+                         **kwargs)
         self._device_cache: Dict[str, SQSOutputDevice] = {}
 
-    def get_output_device(self, name: str) -> SQSOutputDevice:
+    def _create_output_device(self, name: str) -> SQSOutputDevice:
         """
         Returns and outgoing device by name
 

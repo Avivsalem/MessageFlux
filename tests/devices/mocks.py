@@ -42,8 +42,12 @@ class MockErrorOutputDevice(OutputDevice):
 
 
 class MockErrorDeviceManager(InputDeviceManager, OutputDeviceManager):
-    def get_input_device(self, name):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def _create_input_device(self, name):
         return MockErrorInputDevice(name)
 
-    def get_output_device(self, name):
+    def _create_output_device(self, name):
         return MockErrorOutputDevice(name)

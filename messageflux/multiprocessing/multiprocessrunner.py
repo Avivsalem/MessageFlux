@@ -82,7 +82,7 @@ class MultiProcessRunner(BaseService):
         self._run_service_instance(handler.instance_index)
 
     def _finalize_service(self, exception: Optional[Exception] = None):
-        super()._finalize_service(exception)
+        super()._finalize_service(exception=exception)
         for handler in self._process_handlers:
             handler.stop()
         time.sleep(self._shutdown_timeout)

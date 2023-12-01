@@ -37,10 +37,11 @@ class MockInputDevice(InputDevice['MockInputDeviceManager']):
 
 
 class MockInputDeviceManager(InputDeviceManager[MockInputDevice]):
-    def __init__(self, input_list):
+    def __init__(self, input_list, **kwargs):
+        super().__init__(**kwargs)
         self.input_list = input_list
 
-    def get_input_device(self, name):
+    def _create_input_device(self, name):
         return MockInputDevice(self, name, self.input_list)
 
 

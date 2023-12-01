@@ -34,6 +34,7 @@ class ShortCircuitInputDevice(ShortCircuitDeviceBase, InputDevice['ShortCircuitI
         """
         closes the inner device
         """
+        super().close()
         self._inner_device.close()
 
 
@@ -45,7 +46,8 @@ class ShortCircuitInputDeviceManager(InputDeviceManager[ShortCircuitInputDevice]
     def __init__(self,
                  inner_device_manager: InputDeviceManager,
                  short_circuit_fail_count: int,
-                 short_circuit_time: int):
+                 short_circuit_time: int,
+                 **kwargs):
         """
 
         :param inner_device_manager: the inner device manager
@@ -53,6 +55,8 @@ class ShortCircuitInputDeviceManager(InputDeviceManager[ShortCircuitInputDevice]
         the device will be short circuited
         :param short_circuit_time: the time that the device will remain short circuited
         """
+        super().__init__(**kwargs)
+
         self._inner_device_manager = inner_device_manager
         self._short_circuit_fail_count = short_circuit_fail_count
         self._short_circuit_fail_time = short_circuit_time
@@ -69,7 +73,7 @@ class ShortCircuitInputDeviceManager(InputDeviceManager[ShortCircuitInputDevice]
         """
         self._inner_device_manager.disconnect()
 
-    def get_input_device(self, name: str) -> ShortCircuitInputDevice:
+    def _create_input_device(self, name: str) -> ShortCircuitInputDevice:
         """
         returns a wrapped input device
 

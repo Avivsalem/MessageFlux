@@ -31,11 +31,13 @@ class ErrorIODevice(OutputDevice, InputDevice):
 
 
 class ErrorIODeviceManager(InputDeviceManager, OutputDeviceManager):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-    def get_input_device(self, name):
+    def _create_input_device(self, name):
         return ErrorIODevice(None, name)
 
-    def get_output_device(self, name):
+    def _create_output_device(self, name):
         return ErrorIODevice(None, name)
 
 

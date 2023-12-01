@@ -16,15 +16,16 @@ class RoundRobinInputDeviceManager(CollectionInputDeviceManager):
     This class is used to create RoundRobin InputDevices
     """
 
-    def __init__(self, inner_managers: List[InputDeviceManager]):
+    def __init__(self, inner_managers: List[InputDeviceManager], **kwargs):
         """
         This class is used to create RoundRobin IODevices
 
         :param inner_managers: the actual InputDeviceManager instances to generate devices from
         """
 
-        super(RoundRobinInputDeviceManager, self).__init__(inner_managers=inner_managers,
-                                                           collection_maker=_create_round_robin_collection)
+        super().__init__(inner_managers=inner_managers,
+                         collection_maker=_create_round_robin_collection,
+                         **kwargs)
 
 
 class RoundRobinOutputDeviceManager(CollectionOutputDeviceManager):
@@ -32,11 +33,12 @@ class RoundRobinOutputDeviceManager(CollectionOutputDeviceManager):
     This class is used to create RoundRobin IODevices
     """
 
-    def __init__(self, inner_managers: List[OutputDeviceManager]):
+    def __init__(self, inner_managers: List[OutputDeviceManager], **kwargs):
         """
         This class is used to create RoundRobin IODevices
 
         :param inner_managers: the actual OutputDeviceManager instances to generate devices from
         """
-        super(RoundRobinOutputDeviceManager, self).__init__(inner_managers=inner_managers,
-                                                            collection_maker=_create_round_robin_collection)
+        super().__init__(inner_managers=inner_managers,
+                         collection_maker=_create_round_robin_collection,
+                         **kwargs)

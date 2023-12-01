@@ -61,7 +61,7 @@ class RabbitMQNoPoisonInputTransactionWrapper(InputTransaction):
         :param poison_counter: the poison counter
         :param message_id: the message id in this transaction
         """
-        super().__init__(inner_transaction.device)
+        super().__init__(device=inner_transaction.device)
         self._inner_transaction = inner_transaction
         self._poison_counter = poison_counter
         self._message_id = message_id
@@ -104,6 +104,7 @@ class RabbitMQPoisonCountingInputDevice(RabbitMQInputDevice):
                          consumer_args=consumer_args,
                          prefetch_count=prefetch_count,
                          use_consumer=use_consumer)
+
         self._max_poison_count = max_poison_count
         self._poison_counter = poison_counter
 
@@ -207,7 +208,7 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
                  use_consumer: bool = True,
                  blocked_connection_timeout: Optional[float] = None,
                  default_direct_exchange: Optional[str] = None,
-                 ):
+                 **kwargs):
         """
         This manager used to create RabbitMQ devices (direct queues)
 
@@ -247,7 +248,8 @@ class RabbitMQPoisonCountingInputDeviceManager(RabbitMQInputDeviceManager):
                          prefetch_count=prefetch_count,
                          use_consumer=use_consumer,
                          blocked_connection_timeout=blocked_connection_timeout,
-                         default_direct_exchange=default_direct_exchange)
+                         default_direct_exchange=default_direct_exchange,
+                         **kwargs)
 
         self._max_poison_count = max_poison_count
         self._poison_counter = poison_counter
