@@ -5,6 +5,8 @@ from itertools import cycle, islice
 from time import perf_counter
 from typing import Collection, TypeVar, List, Iterator, Generic, Callable, Optional, Any, Union
 
+from .rate_limiter import RateLimiter, limit_rate
+
 EllipsisType = type(...)
 
 
