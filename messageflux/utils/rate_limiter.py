@@ -75,7 +75,6 @@ class RateLimiter:
         time_to_sleep: float = 0
         now = self._get_time()
         self._trim_queue(now=now)
-#        print(f'len: {len(self._action_queue)}')
         if len(self._action_queue) >= self._number_of_actions:
             last_action_time = self._action_queue.popleft()
             time_to_sleep = self._amount_of_seconds - (now - last_action_time)
