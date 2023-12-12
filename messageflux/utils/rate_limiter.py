@@ -1,37 +1,10 @@
 import time
 from collections import deque
-from contextlib import contextmanager
-from functools import wraps
+from contextlib import ContextDecorator
 from typing import Optional
 
 
-def limit_rate(number_of_actions: int, amount_of_seconds: int = 1, max_block: Optional[float] = None):
-    """
-    a decorator to limit rate of a method
-
-    :param number_of_actions: the number of actions allowed within a window of time
-    :param amount_of_seconds: the length of the time window in seconds
-    :param max_block: the maximum time to block if rate limit has reached
-    """
-
-    def _decorator_func(func):
-        """
-        the actual decorator
-        """
-        rate_limiter = RateLimiter(number_of_actions=number_of_actions,
-                                   amount_of_seconds=amount_of_seconds)
-
-        @wraps(func)
-        def _wrapper(*args, **kwargs):
-            rate_limiter.perform_action(max_block=max_block)
-            return func(*args, **kwargs)
-
-        return _wrapper
-
-    return _decorator_func
-
-
-class RateLimiter:
+class RateLimiter(ContextDecorator):
     """
     a class used to limit the rate of actions
     """
@@ -40,17 +13,27 @@ class RateLimiter:
     HOUR = 60 * MINUTE
     DAY = 24 * HOUR
 
-    def __init__(self, number_of_actions: int, amount_of_seconds: int = 1):
+    def __init__(self, number_of_actions: int, amount_of_seconds: int = 1, max_block: Optional[float] = None):
         """
         ctor
 
         :param number_of_actions: the number of actions allowed within a window of time
         :param amount_of_seconds: the length of the time window in seconds
+        :param max_block: the maximum amount of seconds to block if rate limit is needed. None means no maximum
         """
 
         self._number_of_actions = number_of_actions
         self._amount_of_seconds = amount_of_seconds
+        self._max_block = max_block
         self._action_queue: deque[float] = deque()
+        self._last_block_time: float = 0
+
+    @property
+    def last_block_time(self) -> float:
+        """
+        returns the last amount of time that the rate limiter was blocked
+        """
+        return self._last_block_time
 
     def _get_time(self) -> float:
         """
@@ -62,39 +45,33 @@ class RateLimiter:
         while self._action_queue and now - self._action_queue[0] > self._amount_of_seconds:
             self._action_queue.popleft()
 
-    def perform_action(self, max_block: Optional[float] = None) -> float:
+    def perform_action(self):
         """
         signals the rate limiter, that you want to perform an action.
         the method will block for the right amount of time if rate limiting is needed
-
-        :param max_block: the maximum amount of seconds to block if rate limit is needed. None means no maximum
-        :return: the actual time blocked in seconds (between 0 and max_block)
         """
+        self._last_block_time = 0
         if self._amount_of_seconds <= 0:
-            return 0
+            return
         time_to_sleep: float = 0
         now = self._get_time()
         self._trim_queue(now=now)
         if len(self._action_queue) >= self._number_of_actions:
             last_action_time = self._action_queue.popleft()
             time_to_sleep = self._amount_of_seconds - (now - last_action_time)
-            if max_block is not None:
-                time_to_sleep = min(max_block, time_to_sleep)
+            if self._max_block is not None:
+                time_to_sleep = min(self._max_block, time_to_sleep)
 
             if time_to_sleep > 0:
                 time.sleep(time_to_sleep)
                 now = self._get_time()
 
         self._action_queue.append(now)
-        return time_to_sleep
+        self._last_block_time = time_to_sleep
 
-    @contextmanager
-    def limit(self, max_block: Optional[float] = None):
-        """
-        a context manager that rate limits its context
+    def __enter__(self):
+        self.perform_action()
+        return self
 
-        :param max_block: the maximum amount of seconds to block if rate limit is needed. None means no maximum
-        :return: the actual time blocked in seconds (between 0 and max_block)
-        """
-        actual_blocked = self.perform_action(max_block=max_block)
-        yield actual_blocked
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
