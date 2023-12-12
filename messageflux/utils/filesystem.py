@@ -1,8 +1,8 @@
+import errno
 import os
 import shutil
-
-import errno
 import time
+from contextlib import suppress
 
 from messageflux.utils import KwargsException
 
@@ -76,12 +76,9 @@ def recursive_chmod(dir_name: str):
     os.chmod(dir_name, 0o777)
     for root, dirs, files in os.walk(dir_name):
         for d in dirs:
-            try:
+            with suppress(OSError):
                 os.chmod(os.path.join(root, d), 0o777)
-            except OSError:
-                pass
+
         for f in files:
-            try:
+            with suppress(OSError):
                 os.chmod(os.path.join(root, f), 0o777)
-            except OSError:
-                pass
