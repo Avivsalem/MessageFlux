@@ -97,7 +97,4 @@ class RateLimiter:
         :return: the actual time blocked in seconds (between 0 and max_block)
         """
         actual_blocked = self.perform_action(max_block=max_block)
-        try:
-            yield actual_blocked
-        finally:
-            pass
+        yield actual_blocked
