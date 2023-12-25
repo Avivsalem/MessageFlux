@@ -2,7 +2,7 @@ import threading
 from typing import Optional
 
 from messageflux.iodevices.base import InputDeviceManager, InputDevice, ReadResult
-from messageflux.utils import RateLimiter
+from messageflux.utils import RateLimiter, TimerContext
 
 
 class RateLimitedInputDevice(InputDevice['RateLimitedInputDeviceManager']):
@@ -22,10 +22,17 @@ class RateLimitedInputDevice(InputDevice['RateLimitedInputDeviceManager']):
                       timeout: Optional[float] = None,
                       with_transaction: bool = True) -> Optional['ReadResult']:
 
-        with self._rate_limiter:
-            return self._inner_device.read_message(cancellation_token=cancellation_token,
-                                                   timeout=timeout,
-                                                   with_transaction=with_transaction)
+        with TimerContext() as timer:
+            timed_out = self._rate_limiter.perform_action(timeout=timeout)
+            if timed_out:
+                return None
+
+        if timeout is not None:
+            timeout -= timer.elapsed_seconds
+
+        return self._inner_device.read_message(cancellation_token=cancellation_token,
+                                               timeout=timeout,
+                                               with_transaction=with_transaction)
 
     def close(self):
         """
