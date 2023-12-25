@@ -1,7 +1,7 @@
 import time
 from collections import deque
 from contextlib import ContextDecorator
-from typing import Optional
+from typing import Optional, Deque
 
 
 class RateLimiter(ContextDecorator):
@@ -45,7 +45,7 @@ class RateLimiter(ContextDecorator):
 
         self._number_of_actions = number_of_actions
         self._amount_of_seconds = amount_of_seconds
-        self._action_queue: deque[float] = deque()
+        self._action_queue: Deque[float] = deque()
         self._default_timeout = default_timeout
         self._raise_on_timeout = raise_on_timeout
         self._raise_on_limited = raise_on_limited
@@ -90,7 +90,6 @@ class RateLimiter(ContextDecorator):
         time_to_sleep = self.expected_block_time()
         if time_to_sleep > 0:
             if self._raise_on_limited:
-
                 raise self.RateLimitedError(f'Action is limited for another {time_to_sleep} seconds')
             if timeout is not None and timeout < time_to_sleep:
                 time_to_sleep = timeout
