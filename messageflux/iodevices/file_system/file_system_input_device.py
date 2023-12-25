@@ -5,6 +5,7 @@ import random
 import threading
 import time
 from collections import defaultdict
+from contextlib import suppress
 from random import randint
 from typing import Optional, Dict, List, Set, Iterator
 
@@ -114,10 +115,8 @@ class FileSystemInputTransaction(InputTransaction):
                                                                      org_path=org_path,
                                                                      tmp_path=tmp_path))
         else:
-            try:
+            with suppress(FileNotFoundError):
                 os.remove(tmp_path)
-            except FileNotFoundError:
-                pass
 
             return ReadResult(message)
 
@@ -125,10 +124,9 @@ class FileSystemInputTransaction(InputTransaction):
         """
         commits the transaction
         """
-        try:
+        with suppress(FileNotFoundError):
             os.remove(self._tmp_path)
-        except FileNotFoundError:
-            pass
+
         self._POISON_COUNTS_PER_FILE.pop(self._org_path, None)
         self._device_manager.transaction_log.remove_transaction(self)
 
@@ -244,10 +242,8 @@ class TransactionLog:
         writes the transaction log to the file
         """
         if not self._transactions:
-            try:
+            with suppress(OSError):
                 os.remove(self._filepath)
-            except OSError:
-                pass
         else:
             with open(self._filepath, 'w') as f:
                 json.dump(self._transactions, f)

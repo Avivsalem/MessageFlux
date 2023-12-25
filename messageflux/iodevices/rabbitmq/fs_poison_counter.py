@@ -2,11 +2,11 @@ import json
 import logging
 import os
 import threading
+from contextlib import suppress
 from hashlib import md5
 from threading import Event
-from typing import Optional, Dict, Any
-
 from time import time
+from typing import Optional, Dict, Any
 
 from messageflux.iodevices.rabbitmq.rabbitmq_poison_counting_input_device import PoisonCounterBase
 
@@ -96,12 +96,10 @@ class FileSystemPoisonCounter(PoisonCounterBase):
         data: Dict[str, Any] = {self.MESSAGE_ID_PROP_NAME: message_id,
                                 self.COUNTER_PROP_NAME: 0}
 
-        try:
+        with suppress(FileNotFoundError):
             if os.path.exists(counter_filepath):
                 with open(counter_filepath, 'r') as f:
                     data = json.load(f)
-        except FileNotFoundError:  # someone deleted the file as we read it... NOT SUPPOSED TO HAPPEN
-            pass
 
         data[self.MESSAGE_ID_PROP_NAME] = message_id  # THIS IS ONLY FOR SAFETY... PROBABLY REDUNDANT
         data[self.COUNTER_PROP_NAME] += 1
@@ -116,9 +114,7 @@ class FileSystemPoisonCounter(PoisonCounterBase):
         """
         deletes the counter file
         """
-        try:
+        with suppress(FileNotFoundError):
             counter_filepath = self._get_counter_filepath(message_id)
             if os.path.exists(counter_filepath):
                 os.remove(counter_filepath)
-        except FileNotFoundError:  # file already deleted... so we don't care
-            pass
